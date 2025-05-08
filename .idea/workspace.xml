@@ -5,12 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/filetranslate/decorator/time.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/filetranslate/translater.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/filetranslate/utils/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/filetranslate/utils/agent_utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/filetranslate/utils/markdown_splitter.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/filetranslate/utils/markdown_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -306,7 +302,7 @@
       <workItem from="1746588383790" duration="2614000" />
       <workItem from="1746593417117" duration="25924000" />
       <workItem from="1746626070703" duration="7931000" />
-      <workItem from="1746669839816" duration="13724000" />
+      <workItem from="1746669839816" duration="16840000" />
     </task>
     <servers />
   </component>
