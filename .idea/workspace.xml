@@ -5,20 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/filetranslate/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/filetranslate/decorator/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/decorator/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/filetranslate/decorator/markdown_mask.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/decorator/markdown_mask.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/filetranslate/decorator/time.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/decorator/time.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/filetranslate/translater.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/translater.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/filetranslate/utils/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/filetranslate/utils/agent_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/agent_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/filetranslate/utils/convert.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/convert.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/filetranslate/utils/markdown_splitter.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/markdown_splitter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/filetranslate/utils/markdown_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/markdown_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -314,7 +301,7 @@
       <workItem from="1746588383790" duration="2614000" />
       <workItem from="1746593417117" duration="25924000" />
       <workItem from="1746626070703" duration="7931000" />
-      <workItem from="1746669839816" duration="20170000" />
+      <workItem from="1746669839816" duration="20338000" />
     </task>
     <servers />
   </component>

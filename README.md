@@ -1,6 +1,6 @@
 # 简介 
 ## DocuTranslate
-一个使用大预言模型(llm)翻译pdf和markdown的包
+一个使用大语言模型(llm)翻译pdf和markdown的包
   
 [github主页](https://github.com/xunbu/docutranslate)
 
