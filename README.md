@@ -15,7 +15,7 @@
 # 前置条件（获取大模型平台的baseurl、key、model-id）
 由于需要使用大语言模型进行markdown调整与翻译，所以需要预先获取模型的baseurl、key、model-id  
 常见的大模型平台baseurl与api获取方式可见[常用ai平台](#常用ai平台)
-> 比较推荐的模型有阿里云的qwen-plus、智谱的glm-z1-flash等。免费的智谱glm-4-flash可以用但效果欠佳
+> 比较推荐的模型有阿里云的qwen-plus、智谱的glm-4-air、glm-z1-flash等。免费的智谱glm-4-flash能用但效果欠佳(2025.5)
 # 使用方式
 ## 翻译文件
 
