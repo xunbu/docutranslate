@@ -2,7 +2,7 @@ from functools import wraps
 from typing import Concatenate, ParamSpec, Callable
 import re
 
-from filetranslate.utils.markdown_utils import MaskDict
+from docutranslate.utils.markdown_utils import MaskDict
 
 P=ParamSpec("P")
 def mask_uris_temp(func:Callable[Concatenate[str, P], str]) -> Callable[Concatenate[str, P], str]:

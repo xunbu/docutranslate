@@ -1,15 +1,15 @@
 # 简介 
-## FileTranslate
+## DocuTranslate
 一个使用大预言模型(llm)翻译pdf和markdown的包
   
-[github主页](https://github.com/xunbu/filetranslate)
+[github主页](https://github.com/xunbu/docutranslate)
 
 # 安装
 使用pip  
-`pip install filetranslate`  
+`pip install doctranslate`  
 
 使用uv  
-`uv add filetranslate`
+`uv add doctranslate`
 
 # 前置条件（获取大模型平台的baseurl、key、model-id）
 由于需要使用大语言模型进行markdown调整与翻译，所以需要预先获取模型的baseurl、key、model-id  
@@ -17,40 +17,45 @@
 
 # 使用方式
 ## 使用默认参数翻译pdf
+
 ```python
-from filetranslate.translater import FileTranslater
+from docutranslate.translater import FileTranslater
 
-#不开启公式、代码识别
-FileTranslater(base_url="<baseurl>",key="<key>",model_id="<model-id>").translate_pdf_file("<pdf路径>",to_lang="中文")
+# 不开启公式、代码识别
+FileTranslater(base_url="<baseurl>", key="<key>", model_id="<model-id>").translate_pdf_file("<pdf路径>", to_lang="中文")
 
-#开启公式、代码识别（需要下载更多模型）
-FileTranslater(base_url="<baseurl>",key="<key>",model_id="<model-id>").translate_pdf_file("<pdf路径>",to_lang="中文",formula=True,code=True)
+# 开启公式、代码识别（需要下载更多模型）
+FileTranslater(base_url="<baseurl>", key="<key>", model_id="<model-id>").translate_pdf_file("<pdf路径>", to_lang="中文",
+                                                                                            formula=True, code=True)
 ```
 > 第一次使用时需要下载模型（约1G、使用公式、代码识别需要多约0.5G），请稍作等待  
 > 输出文件默认放在`./output`中
 
 ## 使用不同的agent分别进行文本修正和翻译
+
 ```python
-from filetranslate.translater import FileTranslater
+from docutranslate.translater import FileTranslater
 
 translater = FileTranslater()
 
-refine_agent=translater.create_refine_agent(baseurl="<baseurl-1>",key="<key-1>",model_id="<model-id-1>")
-translate_agent=translater.create_translate_agent(baseurl="<baseurl-2>",key="<key-2>",model_id="<model-id-2>")
+refine_agent = translater.create_refine_agent(baseurl="<baseurl-1>", key="<key-1>", model_id="<model-id-1>")
+translate_agent = translater.create_translate_agent(baseurl="<baseurl-2>", key="<key-2>", model_id="<model-id-2>")
 
-translater.translate_pdf_file(pdf_path="<pdf路径>",to_lang="中文",refine_agent=refine_agent,translate_agent=translate_agent)
+translater.translate_pdf_file(pdf_path="<pdf路径>", to_lang="中文", refine_agent=refine_agent,
+                              translate_agent=translate_agent)
 ```
 
 ## 参数说明
 ### 创建FileTranslate
+
 ```python
-from filetranslate.translater import FileTranslater
+from docutranslate.translater import FileTranslater
 
 translater = FileTranslater(base_url="<baseurl>",
                             key="<key>",
-                            model_id="<model-id>",#使用的模型id
-                            chunksize=4000,#【可选】markdown分块长度，分块越大效果越好，不建议超过4096
-                            max_concurrent=6#【可选】并发数，受到ai平台并发量限制
+                            model_id="<model-id>",  # 使用的模型id
+                            chunksize=4000,  # 【可选】markdown分块长度，分块越大效果越好，不建议超过4096
+                            max_concurrent=6  # 【可选】并发数，受到ai平台并发量限制
                             )
 ```
 ### 翻译pdf文件

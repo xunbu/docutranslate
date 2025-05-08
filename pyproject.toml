@@ -1,5 +1,5 @@
 [project]
-name = "filetranslate"
+name = "docutranslate"
 version = "0.0.1"
 description = "能翻译pdf和markdown的软件"
 readme = "README.md"

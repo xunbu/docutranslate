@@ -5,8 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filetranslate/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filetranslate/decorator/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/decorator/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filetranslate/decorator/markdown_mask.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/decorator/markdown_mask.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filetranslate/decorator/time.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/decorator/time.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filetranslate/translater.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/translater.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filetranslate/utils/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filetranslate/utils/agent_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/agent_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filetranslate/utils/convert.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/convert.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filetranslate/utils/markdown_splitter.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/markdown_splitter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/filetranslate/utils/markdown_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/markdown_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,38 +44,38 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "JavaScript 调试.output.html (1).executor": "Run",
-    "JavaScript 调试.output.html.executor": "Run",
-    "JavaScript 调试.regex_中文.html.executor": "Run",
-    "JavaScript 调试.test2_英文.html.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python 测试.Python 测试 (markdown_mask.py 内).executor": "Run",
-    "Python 测试.markdown_mask.Test.test_basic_link_masking 的 Python 测试.executor": "Run",
-    "Python.PDFtranslater (1).executor": "Run",
-    "Python.PDFtranslater (2).executor": "Run",
-    "Python.agent_utils.executor": "Run",
-    "Python.convert.executor": "Run",
-    "Python.markdown_splitter.executor": "Run",
-    "Python.markdown_utils.executor": "Run",
-    "Python.test.executor": "Run",
-    "Python.test1.executor": "Run",
-    "Python.translater.executor": "Debug",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "master",
-    "last_opened_file_path": "C:/Users/jxgm/Desktop/FileTranslate/tests/resource",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "Errors",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;JavaScript 调试.output.html (1).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.output.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.regex_中文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.test2_英文.html.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python 测试.Python 测试 (markdown_mask.py 内).executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.markdown_mask.Test.test_basic_link_masking 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python.PDFtranslater (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.PDFtranslater (2).executor&quot;: &quot;Run&quot;,
+    &quot;Python.agent_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.convert.executor&quot;: &quot;Run&quot;,
+    &quot;Python.markdown_splitter.executor&quot;: &quot;Run&quot;,
+    &quot;Python.markdown_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test1.executor&quot;: &quot;Run&quot;,
+    &quot;Python.translater.executor&quot;: &quot;Debug&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;master&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/jxgm/Desktop/FileTranslate/tests/resource&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;Errors&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\tests\resource" />
@@ -302,7 +314,7 @@
       <workItem from="1746588383790" duration="2614000" />
       <workItem from="1746593417117" duration="25924000" />
       <workItem from="1746626070703" duration="7931000" />
-      <workItem from="1746669839816" duration="17865000" />
+      <workItem from="1746669839816" duration="20170000" />
     </task>
     <servers />
   </component>

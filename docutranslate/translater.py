@@ -3,11 +3,11 @@ from typing import Literal
 
 import markdown2
 
-from filetranslate.decorator.markdown_mask import MaskDict
-from filetranslate.utils.agent_utils import Agent
-from filetranslate.utils.convert import pdf2markdown_embed_images
-from filetranslate.utils.markdown_splitter import split_markdown_text
-from filetranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris
+from docutranslate.decorator.markdown_mask import MaskDict
+from docutranslate.utils.agent_utils import Agent
+from docutranslate.utils.convert import pdf2markdown_embed_images
+from docutranslate.utils.markdown_splitter import split_markdown_text
+from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris
 
 
 class FileTranslater:

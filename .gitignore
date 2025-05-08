@@ -7,6 +7,6 @@ wheels/
 *.egg-info
 tests/resource/
 tests/
-filetranslate/output/
+docutranslate/output/
 # Virtual environments
 .venv
