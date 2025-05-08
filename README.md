@@ -17,7 +17,7 @@
 常见的大模型平台baseurl可见[常用baseurl](#常用baseurl)
 
 # 使用方式
-## 使用默认参数翻译pdf
+## 翻译文件
 
 ```python
 from docutranslate.translater import FileTranslater
@@ -31,6 +31,9 @@ translater.translate_pdf_file("<pdf路径>", to_lang="中文")
 
 # 开启公式、代码识别（需要下载更多模型）
 translater.translate_pdf_file("<pdf路径>", to_lang="中文",formula=True, code=True)
+
+#翻译markdown文件
+translater.translate_markdown_file("<markdown路径>",to_lang="中文")
 ```
 > 第一次使用时需要下载模型（约1G、使用公式、代码识别需要多约0.5G），请稍作等待  
 > 输出文件默认放在`./output`中
@@ -47,6 +50,17 @@ translate_agent = translater.create_translate_agent(baseurl="<baseurl-2>", key="
 
 translater.translate_pdf_file(pdf_path="<pdf路径>", to_lang="中文", refine_agent=refine_agent,
                               translate_agent=translate_agent)
+```
+## 文件转换(pdf/markdown->markdown/html)
+```python
+from docutranslate import FileTranslater
+translater=FileTranslater(base_url="<baseurl>", 
+               key="<key>", 
+               model_id="<model-id>")
+#markdown转html
+translater.read_markdown("<markdown路径>").save_as_html()
+#pdf转markdown
+translater.read_pdf_as_markdown("<pdf路径>").save_as_markdown()
 ```
 
 ## 参数说明

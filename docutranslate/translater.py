@@ -97,10 +97,12 @@ hello<ph-aaaaaa>, what's your name?
 你好<ph-aaaaaa>，你叫什么名字？\no_think""".format(to_lang)
         return agent
 
-    def read_pdf_as_markdown(self, pdf: Path | None = None, formula=False, code=False, save=False):
+    def read_pdf_as_markdown(self, pdf: Path |str|None = None, formula=False, code=False, save=False):
         print("正在将pdf转换为markdown")
         if pdf is None:
             pdf = self.file_path
+        if isinstance(pdf,str):
+            pdf=Path(pdf)
         self.markdown = pdf2markdown_embed_images(pdf, formula, code)
         print("pdf已转换")
         if save:
