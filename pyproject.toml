@@ -1,7 +1,7 @@
 [project]
 name = "docutranslate"
 version = "0.0.7"
-description = "能翻译pdf和markdown的软件"
+description = "能翻译pdf和markdown的工具"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
