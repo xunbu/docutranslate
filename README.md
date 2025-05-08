@@ -6,10 +6,11 @@
 
 # 安装
 使用pip  
-`pip install doctranslate`  
+`pip install docutranslate`  
 
 使用uv  
-`uv add doctranslate`
+`uv init`  
+`uv add docutranslate`
 
 # 前置条件（获取大模型平台的baseurl、key、model-id）
 由于需要使用大语言模型进行markdown调整与翻译，所以需要预先获取模型的baseurl、key、model-id  
