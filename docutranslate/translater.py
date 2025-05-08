@@ -174,11 +174,22 @@ hello<ph-aaaaaa>, what's your name?
             font-size: 15px;
         }}
     </style>
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({{
+        tex2jax: {{
+          inlineMath: [ ['$','$'], ["\\\(","\\\)"] ],
+          processEscapes: true
+        }}
+      }});
+    </script>
+        
+    <script type="text/javascript"
+            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+    </script>
 </head>
 <body>
 {markdowner.convert(self.markdown)}
 </body>
-<script src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.min.js"></script>
 <script type="module" defer>
   import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.esm.min.mjs';
   mermaid.initialize({{
@@ -197,6 +208,7 @@ hello<ph-aaaaaa>, what's your name?
     }});
   }});
 </script>
+
 </html>
 """
         with open(full_name, "w") as file:
