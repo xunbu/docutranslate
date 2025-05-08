@@ -24,7 +24,7 @@ class Agent:
         data = {
             "model": self.model_id,
             "messages": [
-                {"role": "system", "content": "回复必须严格以BEGIN>>开头，包括简短回答。\n示例:BEGIN>>这是示例回答\n"+system_prompt},
+                {"role": "system", "content": "回复必须以【SSS】开头（该规则适用于之后的所有例子），必须遵守。示例：【SSS】这是示例回答\n"+system_prompt},
                 {"role": "user", "content": prompt}
             ],
             "temperature": temperature,
@@ -32,19 +32,13 @@ class Agent:
         }
         return headers, data
 
-    # def send_prompt(self,prompt,system_prompt=None,timeout=TIMEOUT):
-    #     if system_prompt is None:
-    #         system_prompt=self.system_prompt
-    #     headers,data=self._prepare_request_data(prompt,system_prompt)
-    #     response=self.client.post(f"{self.baseurl}/chat/completions",json=data,headers=headers,timeout=timeout)
-    #     response.raise_for_status()
-    #     return response.json()["choices"][0]["message"]["content"].lstrip()
-
     async def send_async(self, prompt: str, system_prompt: None | str = None, timeout: int = TIMEOUT) -> str:
         if system_prompt is None:
             system_prompt = self.system_prompt
         """Sends a single prompt asynchronously."""
         headers, data = self._prepare_request_data(prompt, system_prompt)
+        if self.baseurl.endswith("/"):
+            self.baseurl=self.baseurl[:-1]
         try:
             response = await self.client_async.post(
                 f"{self.baseurl}/chat/completions",
@@ -54,10 +48,10 @@ class Agent:
             )
             response.raise_for_status()
             result=response.json()["choices"][0]["message"]["content"]
-            pattern=r"BEGIN>>(.*)"
+            pattern=r".*【SSS】(.*)"
             match= re.search(pattern,result, re.DOTALL)
             if match is None:
-                print("检测开头`BEGIN>>`失败")
+                print("检测开头`【SSS】`失败")
             else:
                 result=match.group(1)
             return result

@@ -32,16 +32,28 @@ class MaskDict:
     def __contains__(self, item):
         with self._lock:
             return item in self._dict
+
+# def uris2placeholder(markdown:str, mask_dict:MaskDict):
+        ##替换整个uri
+#     def uri2placeholder(match: re.Match):
+#         id = mask_dict.create_id()
+#         mask_dict.set(id, match.group())
+#         return f"<ph-{id}>"
+#
+#     uri_pattern = r'!?\[.*?\]\(.*?\)'
+#     markdown = re.sub(uri_pattern, uri2placeholder, markdown)
+#     return markdown
+
 def uris2placeholder(markdown:str, mask_dict:MaskDict):
+    ##只替换uri里的链接部分，保留标题
     def uri2placeholder(match: re.Match):
         id = mask_dict.create_id()
-        mask_dict.set(id, match.group())
-        return f"<ph-{id}>"
+        mask_dict.set(id, match.group(2))
+        return f"{match.group(1)}(<ph-{id}>)"
 
-    uri_pattern = r'!?\[.*?\]\(.*?\)'
+    uri_pattern = r'(!?\[.*?\])\((.*?)\)'
     markdown = re.sub(uri_pattern, uri2placeholder, markdown)
     return markdown
-
 def placeholder2_uris(markdown:str, mask_dict:MaskDict):
     def placeholder2uri(match:re.Match):
         id=match.group(1)
