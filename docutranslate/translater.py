@@ -118,6 +118,7 @@ hello<ph-aaaaaa>, what's your name?
         return self
 
     def refine_markdown(self, refine_agent: Agent | None = None) -> str:
+        print("正在修正markdown")
         if refine_agent is None:
             refine_agent = self.create_refine_agent(self.base_url, self.key, self.model_id, self.temperature)
         chuncks = self._split_markdown_into_chunks()

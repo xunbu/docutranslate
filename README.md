@@ -14,7 +14,7 @@
 
 # 前置条件（获取大模型平台的baseurl、key、model-id）
 由于需要使用大语言模型进行markdown调整与翻译，所以需要预先获取模型的baseurl、key、model-id  
-常见的大模型平台baseurl可见[常用baseurl](#常用baseurl)
+常见的大模型平台baseurl与api获取方式可见[常用ai平台](#常用ai平台)
 
 # 使用方式
 ## 翻译文件
@@ -73,7 +73,7 @@ translater = FileTranslater(base_url="<baseurl>",
                             key="<key>",
                             model_id="<model-id>",  # 使用的模型id
                             chunksize=4000,  # 【可选】markdown分块长度，分块越大效果越好，不建议超过4096
-                            max_concurrent=6  # 【可选】并发数，受到ai平台并发量限制
+                            max_concurrent=6  # 【可选】并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
                             )
 ```
 ### 翻译pdf文件
@@ -100,11 +100,16 @@ translater.translate_markdown_file(r"<要翻译的markdown路径>",
 
 
 
-# 常用baseurl
-| 平台名称     | baseurl                              |
-|----------|--------------------------------------|
-| ollama   | http://127.0.0.1:11434/v1            |
-| lm studio | http://127.0.0.1:1234/v1             |
-| openai   | https://api.openai.com/v1/           |
-| deepseek | https://api.deepseek.com/v1          |
-| 智谱ai     | https://open.bigmodel.cn/api/paas/v4 |
+# 常用ai平台
+| 平台名称       | 获取APIkey                                            | baseurl                                           |
+|------------|-----------------------------------------------------|---------------------------------------------------|
+| ollama     |                                                     | http://127.0.0.1:11434/v1                         |
+| lm studio  |                                                     | http://127.0.0.1:1234/v1                          |
+| openrouter | [点击获取](https://openrouter.ai/settings/keys)       |https://openrouter.ai/api/v1|
+| openai     | [点击获取](https://platform.openai.com/api-keys)      | https://api.openai.com/v1/                        |
+| deepseek   | [点击获取](https://platform.deepseek.com/api_keys)    | https://api.deepseek.com/v1                       |
+| 智谱ai       | [点击获取](https://open.bigmodel.cn/usercenter/apikeys) | https://open.bigmodel.cn/api/paas/v4              |
+| 腾讯混元       |[点击获取](https://console.cloud.tencent.com/hunyuan/api-key) | https://api.hunyuan.cloud.tencent.com/v1          |
+| 阿里云百炼      | [点击获取](https://bailian.console.aliyun.com/?tab=model#/api-key)| https://dashscope.aliyuncs.com/compatible-mode/v1 |
+| 火山引擎       | [点击获取](https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey?apikey=%7B%7D)  | https://ark.cn-beijing.volces.com/api/v3          |
+| 硅基流动       |   [点击获取](https://cloud.siliconflow.cn/account/ak)                                                   | https://api.siliconflow.cn/v1                     |
