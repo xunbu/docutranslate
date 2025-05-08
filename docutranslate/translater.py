@@ -160,7 +160,7 @@ hello<ph-aaaaaa>, what's your name?
         # 确保输出目录存在
         output_dir.mkdir(parents=True, exist_ok=True)
         full_name = output_dir / filename
-        markdowner = markdown2.Markdown(extras=['tables', 'fenced-code-blocks', 'mermaid'])
+        markdowner = markdown2.Markdown(extras=['tables', 'fenced-code-blocks', 'mermaid',"code-friendly"])
 
         html = f"""<!DOCTYPE html>
 <html lang="en">
