@@ -1,4 +1,5 @@
 import asyncio
+import re
 
 import httpx
 
@@ -15,7 +16,7 @@ class Agent:
         self.client_async = httpx.AsyncClient()
         self.max_concurrent = max_concurrent
 
-    def _prepare_request_data(self, prompt, system_prompt, temperature=None, top_p=0.9):
+    def _prepare_request_data(self, prompt:str, system_prompt:str, temperature=None, top_p=0.9):
         if temperature is None:
             temperature = self.temperature
         headers = {"Content-Type": "application/json",
@@ -23,7 +24,7 @@ class Agent:
         data = {
             "model": self.model_id,
             "messages": [
-                {"role": "system", "content": system_prompt},
+                {"role": "system", "content": "所有回复必须严格以<<AAA>>开头，包括简短回答。示例：\n<<AAA>>这是示例回答\n"+system_prompt},
                 {"role": "user", "content": prompt}
             ],
             "temperature": temperature,
@@ -52,8 +53,14 @@ class Agent:
                 timeout=timeout
             )
             response.raise_for_status()
-            result: str = response.json()["choices"][0]["message"]["content"]
-            return result.lstrip()
+            result=response.json()["choices"][0]["message"]["content"]
+            pattern=r"<<AAA>>(.*)"
+            match= re.search(pattern,result, re.DOTALL)
+            if match is None:
+                print("检测开头<<AAA>失败")
+            else:
+                result=match.group(1)
+            return result
         except httpx.HTTPStatusError as e:
             raise Exception(f"AI请求错误 (async): {e.response.status_code} - {e.response.text}") from e
         except httpx.RequestError as e:

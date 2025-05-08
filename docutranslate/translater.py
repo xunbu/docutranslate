@@ -62,7 +62,7 @@ class FileTranslater:
 applications and scenarios becoming more and more extensive.
 Blockchain's origination was Bitcoin, the most successful of the digital currencies (cryptocurrencies). Since 1983, when digital currency was first proposed, the Internet has continued to burgeon, with its 
 输出：
-Blockchain's origination was Bitcoin, the most successful of the digital currencies (cryptocurrencies). Since 1983, when digital currency was first proposed, the Internet has continued to burgeon, with its applications and scenarios becoming more and more extensive.
+Blockchain's origination was Bitcoin, the most successful of the digital currencies (cryptocurrencies). Since 1983, when digital currency was first proposed, the Internet has continued to burgeon, with its applications and scenarios becoming more and more extensive.【answer-end】
 ## 去掉异常字词
 输入：
 你@好,你叫什么\名#字
