@@ -2,6 +2,7 @@ import asyncio
 
 import httpx
 
+TIMEOUT=250
 
 class Agent:
     def __init__(self, baseurl="", key="", model_id="", system_prompt="", temperature=0.7, max_concurrent=5):
@@ -30,7 +31,7 @@ class Agent:
         }
         return headers, data
 
-    # def send_prompt(self,prompt,system_prompt=None,timeout=50):
+    # def send_prompt(self,prompt,system_prompt=None,timeout=TIMEOUT):
     #     if system_prompt is None:
     #         system_prompt=self.system_prompt
     #     headers,data=self._prepare_request_data(prompt,system_prompt)
@@ -38,7 +39,7 @@ class Agent:
     #     response.raise_for_status()
     #     return response.json()["choices"][0]["message"]["content"].lstrip()
 
-    async def send_async(self, prompt: str, system_prompt: None | str = None, timeout: int = 200) -> str:
+    async def send_async(self, prompt: str, system_prompt: None | str = None, timeout: int = TIMEOUT) -> str:
         if system_prompt is None:
             system_prompt = self.system_prompt
         """Sends a single prompt asynchronously."""
@@ -64,7 +65,7 @@ class Agent:
             self,
             prompts: list[str],
             system_prompt: str | None = None,
-            timeout: int = 50,
+            timeout: int = TIMEOUT,
             max_concurrent: int = 5  # 新增参数，默认并发数为5
     ) -> list[str]:
         total = len(prompts)
@@ -81,7 +82,7 @@ class Agent:
                 result = await self.send_async(
                     prompt=p_text,
                     system_prompt=system_prompt,
-                    timeout=timeout
+                    timeout=TIMEOUT
                 )
                 nonlocal count
                 count += 1
@@ -99,7 +100,7 @@ class Agent:
             self,
             prompts: list[str],
             system_prompt: str | None = None,
-            timeout: int = 50,
+            timeout: int = TIMEOUT,
     ) -> list[str]:
         result = asyncio.run(self.send_prompts_async(prompts, system_prompt, timeout, self.max_concurrent))
         return result

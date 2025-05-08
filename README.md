@@ -21,12 +21,15 @@
 ```python
 from docutranslate.translater import FileTranslater
 
+
+translater=FileTranslater(base_url="<baseurl>", 
+               key="<key>", 
+               model_id="<model-id>")
 # 不开启公式、代码识别
-FileTranslater(base_url="<baseurl>", key="<key>", model_id="<model-id>").translate_pdf_file("<pdf路径>", to_lang="中文")
+translater.translate_pdf_file("<pdf路径>", to_lang="中文")
 
 # 开启公式、代码识别（需要下载更多模型）
-FileTranslater(base_url="<baseurl>", key="<key>", model_id="<model-id>").translate_pdf_file("<pdf路径>", to_lang="中文",
-                                                                                            formula=True, code=True)
+translater.translate_pdf_file("<pdf路径>", to_lang="中文",formula=True, code=True)
 ```
 > 第一次使用时需要下载模型（约1G、使用公式、代码识别需要多约0.5G），请稍作等待  
 > 输出文件默认放在`./output`中
@@ -34,7 +37,7 @@ FileTranslater(base_url="<baseurl>", key="<key>", model_id="<model-id>").transla
 ## 使用不同的agent分别进行文本修正和翻译
 
 ```python
-from docutranslate.translater import FileTranslater
+from docutranslate import FileTranslater
 
 translater = FileTranslater()
 
@@ -49,7 +52,7 @@ translater.translate_pdf_file(pdf_path="<pdf路径>", to_lang="中文", refine_a
 ### 创建FileTranslate
 
 ```python
-from docutranslate.translater import FileTranslater
+from docutranslate import FileTranslater
 
 translater = FileTranslater(base_url="<baseurl>",
                             key="<key>",
@@ -83,10 +86,10 @@ translater.translate_markdown_file(r"<要翻译的markdown路径>",
 
 
 # 常用baseurl
-| 平台名称      | baseurl                              |
-|-----------|--------------------------------------|
-| ollama    | http://127.0.0.1:11434/v1            |
+| 平台名称     | baseurl                              |
+|----------|--------------------------------------|
+| ollama   | http://127.0.0.1:11434/v1            |
 | lm studio | http://127.0.0.1:1234/v1             |
-| openai    | https://api.openai.com/v1/           |
-| deepseek  | https://api.deepseek.com/v1          |
-| 智谱ai      | https://open.bigmodel.cn/api/paas/v4 |
+| openai   | https://api.openai.com/v1/           |
+| deepseek | https://api.deepseek.com/v1          |
+| 智谱ai     | https://open.bigmodel.cn/api/paas/v4 |
