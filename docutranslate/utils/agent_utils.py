@@ -24,7 +24,7 @@ class Agent:
         data = {
             "model": self.model_id,
             "messages": [
-                {"role": "system", "content": "所有回复必须严格以<<AAA>>开头，包括简短回答。示例：\n<<AAA>>这是示例回答\n"+system_prompt},
+                {"role": "system", "content": "回复必须严格以BEGIN>>开头，包括简短回答。\n示例:BEGIN>>这是示例回答\n"+system_prompt},
                 {"role": "user", "content": prompt}
             ],
             "temperature": temperature,
@@ -54,10 +54,10 @@ class Agent:
             )
             response.raise_for_status()
             result=response.json()["choices"][0]["message"]["content"]
-            pattern=r"<<AAA>>(.*)"
+            pattern=r"BEGIN>>(.*)"
             match= re.search(pattern,result, re.DOTALL)
             if match is None:
-                print("检测开头<<AAA>失败")
+                print("检测开头`BEGIN>>`失败")
             else:
                 result=match.group(1)
             return result

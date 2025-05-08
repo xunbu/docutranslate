@@ -6,9 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/translater.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/translater.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docutranslate/utils/agent_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/agent_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -109,29 +107,6 @@
     <configuration name="regex_中文.html" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/filetranslate/tests/output/regex_中文.html" useBuiltInWebServerPort="true">
       <method v="2" />
     </configuration>
-    <configuration name="PDFtranslater (2)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="FileTranslate" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/filetranslate_packages" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/filetranslate_packages/PDFtranslater.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <module name="filetranslate" />
       <option name="ENV_FILES" value="" />
@@ -147,6 +122,29 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="agent_utils" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="FileTranslate" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/docutranslate/utils" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/docutranslate/utils/agent_utils.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -279,9 +277,9 @@
       <list>
         <item itemvalue="Python.test1" />
         <item itemvalue="JavaScript 调试.regex_中文.html" />
+        <item itemvalue="Python.agent_utils" />
         <item itemvalue="JavaScript 调试.output.html (1)" />
         <item itemvalue="JavaScript 调试.output.html" />
-        <item itemvalue="Python.PDFtranslater (2)" />
       </list>
     </recent_temporary>
   </component>
@@ -309,7 +307,8 @@
       <workItem from="1746694671369" duration="2403000" />
       <workItem from="1746697418777" duration="120000" />
       <workItem from="1746699070198" duration="51000" />
-      <workItem from="1746700998566" duration="3875000" />
+      <workItem from="1746700998566" duration="4012000" />
+      <workItem from="1746705145591" duration="2321000" />
     </task>
     <servers />
   </component>
@@ -318,15 +317,16 @@
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/filetranslate$test.coverage" NAME="test 覆盖结果" MODIFIED="1746677277745" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
-    <SUITE FILE_PATH="coverage/PDFtranslate$translater.coverage" NAME="translater 覆盖结果" MODIFIED="1746600434803" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages" />
-    <SUITE FILE_PATH="coverage/filetranslate$test1.coverage" NAME="test1 覆盖结果" MODIFIED="1746704682491" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
+    <SUITE FILE_PATH="coverage/filetranslate$agent_utils.coverage" NAME="agent_utils 覆盖结果" MODIFIED="1746706572495" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/docutranslate/utils" />
+    <SUITE FILE_PATH="coverage/filetranslate$test1.coverage" NAME="test1 覆盖结果" MODIFIED="1746707472556" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
     <SUITE FILE_PATH="coverage/PDFtranslate$PDFtranslater__1_.coverage" NAME="PDFtranslater (1) 覆盖结果" MODIFIED="1746633258205" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages" />
     <SUITE FILE_PATH="coverage/PDFtranslate$convert.coverage" NAME="convert 覆盖结果" MODIFIED="1746596984213" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages/utils" />
     <SUITE FILE_PATH="coverage/PDFtranslate$agent_utils.coverage" NAME="agent_utils 覆盖结果" MODIFIED="1746617703678" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages/utils" />
+    <SUITE FILE_PATH="coverage/PDFtranslate$markdown_splitter.coverage" NAME="markdown_splitter 覆盖结果" MODIFIED="1746599883603" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages/utils" />
+    <SUITE FILE_PATH="coverage/PDFtranslate$translater.coverage" NAME="translater 覆盖结果" MODIFIED="1746600434803" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages" />
     <SUITE FILE_PATH="coverage/PDFtranslate$markdown_utils.coverage" NAME="markdown_utils 覆盖结果" MODIFIED="1746598797872" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages/utils" />
     <SUITE FILE_PATH="coverage/PDFtranslate$test.coverage" NAME="test 覆盖结果" MODIFIED="1746629433597" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
     <SUITE FILE_PATH="coverage/filetranslate$PDFtranslater__2_.coverage" NAME="PDFtranslater (2) 覆盖结果" MODIFIED="1746679546680" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/filetranslate_packages" />
-    <SUITE FILE_PATH="coverage/PDFtranslate$markdown_splitter.coverage" NAME="markdown_splitter 覆盖结果" MODIFIED="1746599883603" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages/utils" />
     <SUITE FILE_PATH="coverage/PDFtranslate$.coverage" NAME=" 覆盖结果" MODIFIED="1746588350286" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/decorator" />
   </component>
 </project>
