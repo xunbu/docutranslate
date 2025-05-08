@@ -1,10 +1,14 @@
-# FileTranslate
-## 一个使用大预言模型(llm)翻译pdf和markdown的包
+# 简介 
+## FileTranslate
+一个使用大预言模型(llm)翻译pdf和markdown的包
+  
+[github主页](https://github.com/xunbu/filetranslate)
 
 # 安装
-## 使用pip
-`pip install filetranslate`
-## 使用uv
+使用pip  
+`pip install filetranslate`  
+
+使用uv  
 `uv add filetranslate`
 
 # 前置条件（获取大模型平台的baseurl、key、model-id）
