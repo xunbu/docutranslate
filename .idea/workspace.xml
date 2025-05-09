@@ -5,8 +5,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/docutranslate/Agents/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docutranslate/Agents/markdown_agent.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/docutranslate/utils/docling_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate/decorator/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate/decorator/markdown_mask.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate/decorator/time.py" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/docutranslate/translater.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/translater.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate/utils/agent_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/Agents/agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate/utils/convert.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/convert.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,43 +42,43 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "JavaScript 调试.output.html (1).executor": "Run",
-    "JavaScript 调试.output.html.executor": "Run",
-    "JavaScript 调试.regex_中文.html.executor": "Run",
-    "JavaScript 调试.test2_英文.html.executor": "Run",
-    "JavaScript 调试.test4-1_中文.html.executor": "Run",
-    "JavaScript 调试.互联网认证授权机制_英文.html.executor": "Run",
-    "JavaScript 调试.毕业论文_英文.html.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python 测试.Python 测试 (markdown_mask.py 内).executor": "Run",
-    "Python 测试.markdown_mask.Test.test_basic_link_masking 的 Python 测试.executor": "Run",
-    "Python.PDFtranslater (1).executor": "Run",
-    "Python.PDFtranslater (2).executor": "Run",
-    "Python.agent_utils.executor": "Run",
-    "Python.convert.executor": "Run",
-    "Python.markdown_splitter.executor": "Run",
-    "Python.markdown_utils.executor": "Run",
-    "Python.test.executor": "Run",
-    "Python.test1.executor": "Run",
-    "Python.test2.executor": "Run",
-    "Python.test3.executor": "Run",
-    "Python.translater.executor": "Debug",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/jxgm/Desktop/FileTranslate/tests/resource",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "Errors",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;JavaScript 调试.output.html (1).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.output.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.regex_中文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.test2_英文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.test4-1_中文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.互联网认证授权机制_英文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.毕业论文_英文.html.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python 测试.Python 测试 (markdown_mask.py 内).executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.markdown_mask.Test.test_basic_link_masking 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python.PDFtranslater (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.PDFtranslater (2).executor&quot;: &quot;Run&quot;,
+    &quot;Python.agent_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.convert.executor&quot;: &quot;Run&quot;,
+    &quot;Python.markdown_splitter.executor&quot;: &quot;Run&quot;,
+    &quot;Python.markdown_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test1.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test2.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test3.executor&quot;: &quot;Run&quot;,
+    &quot;Python.translater.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/jxgm/Desktop/FileTranslate/tests/resource&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;Errors&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\tests\resource" />
@@ -77,6 +87,8 @@
       <recent name="C:\Users\jxgm\Desktop\PDFtranslate\pdftranslate_packages\output" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\jxgm\Desktop\FileTranslate\tests\resource" />
+      <recent name="C:\Users\jxgm\Desktop\FileTranslate\docutranslate\Agents" />
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\tests" />
       <recent name="C:\Users\jxgm\Desktop\PDFtranslate\pdf" />
     </key>
@@ -106,10 +118,7 @@
     <configuration name="毕业论文_英文.html" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/filetranslate/tests/output/毕业论文_英文.html" useBuiltInWebServerPort="true">
       <method v="2" />
     </configuration>
-    <configuration name="test2_英文.html" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/filetranslate/tests/output/test2_英文.html" useBuiltInWebServerPort="true">
-      <method v="2" />
-    </configuration>
-    <configuration name="test4-1_中文.html" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/filetranslate/tests/output/test4-1_中文.html" useBuiltInWebServerPort="true">
+    <configuration name="互联网认证授权机制_英文.html" type="JavascriptDebugType" temporary="true" nameIsGenerated="true" uri="http://localhost:63342/filetranslate/tests/resource/互联网认证授权机制_英文.html" useBuiltInWebServerPort="true">
       <method v="2" />
     </configuration>
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
@@ -127,6 +136,29 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="convert" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="FileTranslate" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/docutranslate/utils" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/docutranslate/utils/convert.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -173,6 +205,29 @@
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tests/test3.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="translater" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="FileTranslate" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/docutranslate" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/docutranslate/translater.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -281,10 +336,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.test3" />
-        <item itemvalue="JavaScript 调试.毕业论文_英文.html" />
         <item itemvalue="Python.test1" />
-        <item itemvalue="JavaScript 调试.test2_英文.html" />
-        <item itemvalue="JavaScript 调试.test4-1_中文.html" />
+        <item itemvalue="Python.convert" />
+        <item itemvalue="Python.translater" />
+        <item itemvalue="JavaScript 调试.毕业论文_英文.html" />
       </list>
     </recent_temporary>
   </component>
@@ -317,6 +372,12 @@
       <workItem from="1746715913355" duration="823000" />
       <workItem from="1746717711857" duration="114000" />
       <workItem from="1746718953100" duration="3871000" />
+      <workItem from="1746771270710" duration="2828000" />
+      <workItem from="1746774755487" duration="4243000" />
+      <workItem from="1746779030113" duration="1102000" />
+      <workItem from="1746780247620" duration="1776000" />
+      <workItem from="1746782039257" duration="307000" />
+      <workItem from="1746782370978" duration="3228000" />
     </task>
     <servers />
   </component>
@@ -326,17 +387,19 @@
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
     <SUITE FILE_PATH="coverage/filetranslate$test.coverage" NAME="test 覆盖结果" MODIFIED="1746677277745" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
     <SUITE FILE_PATH="coverage/filetranslate$agent_utils.coverage" NAME="agent_utils 覆盖结果" MODIFIED="1746708534311" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/docutranslate/utils" />
-    <SUITE FILE_PATH="coverage/filetranslate$test1.coverage" NAME="test1 覆盖结果" MODIFIED="1746753086503" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
+    <SUITE FILE_PATH="coverage/filetranslate$convert.coverage" NAME="convert 覆盖结果" MODIFIED="1746780691113" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/docutranslate/utils" />
+    <SUITE FILE_PATH="coverage/filetranslate$test1.coverage" NAME="test1 覆盖结果" MODIFIED="1746782563450" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
     <SUITE FILE_PATH="coverage/PDFtranslate$PDFtranslater__1_.coverage" NAME="PDFtranslater (1) 覆盖结果" MODIFIED="1746633258205" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages" />
     <SUITE FILE_PATH="coverage/PDFtranslate$convert.coverage" NAME="convert 覆盖结果" MODIFIED="1746596984213" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages/utils" />
     <SUITE FILE_PATH="coverage/PDFtranslate$agent_utils.coverage" NAME="agent_utils 覆盖结果" MODIFIED="1746617703678" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages/utils" />
     <SUITE FILE_PATH="coverage/PDFtranslate$markdown_splitter.coverage" NAME="markdown_splitter 覆盖结果" MODIFIED="1746599883603" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages/utils" />
-    <SUITE FILE_PATH="coverage/filetranslate$test3.coverage" NAME="test3 覆盖结果" MODIFIED="1746755666962" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
+    <SUITE FILE_PATH="coverage/filetranslate$test3.coverage" NAME="test3 覆盖结果" MODIFIED="1746785064481" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
     <SUITE FILE_PATH="coverage/PDFtranslate$translater.coverage" NAME="translater 覆盖结果" MODIFIED="1746600434803" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages" />
     <SUITE FILE_PATH="coverage/PDFtranslate$markdown_utils.coverage" NAME="markdown_utils 覆盖结果" MODIFIED="1746598797872" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages/utils" />
     <SUITE FILE_PATH="coverage/PDFtranslate$test.coverage" NAME="test 覆盖结果" MODIFIED="1746629433597" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
     <SUITE FILE_PATH="coverage/filetranslate$PDFtranslater__2_.coverage" NAME="PDFtranslater (2) 覆盖结果" MODIFIED="1746679546680" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/filetranslate_packages" />
     <SUITE FILE_PATH="coverage/filetranslate$test2.coverage" NAME="test2 覆盖结果" MODIFIED="1746710994589" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
+    <SUITE FILE_PATH="coverage/filetranslate$translater.coverage" NAME="translater 覆盖结果" MODIFIED="1746779982501" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/docutranslate" />
     <SUITE FILE_PATH="coverage/PDFtranslate$.coverage" NAME=" 覆盖结果" MODIFIED="1746588350286" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/decorator" />
   </component>
 </project>

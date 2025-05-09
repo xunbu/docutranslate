@@ -1,18 +1,28 @@
 import asyncio
+
 import re
+from typing import TypedDict
 
 import httpx
+
+class AgentArgs(TypedDict, total=False):
+    baseurl:str
+    key :str
+    model_id:str
+    system_prompt:str
+    temperature:float
+    max_concurrent:int
+
 
 TIMEOUT=250
 
 class Agent:
-    def __init__(self, baseurl="", key="", model_id="", system_prompt="", temperature=0.7, max_concurrent=5):
+    def __init__(self, baseurl="", key="", model_id="", system_prompt="", temperature=0.7, max_concurrent=6):
         self.baseurl = baseurl
         self.key = key
         self.model_id = model_id
         self.system_prompt = system_prompt
         self.temperature = temperature
-        # self.client=httpx.Client()
         self.client_async = httpx.AsyncClient()
         self.max_concurrent = max_concurrent
 
@@ -24,7 +34,7 @@ class Agent:
         data = {
             "model": self.model_id,
             "messages": [
-                {"role": "system", "content": "回复必须以【SSS】开头（该规则适用于之后的所有例子），必须遵守。示例：【SSS】这是示例回答\n"+system_prompt},
+                {"role": "system", "content": "重要：所有回复必须以【SSS】开头（该规则适用于之后的所有例子）。示例：【SSS】这是示例回答\n"+system_prompt},
                 {"role": "user", "content": prompt}
             ],
             "temperature": temperature,
@@ -83,7 +93,7 @@ class Agent:
                 result = await self.send_async(
                     prompt=p_text,
                     system_prompt=system_prompt,
-                    timeout=TIMEOUT
+                    timeout=timeout
                 )
                 nonlocal count
                 count += 1
