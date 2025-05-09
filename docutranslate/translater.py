@@ -82,7 +82,7 @@ class FileTranslater:
         print("正在修正markdown")
         chuncks = self._split_markdown_into_chunks()
         result: list[str] = refine_agent.send_prompts(chuncks, timeout=10000)
-        self.markdown = "".join(result)
+        self.markdown = "\n".join(result)
         print("markdown已修正")
         return self.markdown
 
@@ -90,7 +90,7 @@ class FileTranslater:
         print("正在翻译markdown")
         chuncks = self._split_markdown_into_chunks()
         result: list[str] = translate_agent.send_prompts(chuncks, timeout=10000)
-        self.markdown = "".join(result)
+        self.markdown = "\n".join(result)
         print("翻译完成")
         return self.markdown
 

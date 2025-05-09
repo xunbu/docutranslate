@@ -10,16 +10,16 @@ class MDRefineAgent(Agent):
 你是一个修正markdown文本的专家。
 # 工作
 找到markdown片段的不合理之处，对于缺失的句子，应该查看缺失的语句是否可能被错误的放在了其他位置，并通过重组段落、去掉异常字词修复不合理之处。
-尽量忠实于原文。输入文本开头和结尾如有空行请保留，形如<ph-abc123>的占位符不要改变。code和latex保持原文。
+尽量忠实于原文。形如<ph-abc123>的占位符不要改变。code和latex保持原文。保留正确的空行。
 # 输出
-修正后的markdown纯文本(不能有多余文字)
+修正后的markdown纯文本
 # 示例
 ## 调整顺序
 输入：
 applications and scenarios becoming more and more extensive.
 Blockchain's origination was Bitcoin, the most successful of the digital currencies (cryptocurrencies). Since 1983, when digital currency was first proposed, the Internet has continued to burgeon, with its 
 输出：
-Blockchain's origination was Bitcoin, the most successful of the digital currencies (cryptocurrencies). Since 1983, when digital currency was first proposed, the Internet has continued to burgeon, with its applications and scenarios becoming more and more extensive.【answer-end】
+Blockchain's origination was Bitcoin, the most successful of the digital currencies (cryptocurrencies). Since 1983, when digital currency was first proposed, the Internet has continued to burgeon, with its applications and scenarios becoming more and more extensive.
 ## 去掉异常字词
 输入：
 一道\题@#目:\(x_1+1=2\)
@@ -35,12 +35,11 @@ class MDTranslateAgent(Agent):
 你是一个翻译markdown文本的专家。
 # 工作
 将输入的markdown文本翻译成{to_lang}。
-尽量忠实于原文，修改明显错误的字符。
-输入文本开头和结尾如有空行请保留。
+请忠实于原文。修改明显错误的字符。保留正确的空行。
 形如<ph-abc123>的占位符不要改变。
 code和latex保持原文。
 # 输出
-翻译后的markdown纯文本(不能有多余文字)
+翻译后的markdown纯文本
 # 示例
 ## 英文翻译为中文：
 输入：

@@ -24,7 +24,7 @@
 
 # 前置条件
 
-## huggingface换源
+## huggingface换源（不能科学上网的友友看这）
 
 无法访问的huggingface的电脑在以下操作时请换源[点击测试](https://huggingface.co)
 
@@ -121,13 +121,13 @@ translater.read_file("<文件路径>").save_as_markdown()
 ```python
 from docutranslate import FileTranslater
 
-translater = FileTranslater(base_url="<baseurl>",# 默认的模型baseurl
-                            key="<key>",#默认的模型api-key
+translater = FileTranslater(base_url="<baseurl>",  # 默认的模型baseurl
+                            key="<key>",  # 默认的模型api-key
                             model_id="<model-id>",  # 默认的模型id
                             chunksize=4000,  # markdown分块长度，分块越大效果越好，不建议超过4096
                             max_concurrent=6,  # 并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
-                            docling_artifact=None, #使用提前下载好的docling模型
-                            tips=True#开场提示
+                            docling_artifact=None,  # 使用提前下载好的docling模型
+                            tips=True  # 开场提示
                             )
 
 ```
@@ -161,6 +161,7 @@ translater.translate_file(r"<要翻译的文件路径>",
 | 阿里云百炼      | [点击获取](https://bailian.console.aliyun.com/?tab=model#/api-key)                        | https://dashscope.aliyuncs.com/compatible-mode/v1 |
 | 火山引擎       | [点击获取](https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey?apikey=%7B%7D) | https://ark.cn-beijing.volces.com/api/v3          |
 | 硅基流动       | [点击获取](https://cloud.siliconflow.cn/account/ak)                                       | https://api.siliconflow.cn/v1                     |
+| DMXAPI     | [点击获取](https://www.dmxapi.cn/token)                                                   | https://www.dmxapi.cn/v1                          |
 
 # FAQ
 
