@@ -52,7 +52,8 @@ os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 由于需要使用大语言模型进行markdown调整与翻译，所以需要预先获取模型的baseurl、key、model-id  
 常见的大模型平台baseurl与api获取方式可见[常用ai平台](#常用ai平台)
-> 比较推荐的模型有阿里云的qwen-plus、智谱的glm-4-air、glm-z1-flash等。免费的智谱glm-4-flash能用但效果欠佳(2025.5)
+> 比较推荐的模型有阿里云的qwen-plus、智谱的glm-4-air等。免费的智谱glm-4-flash也能用(2025.5)。  
+> 推理模型需要支持api请求响应中区分`reasoning_content`和`content`（详见平台开发手册，ollama、lmstudio需开启对应选项）
 
 # 使用方式
 
@@ -138,7 +139,7 @@ translater.translate_file(r"<要翻译的文件路径>",
                           to_lang="中文",
                           formula=False,  # 是否启用公式识别
                           code=False,  # 是否启用代码识别
-                          refine=True,  # 是否在翻译前先修正markdown文本（较耗时）
+                          refine=False,  # 是否在翻译前先修正一遍markdown文本（较耗时）
                           output_format="markdown",  # "markdown"与"html"两种输出格式
                           output_dir="./output",  # 默认输出文件夹
                           refine_agent=None,  # 修正Agent

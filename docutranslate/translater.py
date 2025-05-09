@@ -190,7 +190,7 @@ class FileTranslater:
 
     def translate_file(self, file_path: Path | str | None = None, to_lang="中文", output_dir="./output",
                        formula=False,
-                       code=False, output_format: Literal["markdown", "html"] = "markdown", refine=True,
+                       code=False, output_format: Literal["markdown", "html"] = "markdown", refine=False,
                        refine_agent: Agent | None = None, translate_agent: Agent | None = None):
         if file_path is None:
             assert self.file_path is not None, "未输入文件路径"

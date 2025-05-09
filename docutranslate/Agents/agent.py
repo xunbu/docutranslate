@@ -1,20 +1,22 @@
 import asyncio
 
-import re
+# import re
 from typing import TypedDict
 
 import httpx
 
+
 class AgentArgs(TypedDict, total=False):
-    baseurl:str
-    key :str
-    model_id:str
-    system_prompt:str
-    temperature:float
-    max_concurrent:int
+    baseurl: str
+    key: str
+    model_id: str
+    system_prompt: str
+    temperature: float
+    max_concurrent: int
 
 
-TIMEOUT=250
+TIMEOUT = 250
+
 
 class Agent:
     def __init__(self, baseurl="", key="", model_id="", system_prompt="", temperature=0.7, max_concurrent=6):
@@ -26,7 +28,7 @@ class Agent:
         self.client_async = httpx.AsyncClient()
         self.max_concurrent = max_concurrent
 
-    def _prepare_request_data(self, prompt:str, system_prompt:str, temperature=None, top_p=0.9):
+    def _prepare_request_data(self, prompt: str, system_prompt: str, temperature=None, top_p=0.9):
         if temperature is None:
             temperature = self.temperature
         headers = {"Content-Type": "application/json",
@@ -34,7 +36,8 @@ class Agent:
         data = {
             "model": self.model_id,
             "messages": [
-                {"role": "system", "content": "重要：所有回复必须以【SSS】开头（该规则适用于之后的所有例子）。示例：【SSS】这是示例回答\n"+system_prompt},
+                {"role": "system", "content": system_prompt},
+                # {"role": "system", "content": "所有回复必须以【SSS】开头（这是最高规则，适用于之后的所有例子）。示例：【SSS】这是示例回答\n"+system_prompt},
                 {"role": "user", "content": prompt}
             ],
             "temperature": temperature,
@@ -48,7 +51,7 @@ class Agent:
         """Sends a single prompt asynchronously."""
         headers, data = self._prepare_request_data(prompt, system_prompt)
         if self.baseurl.endswith("/"):
-            self.baseurl=self.baseurl[:-1]
+            self.baseurl = self.baseurl[:-1]
         try:
             response = await self.client_async.post(
                 f"{self.baseurl}/chat/completions",
@@ -57,13 +60,13 @@ class Agent:
                 timeout=timeout
             )
             response.raise_for_status()
-            result=response.json()["choices"][0]["message"]["content"]
-            pattern=r".*【SSS】(.*)"
-            match= re.search(pattern,result, re.DOTALL)
-            if match is None:
-                print("检测开头`【SSS】`失败")
-            else:
-                result=match.group(1)
+            result = response.json()["choices"][0]["message"]["content"]
+            # pattern = r".*【SSS】(.*)"
+            # match = re.search(pattern, result, re.DOTALL)
+            # if match is None:
+            #     print("检测开头`【SSS】`失败")
+            # else:
+            #     result = match.group(1)
             return result
         except httpx.HTTPStatusError as e:
             raise Exception(f"AI请求错误 (async): {e.response.status_code} - {e.response.text}") from e
@@ -81,9 +84,6 @@ class Agent:
     ) -> list[str]:
         total = len(prompts)
         count = 0
-        """
-        Sends multiple prompts asynchronously, limiting concurrent requests.
-        """
         semaphore = asyncio.Semaphore(max_concurrent)
         tasks = []
 
