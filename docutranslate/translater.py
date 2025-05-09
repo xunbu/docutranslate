@@ -12,7 +12,7 @@ from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_ur
 
 class FileTranslater:
     def __init__(self, file_path: Path | str | None = None, chunksize: int = 4096, base_url="", key=None,
-                 model_id="", temperature=0.7, max_concurrent=6, docling_artifact: Path | str | None = None):
+                 model_id="", temperature=0.7, max_concurrent=6, docling_artifact: Path | str | None = None,tips=True):
         if isinstance(file_path, str):
             file_path = Path(file_path)
         self.file_path: Path = file_path
@@ -26,7 +26,15 @@ class FileTranslater:
         self.model_id: str = model_id
         self.temperature = temperature
         self.docling_artifact=docling_artifact
-
+        if tips:
+            print("""
+=======
+[docutranslate](https://github.com/xunbu/docutranslate)
+>以下操作会自动从[huggingface](https://huggingface.co)下载模型，windows需要使用**管理员模式**打开IDE运行脚本，并按需换源
+- 第一次使用该库读取、翻译非markdown文本
+- 第一次使用该库的公式识别或代码识别功能
+=======
+""")
     def _mask_uris_in_markdown(self):
         self.markdown = uris2placeholder(self.markdown, self._mask_dict)
         return self

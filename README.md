@@ -60,8 +60,8 @@ os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 以下操作会自动从[huggingface](https://huggingface.co)下载模型，windows需要使用**管理员模式**打开IDE运行脚本，并按需换源
 
-- 第一次读取非markdown文本
-- 第一次使用公式识别或代码识别功能
+- 第一次使用该库读取、翻译非markdown文本
+- 第一次使用该库的公式识别或代码识别功能
 
 ## 翻译文件
 
@@ -120,11 +120,13 @@ translater.read_file("<文件路径>").save_as_markdown()
 ```python
 from docutranslate import FileTranslater
 
-translater = FileTranslater(base_url="<baseurl>",
-                            key="<key>",
-                            model_id="<model-id>",  # 使用的模型id
-                            chunksize=4000,  # 【可选】markdown分块长度，分块越大效果越好，不建议超过4096
-                            max_concurrent=6  # 【可选】并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
+translater = FileTranslater(base_url="<baseurl>",# 默认的模型baseurl
+                            key="<key>",#默认的模型api-key
+                            model_id="<model-id>",  # 默认的模型id
+                            chunksize=4000,  # markdown分块长度，分块越大效果越好，不建议超过4096
+                            max_concurrent=6,  # 并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
+                            docling_artifact=None, #使用提前下载好的docling模型
+                            tips=True#开场提示
                             )
 
 ```
