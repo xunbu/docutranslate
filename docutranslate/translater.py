@@ -53,7 +53,7 @@ class FileTranslater:
 你是一个修正markdown文本的专家。
 # 工作
 找到markdown片段的不合理之处，对于缺失的句子，应该查看缺失的语句是否可能被错误的放在了其他位置，并通过重组段落、去掉异常字词修复不合理之处。
-尽量忠实于原文。形如<ph-abc123>的占位符不要改变。latex不要改变。
+尽量忠实于原文。形如<ph-abc123>的占位符不要改变。code和latex保持原文。
 # 输出
 修正后的markdown纯文本
 # 示例
@@ -86,7 +86,7 @@ Blockchain's origination was Bitcoin, the most successful of the digital currenc
 将输入的markdown文本翻译成{0}。
 尽量忠实于原文(如空行)。
 形如<ph-abc123>的占位符不要改变。
-code和formula保持原文。
+code和latex保持原文。
 # 输出
 翻译后的markdown纯文本
 # 示例
@@ -97,12 +97,12 @@ hello<ph-aaaaaa>, what's your name?
 你好<ph-aaaaaa>，你叫什么名字？\no_think""".format(to_lang)
         return agent
 
-    def read_pdf_as_markdown(self, pdf: Path |str|None = None, formula=False, code=False, save=False):
+    def read_pdf_as_markdown(self, pdf: Path | str | None = None, formula=False, code=False, save=False):
         print("正在将pdf转换为markdown")
         if pdf is None:
             pdf = self.file_path
-        if isinstance(pdf,str):
-            pdf=Path(pdf)
+        if isinstance(pdf, str):
+            pdf = Path(pdf)
         self.markdown = pdf2markdown_embed_images(pdf, formula, code)
         print("pdf已转换")
         if save:
@@ -151,6 +151,9 @@ hello<ph-aaaaaa>, what's your name?
         print(f"文件已写入{full_name}")
         return self
 
+    def export_to_markdown(self):
+        return self.markdown
+
     def save_as_html(self, filename: str | Path = "output.html", output_dir: str | Path = "./output"):
         if isinstance(filename, str):
             filename = Path(filename)
@@ -160,13 +163,20 @@ hello<ph-aaaaaa>, what's your name?
         # 确保输出目录存在
         output_dir.mkdir(parents=True, exist_ok=True)
         full_name = output_dir / filename
-        markdowner = markdown2.Markdown(extras=['tables', 'fenced-code-blocks', 'mermaid',"code-friendly"])
+        html = self.export_to_html(str(filename.resolve().stem))
+        with open(full_name, "w") as file:
+            file.write(html)
+        print(f"文件已写入{full_name}")
+        return self
+
+    def export_to_html(self, title="title") -> str:
+        markdowner = markdown2.Markdown(extras=['tables', 'fenced-code-blocks', 'mermaid', "code-friendly"])
 
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>{filename}</title>
+    <title>{title}</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@latest/css/pico.min.css">
         <style>
         html {{
@@ -211,10 +221,7 @@ hello<ph-aaaaaa>, what's your name?
 
 </html>
 """
-        with open(full_name, "w") as file:
-            file.write(html)
-        print(f"文件已写入{full_name}")
-        return self
+        return html
 
     def translate_pdf_file(self, pdf_path: Path | str | None = None, to_lang="中文", output_dir="./output",
                            formula=False,
