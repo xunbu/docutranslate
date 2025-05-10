@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Literal
 
 import markdown2
-import mdformat
+# import mdformat
 
 from docutranslate.Agents import MDRefineAgent, MDTranslateAgent
 from docutranslate.Agents.agent import Agent, AgentArgs
@@ -13,7 +13,8 @@ from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_ur
 
 class FileTranslater:
     def __init__(self, file_path: Path | str | None = None, chunksize: int = 4096, base_url="", key=None,
-                 model_id="", temperature=0.7, max_concurrent=20, docling_artifact: Path | str | None = None,tips=True):
+                 model_id="", temperature=0.7, max_concurrent=20, docling_artifact: Path | str | None = None,
+                 timeout=1000, tips=True):
         if isinstance(file_path, str):
             file_path = Path(file_path)
         self.file_path: Path = file_path
@@ -26,7 +27,8 @@ class FileTranslater:
         self.key: str = key if key is not None else "xx"
         self.model_id: str = model_id
         self.temperature = temperature
-        self.docling_artifact=docling_artifact
+        self.docling_artifact = docling_artifact
+        self.timeout = timeout
         if tips:
             print("""
 =======
@@ -36,8 +38,12 @@ class FileTranslater:
 - 第一次使用该库的公式识别或代码识别功能
 =======
 """)
+
     def _markdown_format(self):
-        self.markdown=mdformat.text(self.markdown)
+        # 该方法还需要改进
+        # self.markdown=mdformat.text(self.markdown)
+        pass
+
     def _mask_uris_in_markdown(self):
         self.markdown = uris2placeholder(self.markdown, self._mask_dict)
         return self
@@ -57,11 +63,13 @@ class FileTranslater:
             "key": self.key,
             "model_id": self.model_id,
             "temperature": self.temperature,
-            "max_concurrent": self.max_concurrent
+            "max_concurrent": self.max_concurrent,
+            "timeout": self.timeout
         }
         return result
 
-    def read_file(self, file_path: Path | str | None = None, formula=False, code=False, save=False):
+    def read_file(self, file_path: Path | str | None = None, formula=False, code=False, save=False,
+                  save_format: Literal["markdown", "html"] = "markdown", refine=False, refine_agent:Agent|None=None):
         if file_path is None:
             if self.file_path is None:
                 raise Exception("未设置文件路径")
@@ -77,22 +85,32 @@ class FileTranslater:
             print(f"正在将{file_path.resolve().name}转换为markdown")
             self.markdown = file2markdown_embed_images(file_path, formula, code, artifacts_path=self.docling_artifact)
             print("已转换为markdown")
+        if refine:
+            self.refine_markdown_by_agent(refine_agent)
         if save:
-            self.save_as_markdown(filename=f"{file_path.stem}.md")
+            if save_format == "html":
+                self.save_as_html(filename=f"{file_path.stem}.html")
+            else:
+                self.save_as_markdown(filename=f"{file_path.stem}.md")
         return self
 
     def refine_markdown_by_agent(self, refine_agent: Agent | None = None) -> str:
         print("正在修正markdown")
         chuncks = self._split_markdown_into_chunks()
-        result: list[str] = refine_agent.send_prompts(chuncks, timeout=10000)
+        if refine_agent is None:
+            refine_agent = MDRefineAgent(**self.default_agent_params())
+        result: list[str] = refine_agent.send_prompts(chuncks)
         self.markdown = "\n".join(result)
         print("markdown已修正")
         return self.markdown
 
-    def translate_markdown_by_agent(self, translate_agent: Agent):
+    def translate_markdown_by_agent(self, translate_agent: Agent|None=None):
         print("正在翻译markdown")
+
         chuncks = self._split_markdown_into_chunks()
-        result: list[str] = translate_agent.send_prompts(chuncks, timeout=10000)
+        if translate_agent is None:
+            translate_agent = MDTranslateAgent(**self.default_agent_params())
+        result: list[str] = translate_agent.send_prompts(chuncks)
         self.markdown = "\n".join(result)
         print("翻译完成")
         return self.markdown
@@ -110,15 +128,15 @@ class FileTranslater:
         # 确保输出目录存在
         output_dir.mkdir(parents=True, exist_ok=True)
         full_name = output_dir / filename
-        #输出前格式化markdown
+        # 输出前格式化markdown
         self._markdown_format()
         with open(full_name, "w") as file:
             file.write(self.markdown)
-        print(f"文件已写入{full_name}")
+        print(f"文件已写入{full_name.resolve()}")
         return self
 
     def export_to_markdown(self):
-        #输出前格式化markdown
+        # 输出前格式化markdown
         self._markdown_format()
         return self.markdown
 
@@ -138,7 +156,7 @@ class FileTranslater:
         html = self.export_to_html(str(filename.resolve().stem))
         with open(full_name, "w") as file:
             file.write(html)
-        print(f"文件已写入{full_name}")
+        print(f"文件已写入{full_name.resolve()}")
         return self
 
     def export_to_html(self, title="title") -> str:
@@ -207,11 +225,7 @@ class FileTranslater:
         self.read_file(file_path, formula=formula, code=code)
         self._mask_uris_in_markdown()
         if refine:
-            if refine_agent is None:
-                refine_agent = MDRefineAgent(**self.default_agent_params())
             self.refine_markdown_by_agent(refine_agent)
-        if translate_agent is None:
-            translate_agent = MDTranslateAgent(to_lang=to_lang, **self.default_agent_params())
         self.translate_markdown_by_agent(translate_agent)
         self._unmask_uris_in_markdown()
         if output_format == "markdown":

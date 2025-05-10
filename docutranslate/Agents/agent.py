@@ -13,13 +13,14 @@ class AgentArgs(TypedDict, total=False):
     system_prompt: str
     temperature: float
     max_concurrent: int
+    timeout: int
 
 
-TIMEOUT = 250
+TIMEOUT = 500
 
 
 class Agent:
-    def __init__(self, baseurl="", key="", model_id="", system_prompt="", temperature=0.7, max_concurrent=6):
+    def __init__(self, baseurl="", key="", model_id="", system_prompt="", temperature=0.7, max_concurrent=6,timeout:int=TIMEOUT):
         self.baseurl = baseurl
         self.key = key
         self.model_id = model_id
@@ -27,6 +28,7 @@ class Agent:
         self.temperature = temperature
         self.client_async = httpx.AsyncClient()
         self.max_concurrent = max_concurrent
+        self.timeout=timeout
 
     def _prepare_request_data(self, prompt: str, system_prompt: str, temperature=None, top_p=0.9):
         if temperature is None:
@@ -45,9 +47,10 @@ class Agent:
         }
         return headers, data
 
-    async def send_async(self, prompt: str, system_prompt: None | str = None, timeout: int = TIMEOUT) -> str:
+    async def send_async(self, prompt: str, system_prompt: None | str = None) -> str:
         if system_prompt is None:
             system_prompt = self.system_prompt
+
         """Sends a single prompt asynchronously."""
         headers, data = self._prepare_request_data(prompt, system_prompt)
         if self.baseurl.endswith("/"):
@@ -57,7 +60,7 @@ class Agent:
                 f"{self.baseurl}/chat/completions",
                 json=data,
                 headers=headers,
-                timeout=timeout
+                timeout=self.timeout
             )
             response.raise_for_status()
             result = response.json()["choices"][0]["message"]["content"]
@@ -79,21 +82,18 @@ class Agent:
             self,
             prompts: list[str],
             system_prompt: str | None = None,
-            timeout: int = TIMEOUT,
             max_concurrent: int = 5  # 新增参数，默认并发数为5
     ) -> list[str]:
         total = len(prompts)
         count = 0
         semaphore = asyncio.Semaphore(max_concurrent)
         tasks = []
-
         # 辅助协程，用于包装 self.send_async 并使用信号量
         async def send_with_semaphore(p_text: str):
             async with semaphore:  # 在进入代码块前获取信号量，退出时释放
                 result = await self.send_async(
                     prompt=p_text,
                     system_prompt=system_prompt,
-                    timeout=timeout
                 )
                 nonlocal count
                 count += 1
@@ -111,9 +111,9 @@ class Agent:
             self,
             prompts: list[str],
             system_prompt: str | None = None,
-            timeout: int = TIMEOUT,
     ) -> list[str]:
-        result = asyncio.run(self.send_prompts_async(prompts, system_prompt, timeout, self.max_concurrent))
+
+        result = asyncio.run(self.send_prompts_async(prompts, system_prompt, self.max_concurrent))
         return result
 
 

@@ -9,4 +9,5 @@ dependencies = [
     "httpx",
     "markdown2",
     "mdformat>=0.7.22",
+    "transformers>=4.50.1"
 ]

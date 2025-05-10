@@ -231,10 +231,4 @@ def split_markdown_text(markdown_text, max_block_size=4096):
 
 
 if __name__ == '__main__':
-    with open(r"C:\Users\jxgm\Desktop\FileTranslate\tests\resource\regex.md", "r") as f:
-        md = f.read()
-    chunks = split_markdown_text(md)
-    for i, chunk in enumerate(chunks):
-        print(f"块 {i + 1} (大小: {len(chunk)}):")
-        print(chunk[:100] + "..." if len(chunk) > 100 else chunk)
-        print("---")
+    pass
