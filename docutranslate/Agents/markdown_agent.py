@@ -14,9 +14,9 @@ class MDRefineAgent(Agent):
 去掉异常字词，修复错误格式。
 # 要求
 尽量忠实于原文。形如<ph-abc123>的占位符不要改变。
-code块和latex块保持原文。
+code、latex和HTML保持结构。
 # 输出
-修正后的markdown**纯文本**
+修正后的markdown纯文本（不是markdown代码块）
 # 示例
 ## 调整顺序
 输入：
@@ -41,12 +41,12 @@ class MDTranslateAgent(Agent):
 翻译输入的markdown文本
 目标语言{to_lang}
 # 要求
-请忠实于原文，适当修复异常文本。
+尽量忠实于原文。
 必要的专有名词不要翻译。
 形如<ph-abc123>的占位符不要改变。
-code块和latex块保持原文。
+code、latex和HTML只翻译说明文字，其余保持原文
 # 输出
-翻译后的markdown**纯文本**
+翻译后的markdown纯文本（不是markdown代码块）
 # 示例
 ## 英文翻译为中文：
 输入：

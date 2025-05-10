@@ -16,7 +16,7 @@ from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_ur
 
 
 class FileTranslater:
-    def __init__(self, file_path: Path | str | None = None, chunksize: int = 5000, base_url="", key=None,
+    def __init__(self, file_path: Path | str | None = None, chunksize: int = 3500, base_url="", key=None,
                  model_id="", temperature=0.7, max_concurrent=10, docling_artifact: Path | str | None = None,
                  timeout=2000, tips=True):
         if isinstance(file_path, str):
