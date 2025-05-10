@@ -3,7 +3,6 @@ import threading
 import uuid
 
 
-
 class MaskDict:
     def __init__(self):
         self._dict = {}
@@ -33,8 +32,9 @@ class MaskDict:
         with self._lock:
             return item in self._dict
 
+
 # def uris2placeholder(markdown:str, mask_dict:MaskDict):
-        ##替换整个uri
+##替换整个uri
 #     def uri2placeholder(match: re.Match):
 #         id = mask_dict.create_id()
 #         mask_dict.set(id, match.group())
@@ -44,7 +44,7 @@ class MaskDict:
 #     markdown = re.sub(uri_pattern, uri2placeholder, markdown)
 #     return markdown
 
-def uris2placeholder(markdown:str, mask_dict:MaskDict):
+def uris2placeholder(markdown: str, mask_dict: MaskDict):
     ##只替换uri里的链接部分，保留标题
     def uri2placeholder(match: re.Match):
         id = mask_dict.create_id()
@@ -54,10 +54,12 @@ def uris2placeholder(markdown:str, mask_dict:MaskDict):
     uri_pattern = r'(!?\[.*?\])\((.*?)\)'
     markdown = re.sub(uri_pattern, uri2placeholder, markdown)
     return markdown
-def placeholder2_uris(markdown:str, mask_dict:MaskDict):
-    def placeholder2uri(match:re.Match):
-        id=match.group(1)
-        uri=mask_dict.get(id)
+
+
+def placeholder2_uris(markdown: str, mask_dict: MaskDict):
+    def placeholder2uri(match: re.Match):
+        id = match.group(1)
+        uri = mask_dict.get(id)
         if uri is None:
             return match.group()
         return uri
@@ -65,7 +67,6 @@ def placeholder2_uris(markdown:str, mask_dict:MaskDict):
     ph_pattern = r"<ph-([a-zA-Z0-9]+)>"
     markdown = re.sub(ph_pattern, placeholder2uri, markdown)
     return markdown
-
 
 
 if __name__ == '__main__':

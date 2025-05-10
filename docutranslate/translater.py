@@ -2,13 +2,15 @@ from pathlib import Path
 from typing import Literal
 
 import markdown2
-# import mdformat
 
+from docutranslate.Agents import Agent, AgentArgs
 from docutranslate.Agents import MDRefineAgent, MDTranslateAgent
-from docutranslate.Agents.agent import Agent, AgentArgs
 from docutranslate.utils.convert import file2markdown_embed_images
 from docutranslate.utils.markdown_splitter import split_markdown_text
 from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
+
+
+# import mdformat
 
 
 class FileTranslater:
@@ -69,7 +71,8 @@ class FileTranslater:
         return result
 
     def read_file(self, file_path: Path | str | None = None, formula=False, code=False, save=False,
-                  save_format: Literal["markdown", "html"] = "markdown", refine=False, refine_agent:Agent|None=None):
+                  save_format: Literal["markdown", "html"] = "markdown", refine=False,
+                  refine_agent: Agent | None = None):
         if file_path is None:
             if self.file_path is None:
                 raise Exception("未设置文件路径")
@@ -104,7 +107,7 @@ class FileTranslater:
         print("markdown已修正")
         return self.markdown
 
-    def translate_markdown_by_agent(self, translate_agent: Agent|None=None):
+    def translate_markdown_by_agent(self, translate_agent: Agent | None = None):
         print("正在翻译markdown")
 
         chuncks = self._split_markdown_into_chunks()
