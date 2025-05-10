@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Literal
 
 import markdown2
+import mdformat
 
 from docutranslate.Agents import MDRefineAgent, MDTranslateAgent
 from docutranslate.Agents.agent import Agent, AgentArgs
@@ -12,7 +13,7 @@ from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_ur
 
 class FileTranslater:
     def __init__(self, file_path: Path | str | None = None, chunksize: int = 4096, base_url="", key=None,
-                 model_id="", temperature=0.7, max_concurrent=6, docling_artifact: Path | str | None = None,tips=True):
+                 model_id="", temperature=0.7, max_concurrent=20, docling_artifact: Path | str | None = None,tips=True):
         if isinstance(file_path, str):
             file_path = Path(file_path)
         self.file_path: Path = file_path
@@ -35,6 +36,8 @@ class FileTranslater:
 - 第一次使用该库的公式识别或代码识别功能
 =======
 """)
+    def _markdown_format(self):
+        self.markdown=mdformat.text(self.markdown)
     def _mask_uris_in_markdown(self):
         self.markdown = uris2placeholder(self.markdown, self._mask_dict)
         return self
@@ -107,12 +110,16 @@ class FileTranslater:
         # 确保输出目录存在
         output_dir.mkdir(parents=True, exist_ok=True)
         full_name = output_dir / filename
+        #输出前格式化markdown
+        self._markdown_format()
         with open(full_name, "w") as file:
             file.write(self.markdown)
         print(f"文件已写入{full_name}")
         return self
 
     def export_to_markdown(self):
+        #输出前格式化markdown
+        self._markdown_format()
         return self.markdown
 
     def save_as_html(self, filename: str | Path | None = None, output_dir: str | Path = "./output"):

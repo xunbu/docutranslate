@@ -24,7 +24,8 @@
 
 # 前置条件
 
-## huggingface换源（不能科学上网的友友看这）
+## huggingface换源
+> 不能科学上网的友友注意了
 
 无法访问的huggingface的电脑在以下操作时请换源[点击测试](https://huggingface.co)
 
@@ -52,14 +53,14 @@ os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 由于需要使用大语言模型进行markdown调整与翻译，所以需要预先获取模型的baseurl、key、model-id  
 常见的大模型平台baseurl与api获取方式可见[常用ai平台](#常用ai平台)
-> 比较推荐的模型有阿里云的qwen-plus、智谱的glm-4-air等。免费的智谱glm-4-flash也能用(2025.5)。  
+> 比较推荐的模型有智谱的glm-4-flash（免费）、glm-4-air，阿里云的qwen-plus等。  
 > 推理模型需要支持api请求响应中区分`reasoning_content`和`content`（详见平台开发手册，ollama、lmstudio需开启对应选项）
 
 # 使用方式
 
-## 注意事项
+## 注意事项（第一次使用必看）
 
-以下操作会自动从[huggingface](https://huggingface.co)下载模型，windows需要使用**管理员模式**打开IDE运行脚本，并按需换源
+以下操作会自动从[huggingface](https://huggingface.co)下载模型，windows需要使用**管理员模式**打开IDE运行脚本，并按需换源[换源指南](#huggingface换源)
 
 - 第一次使用该库读取、翻译非markdown文本
 - 第一次使用该库的公式识别或代码识别功能
@@ -72,14 +73,14 @@ from docutranslate.translater import FileTranslater
 translater = FileTranslater(base_url="<baseurl>",
                             key="<key>",
                             model_id="<model-id>")
-# 不开启公式、代码识别（默认输出为markdown文件）(打开文本修复)
-translater.translate_file("<文件路径>", to_lang="中文", refine=True)
+# 不开启公式、代码识别（默认输出为markdown文件）
+translater.translate_file("<文件路径>", to_lang="中文")
 
 # 开启公式、代码识别（需要下载更多模型）
 translater.translate_file("<文件路径>", to_lang="中文", formula=True, code=True)
 
-# 翻译markdown文件
-translater.translate_file("<markdown路径>", to_lang="中文", refine=False)
+# 在先修复文本再翻译（适用于翻译pdf，但更耗时耗费）
+translater.translate_file("<文件路径>", to_lang="中文",refine=True)
 ```
 
 > 下载模型时请用管理员模式打开终端运行文件（windows），并按需换源
@@ -125,7 +126,7 @@ translater = FileTranslater(base_url="<baseurl>",  # 默认的模型baseurl
                             key="<key>",  # 默认的模型api-key
                             model_id="<model-id>",  # 默认的模型id
                             chunksize=4000,  # markdown分块长度，分块越大效果越好，不建议超过4096
-                            max_concurrent=6,  # 并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
+                            max_concurrent=20,  # 并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
                             docling_artifact=None,  # 使用提前下载好的docling模型
                             tips=True  # 开场提示
                             )
