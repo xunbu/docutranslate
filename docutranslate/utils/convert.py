@@ -5,13 +5,12 @@ from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling_core.types.doc import ImageRefMode
 from pathlib import Path
 from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.datamodel.document import DocumentStream
 
 IMAGE_RESOLUTION_SCALE = 4
 
 
-def file2markdown_embed_images(file_path: Path | str, formula=False, code=False,artifacts_path:Path|str|None=None) -> str:
-    if isinstance(file_path,str):
-        file_path=Path(file_path)
+def file2markdown_embed_images(file_path: Path | str|DocumentStream, formula=False, code=False,artifacts_path:Path|str|None=None) -> str:
     pipeline_options = PdfPipelineOptions(artifacts_path=artifacts_path)
     # pipeline_options.do_ocr=False
     pipeline_options.images_scale = IMAGE_RESOLUTION_SCALE

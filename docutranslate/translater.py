@@ -1,7 +1,9 @@
+from io import BytesIO
 from pathlib import Path
 from typing import Literal
 
 import markdown2
+from docling.datamodel.document import DocumentStream
 
 from docutranslate.Agents import Agent, AgentArgs
 from docutranslate.Agents import MDRefineAgent, MDTranslateAgent
@@ -70,6 +72,27 @@ class FileTranslater:
         }
         return result
 
+    def read(self, name: str, file: bytes, formula=False, code=False, save=False,
+             save_format: Literal["markdown", "html"] = "markdown", refine=False,
+             refine_agent: Agent | None = None):
+        ds = DocumentStream(name=name, stream=BytesIO(file))
+        file_path = Path(name)
+        # 如果是markdown，直接读取
+        if file_path.suffix == ".md":
+            self.markdown = file.decode()
+        else:
+            print(f"正在将{file_path.resolve().name}转换为markdown")
+            self.markdown = file2markdown_embed_images(ds, formula, code, artifacts_path=self.docling_artifact)
+            print("已转换为markdown")
+        if refine:
+            self.refine_markdown_by_agent(refine_agent)
+        if save:
+            if save_format == "html":
+                self.save_as_html(filename=f"{file_path.stem}.html")
+            else:
+                self.save_as_markdown(filename=f"{file_path.stem}.md")
+        return self
+
     def read_file(self, file_path: Path | str | None = None, formula=False, code=False, save=False,
                   save_format: Literal["markdown", "html"] = "markdown", refine=False,
                   refine_agent: Agent | None = None):
@@ -109,12 +132,12 @@ class FileTranslater:
         print("markdown已修正")
         return self.markdown
 
-    def translate_markdown_by_agent(self, translate_agent: Agent | None = None,to_lang="中文"):
+    def translate_markdown_by_agent(self, translate_agent: Agent | None = None, to_lang="中文"):
         print("正在翻译markdown")
         self._mask_uris_in_markdown()
         chuncks = self._split_markdown_into_chunks()
         if translate_agent is None:
-            translate_agent = MDTranslateAgent(to_lang=to_lang,**self.default_agent_params())
+            translate_agent = MDTranslateAgent(to_lang=to_lang, **self.default_agent_params())
         result: list[str] = translate_agent.send_prompts(chuncks)
         self.markdown = "\n".join(result)
         self._unmask_uris_in_markdown()
@@ -231,7 +254,7 @@ class FileTranslater:
         self.read_file(file_path, formula=formula, code=code)
         if refine:
             self.refine_markdown_by_agent(refine_agent)
-        self.translate_markdown_by_agent(translate_agent,to_lang=to_lang)
+        self.translate_markdown_by_agent(translate_agent, to_lang=to_lang)
         if output_format == "markdown":
             filename = f"{file_path.stem}_{to_lang}.md"
             self.save_as_markdown(filename=filename, output_dir=output_dir)
