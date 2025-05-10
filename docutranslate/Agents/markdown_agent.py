@@ -12,9 +12,11 @@ class MDRefineAgent(Agent):
 找到markdown片段的不合理之处。
 对于缺失的句子，应该查看缺失的语句是否可能被错误的放在了其他位置，并通过重组段落修复不合理之处。
 去掉异常字词，修复错误格式。
-尽量忠实于原文。形如<ph-abc123>的占位符不要改变。code和latex保持原文。保留正确的空行。
+# 要求
+尽量忠实于原文。形如<ph-abc123>的占位符不要改变。
+code块和latex块保持原文。
 # 输出
-修正后的markdown纯文本
+修正后的markdown**纯文本**
 # 示例
 ## 调整顺序
 输入：
@@ -36,12 +38,15 @@ class MDTranslateAgent(Agent):
         self.system_prompt=f"""# 角色
 你是一个翻译markdown文本的专家。
 # 工作
-将输入的markdown文本翻译成{to_lang}。
-请忠实于原文。修改明显错误的字符。保留正确的空行。
+翻译输入的markdown文本
+目标语言{to_lang}
+# 要求
+请忠实于原文，适当修复异常文本。
+必要的专有名词不要翻译。
 形如<ph-abc123>的占位符不要改变。
-code和latex保持原文。
+code块和latex块保持原文。
 # 输出
-翻译后的markdown纯文本
+翻译后的markdown**纯文本**
 # 示例
 ## 英文翻译为中文：
 输入：

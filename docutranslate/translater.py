@@ -14,9 +14,9 @@ from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_ur
 
 
 class FileTranslater:
-    def __init__(self, file_path: Path | str | None = None, chunksize: int = 4096, base_url="", key=None,
-                 model_id="", temperature=0.7, max_concurrent=20, docling_artifact: Path | str | None = None,
-                 timeout=1000, tips=True):
+    def __init__(self, file_path: Path | str | None = None, chunksize: int = 5000, base_url="", key=None,
+                 model_id="", temperature=0.7, max_concurrent=10, docling_artifact: Path | str | None = None,
+                 timeout=2000, tips=True):
         if isinstance(file_path, str):
             file_path = Path(file_path)
         self.file_path: Path = file_path
@@ -99,22 +99,25 @@ class FileTranslater:
 
     def refine_markdown_by_agent(self, refine_agent: Agent | None = None) -> str:
         print("正在修正markdown")
+        self._mask_uris_in_markdown()
         chuncks = self._split_markdown_into_chunks()
         if refine_agent is None:
             refine_agent = MDRefineAgent(**self.default_agent_params())
         result: list[str] = refine_agent.send_prompts(chuncks)
         self.markdown = "\n".join(result)
+        self._unmask_uris_in_markdown()
         print("markdown已修正")
         return self.markdown
 
-    def translate_markdown_by_agent(self, translate_agent: Agent | None = None):
+    def translate_markdown_by_agent(self, translate_agent: Agent | None = None,to_lang="中文"):
         print("正在翻译markdown")
-
+        self._mask_uris_in_markdown()
         chuncks = self._split_markdown_into_chunks()
         if translate_agent is None:
-            translate_agent = MDTranslateAgent(**self.default_agent_params())
+            translate_agent = MDTranslateAgent(to_lang=to_lang,**self.default_agent_params())
         result: list[str] = translate_agent.send_prompts(chuncks)
         self.markdown = "\n".join(result)
+        self._unmask_uris_in_markdown()
         print("翻译完成")
         return self.markdown
 
@@ -226,11 +229,9 @@ class FileTranslater:
         if isinstance(file_path, str):
             file_path = Path(file_path)
         self.read_file(file_path, formula=formula, code=code)
-        self._mask_uris_in_markdown()
         if refine:
             self.refine_markdown_by_agent(refine_agent)
-        self.translate_markdown_by_agent(translate_agent)
-        self._unmask_uris_in_markdown()
+        self.translate_markdown_by_agent(translate_agent,to_lang=to_lang)
         if output_format == "markdown":
             filename = f"{file_path.stem}_{to_lang}.md"
             self.save_as_markdown(filename=filename, output_dir=output_dir)

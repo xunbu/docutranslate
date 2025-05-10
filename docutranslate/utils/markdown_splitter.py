@@ -3,7 +3,7 @@ from typing import List
 
 
 class MarkdownBlockSplitter:
-    def __init__(self, max_block_size: int = 4096):
+    def __init__(self, max_block_size: int = 5000):
         """
         初始化Markdown分块器
 
@@ -11,6 +11,9 @@ class MarkdownBlockSplitter:
             max_block_size: 每个块的最大字符数
         """
         self.max_block_size = max_block_size
+    @staticmethod
+    def _get_bytes(text:str)->int:
+        return len(text.encode('utf-8'))
 
     def split_markdown(self, markdown_text: str) -> List[str]:
         """
@@ -34,7 +37,7 @@ class MarkdownBlockSplitter:
         pending_heading = None  # 等待内容的标题
 
         for block in blocks:
-            block_size = len(block)
+            block_size = self._get_bytes(block)
             is_heading = bool(re.match(r'^#{1,6}\s+.+', block.strip()))
             is_separator = block.strip() == '' and block.count('\n') > 0
 
@@ -57,10 +60,10 @@ class MarkdownBlockSplitter:
                 # 如果有等待内容的标题，尝试将其与内容保持在一起
                 if pending_heading and not is_heading and not is_separator:
                     # 如果只添加标题和此块能放下，则这样做
-                    if len(pending_heading) + block_size + 1 <= self.max_block_size:
+                    if self._get_bytes(pending_heading) + block_size + 1 <= self.max_block_size:
                         result_blocks.append('\n'.join(current_block[:-1]))  # 输出不含标题的内容
                         current_block = [pending_heading, block]
-                        current_size = len(pending_heading) + 1 + block_size
+                        current_size = self._get_bytes(pending_heading) + 1 + block_size
                         pending_heading = None
                         continue
 
@@ -166,16 +169,16 @@ class MarkdownBlockSplitter:
 
             result = []
             current_chunk = [first_line]
-            current_size = len(first_line)
+            current_size = self._get_bytes(first_line)
 
             for line in remaining_lines:
-                line_len = len(line) + 1  # +1是因为换行符
+                line_len = self._get_bytes(line) + 1  # +1是因为换行符
 
-                if current_size + line_len + len(closing_fence) > self.max_block_size:
+                if current_size + line_len + self._get_bytes(closing_fence) > self.max_block_size:
                     # 关闭当前块并开始新块
                     result.append('\n'.join(current_chunk + [closing_fence]))
                     current_chunk = [first_line]  # 新块使用相同的开始标记
-                    current_size = len(first_line)
+                    current_size = self._get_bytes(first_line)
 
                 current_chunk.append(line)
                 current_size += line_len
@@ -193,7 +196,7 @@ class MarkdownBlockSplitter:
         current_size = 0
 
         for line in lines:
-            line_len = len(line) + 1  # +1是因为换行符
+            line_len = self._get_bytes(line) + 1  # +1是因为换行符
 
             if current_size + line_len > self.max_block_size and current_chunk:
                 result.append('\n'.join(current_chunk))
@@ -213,7 +216,7 @@ class MarkdownBlockSplitter:
         return result
 
 
-def split_markdown_text(markdown_text, max_block_size=4096):
+def split_markdown_text(markdown_text, max_block_size=5000):
     """
     将Markdown字符串分割成不超过max_block_size的块
     可以通过简单拼接重建原始文本（分割的代码块除外）

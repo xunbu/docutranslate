@@ -53,7 +53,7 @@ os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 由于需要使用大语言模型进行markdown调整与翻译，所以需要预先获取模型的baseurl、key、model-id  
 常见的大模型平台baseurl与api获取方式可见[常用ai平台](#常用ai平台)
-> 比较推荐的模型有智谱的glm-4-flash（免费）、glm-4-air，阿里云的qwen-plus等。  
+> 比较推荐的模型有智谱的glm-4-air、glm-4-flash（免费），阿里云的qwen-plus等。  
 > 推理模型需要支持api请求响应中区分`reasoning_content`和`content`（详见平台开发手册，ollama、lmstudio需开启对应选项）
 
 # 使用方式
@@ -125,10 +125,10 @@ from docutranslate import FileTranslater
 translater = FileTranslater(base_url="<baseurl>",  # 默认的模型baseurl
                             key="<key>",  # 默认的模型api-key
                             model_id="<model-id>",  # 默认的模型id
-                            chunksize=4000,  # markdown分块长度，分块越大效果越好，不建议超过4096
-                            max_concurrent=20,  # 并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
+                            chunksize=4000,  # markdown分块长度（单位byte），分块越大效果越好，不建议超过4096
+                            max_concurrent=10,  # 并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
                             docling_artifact=None,  # 使用提前下载好的docling模型
-                            timeout=1000,# 调用api的超时时间
+                            timeout=2000,# 调用api的超时时间
                             tips=True  # 开场提示
                             )
 
