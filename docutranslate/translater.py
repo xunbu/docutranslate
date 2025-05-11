@@ -245,7 +245,7 @@ class FileTranslater:
     def translate_file(self, file_path: Path | str | None = None, to_lang="中文", output_dir="./output",
                        formula=False,
                        code=False, output_format: Literal["markdown", "html"] = "markdown", refine=False,
-                       refine_agent: Agent | None = None, translate_agent: Agent | None = None):
+                       refine_agent: Agent | None = None, translate_agent: Agent | None = None,save=True):
         if file_path is None:
             assert self.file_path is not None, "未输入文件路径"
             file_path = self.file_path
@@ -255,26 +255,28 @@ class FileTranslater:
         if refine:
             self.refine_markdown_by_agent(refine_agent)
         self.translate_markdown_by_agent(translate_agent, to_lang=to_lang)
-        if output_format == "markdown":
-            filename = f"{file_path.stem}_{to_lang}.md"
-            self.save_as_markdown(filename=filename, output_dir=output_dir)
-        elif output_format == "html":
-            filename = f"{file_path.stem}_{to_lang}.html"
-            self.save_as_html(filename=filename, output_dir=output_dir)
+        if save:
+            if output_format == "markdown":
+                filename = f"{file_path.stem}_{to_lang}.md"
+                self.save_as_markdown(filename=filename, output_dir=output_dir)
+            elif output_format == "html":
+                filename = f"{file_path.stem}_{to_lang}.html"
+                self.save_as_html(filename=filename, output_dir=output_dir)
         return self
 
     def translate_bytes(self, name:str,file: bytes, to_lang="中文", output_dir="./output",
                        formula=False,
                        code=False, output_format: Literal["markdown", "html"] = "markdown", refine=False,
-                       refine_agent: Agent | None = None, translate_agent: Agent | None = None):
+                       refine_agent: Agent | None = None, translate_agent: Agent | None = None,save=True):
         self.read_bytes(name=name,file=file, formula=formula, code=code)
         if refine:
             self.refine_markdown_by_agent(refine_agent)
         self.translate_markdown_by_agent(translate_agent, to_lang=to_lang)
-        if output_format == "markdown":
-            filename = f"{name}_{to_lang}.md"
-            self.save_as_markdown(filename=filename, output_dir=output_dir)
-        elif output_format == "html":
-            filename = f"{name}_{to_lang}.html"
-            self.save_as_html(filename=filename, output_dir=output_dir)
+        if save:
+            if output_format == "markdown":
+                filename = f"{name}_{to_lang}.md"
+                self.save_as_markdown(filename=filename, output_dir=output_dir)
+            elif output_format == "html":
+                filename = f"{name}_{to_lang}.html"
+                self.save_as_html(filename=filename, output_dir=output_dir)
         return self
