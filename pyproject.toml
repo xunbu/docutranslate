@@ -1,11 +1,12 @@
 [project]
 name = "docutranslate"
-version = "0.1.7"
+version = "0.1.8"
 description = "文件翻译工具"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "docling",
+    "fastapi[standard]>=0.115.12",
     "httpx",
     "markdown2",
     "transformers>=4.50.1",
