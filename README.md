@@ -91,7 +91,7 @@ translater.translate_file("<文件路径>", to_lang="中文",refine=True)
 
 ```python
 from docutranslate import FileTranslater
-from docutranslate.Agents import MDRefineAgent, MDTranslateAgent
+from docutranslate.agents import MDRefineAgent, MDTranslateAgent
 
 translater = FileTranslater()
 

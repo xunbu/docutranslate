@@ -5,12 +5,12 @@ from typing import Literal
 import markdown2
 from docling.datamodel.document import DocumentStream
 
-from docutranslate.Agents import Agent, AgentArgs
-from docutranslate.Agents import MDRefineAgent, MDTranslateAgent
+from docutranslate.agents import Agent, AgentArgs
+from docutranslate.agents import MDRefineAgent, MDTranslateAgent
 from docutranslate.utils.convert import file2markdown_embed_images
 from docutranslate.utils.markdown_splitter import split_markdown_text
 from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
-
+from docutranslate.logger import translater_logger
 
 # import mdformat
 
@@ -58,7 +58,7 @@ class FileTranslater:
 
     def _split_markdown_into_chunks(self) -> list[str]:
         chunks: list[str] = split_markdown_text(self.markdown, self.chunksize)
-        print(f"markdown分为{len(chunks)}块")
+        translater_logger.info(f"markdown分为{len(chunks)}块")
         return chunks
 
     def default_agent_params(self) -> AgentArgs:
@@ -81,9 +81,9 @@ class FileTranslater:
         if file_path.suffix == ".md":
             self.markdown = file.decode()
         else:
-            print(f"正在将{file_path.resolve().name}转换为markdown")
+            translater_logger.info(f"正在将{file_path.resolve().name}转换为markdown")
             self.markdown = file2markdown_embed_images(ds, formula, code, artifacts_path=self.docling_artifact)
-            print("已转换为markdown")
+            translater_logger.info(f"已转换为markdown")
         if refine:
             self.refine_markdown_by_agent(refine_agent)
         if save:
@@ -98,19 +98,20 @@ class FileTranslater:
                   refine_agent: Agent | None = None):
         if file_path is None:
             if self.file_path is None:
+                translater_logger.debug("未设置文件路径")
                 raise Exception("未设置文件路径")
             file_path = self.file_path
         if isinstance(file_path, str):
             file_path = Path(file_path)
-        print(f"读取文件：{file_path.name}")
+        translater_logger.info(f"读取文件：{file_path.name}")
         # 如果是markdown，直接读取
         if file_path.suffix == ".md":
             with open(file_path, "r") as f:
                 self.markdown = f.read()
         else:
-            print(f"正在将{file_path.resolve().name}转换为markdown")
+            translater_logger.info(f"正在将{file_path.resolve().name}转换为markdown")
             self.markdown = file2markdown_embed_images(file_path, formula, code, artifacts_path=self.docling_artifact)
-            print("已转换为markdown")
+            translater_logger.info("已转换为markdown")
         if refine:
             self.refine_markdown_by_agent(refine_agent)
         if save:
@@ -121,7 +122,7 @@ class FileTranslater:
         return self
 
     def refine_markdown_by_agent(self, refine_agent: Agent | None = None) -> str:
-        print("正在修正markdown")
+        translater_logger.info("正在修正markdown")
         self._mask_uris_in_markdown()
         chuncks = self._split_markdown_into_chunks()
         if refine_agent is None:
@@ -129,11 +130,11 @@ class FileTranslater:
         result: list[str] = refine_agent.send_prompts(chuncks)
         self.markdown = "\n".join(result)
         self._unmask_uris_in_markdown()
-        print("markdown已修正")
+        translater_logger.info("markdown已修正")
         return self.markdown
 
     def translate_markdown_by_agent(self, translate_agent: Agent | None = None, to_lang="中文"):
-        print("正在翻译markdown")
+        translater_logger.info("正在翻译markdown")
         self._mask_uris_in_markdown()
         chuncks = self._split_markdown_into_chunks()
         if translate_agent is None:
@@ -141,7 +142,7 @@ class FileTranslater:
         result: list[str] = translate_agent.send_prompts(chuncks)
         self.markdown = "\n".join(result)
         self._unmask_uris_in_markdown()
-        print("翻译完成")
+        translater_logger.info("翻译完成")
         return self.markdown
 
     def save_as_markdown(self, filename: str | Path | None = None, output_dir: str | Path = "./output"):
@@ -161,7 +162,7 @@ class FileTranslater:
         self._markdown_format()
         with open(full_name, "w") as file:
             file.write(self.markdown)
-        print(f"文件已写入{full_name.resolve()}")
+        translater_logger.info(f"文件已写入{full_name.resolve()}")
         return self
 
     def export_to_markdown(self):
@@ -185,7 +186,7 @@ class FileTranslater:
         html = self.export_to_html(str(filename.resolve().stem))
         with open(full_name, "w") as file:
             file.write(html)
-        print(f"文件已写入{full_name.resolve()}")
+        translater_logger.info(f"文件已写入{full_name.resolve()}")
         return self
 
     def export_to_html(self, title="title") -> str:

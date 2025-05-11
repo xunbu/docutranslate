@@ -5,6 +5,8 @@ from typing import TypedDict
 
 import httpx
 
+from docutranslate.logger import translater_logger
+
 
 class AgentArgs(TypedDict, total=False):
     baseurl: str
@@ -97,7 +99,7 @@ class Agent:
                 )
                 nonlocal count
                 count += 1
-                print(f"进行到{count}/{total}")
+                translater_logger.info(f"进行到{count}/{total}")
                 return result
 
         for p_text in prompts:
