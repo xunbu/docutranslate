@@ -32,8 +32,9 @@ class FileTranslater:
         self.model_id: str = model_id
         self.temperature = temperature
         if docling_artifact is None:
-            artifact_path=Path("artifact")
-            if artifact_path.exists():
+            artifact_path=Path("./artifact")
+            if artifact_path.is_dir():
+                translater_logger.info("检测到artifact文件夹")
                 self.docling_artifact=artifact_path
         self.docling_artifact = docling_artifact
         self.timeout = timeout
