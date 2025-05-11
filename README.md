@@ -1,6 +1,7 @@
 # 简介
 
-## DocuTranslate 
+## DocuTranslate
+
 [![image](https://img.shields.io/badge/github-DocuTranslate-blue)](https://github.com/xunbu/docutranslate)
 
 文件翻译工具，借助[docling](https://github.com/docling-project/docling)与大语言模型实现多种格式文件的翻译
@@ -26,6 +27,7 @@
 # 前置条件
 
 ## huggingface换源
+
 > 不能科学上网的友友注意了
 
 无法访问的huggingface的电脑在以下操作时请换源[点击测试](https://huggingface.co)
@@ -61,10 +63,20 @@ os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 ## 注意事项（第一次使用必看）
 
-以下操作会自动从[huggingface](https://huggingface.co)下载模型，windows需要使用**管理员模式**打开IDE运行脚本，并按需换源[换源指南](#huggingface换源)
+以下操作会自动从[huggingface](https://huggingface.co)下载模型，windows需要使用**管理员模式**
+打开IDE运行脚本，并按需换源[换源指南](#huggingface换源)
 
 - 第一次使用该库读取、翻译非markdown文本
 - 第一次使用该库的公式识别或代码识别功能
+
+## 使用ui界面
+
+```python
+from docutranslate import app
+import uvicorn
+
+uvicorn.run(app, host="127.0.0.1", port=8010)
+```
 
 ## 翻译文件
 
@@ -81,7 +93,7 @@ translater.translate_file("<文件路径>", to_lang="中文")
 translater.translate_file("<文件路径>", to_lang="中文", formula=True, code=True)
 
 # 在先修复文本再翻译（适用于翻译pdf，但更耗时耗费）
-translater.translate_file("<文件路径>", to_lang="中文",refine=True)
+translater.translate_file("<文件路径>", to_lang="中文", refine=True)
 ```
 
 > 下载模型时请用管理员模式打开终端运行文件（windows），并按需换源
@@ -129,7 +141,7 @@ translater = FileTranslater(base_url="<baseurl>",  # 默认的模型baseurl
                             chunksize=3500,  # markdown分块长度（单位byte），分块越大效果越好，不建议超过8000
                             max_concurrent=10,  # 并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
                             docling_artifact=None,  # 使用提前下载好的docling模型
-                            timeout=2000,# 调用api的超时时间
+                            timeout=2000,  # 调用api的超时时间
                             tips=True  # 开场提示
                             )
 
