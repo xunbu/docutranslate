@@ -6,7 +6,7 @@ from docling_core.types.doc import ImageRefMode
 from pathlib import Path
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.document import DocumentStream
-
+from docutranslate.logger import translater_logger
 IMAGE_RESOLUTION_SCALE = 4
 
 
@@ -25,7 +25,7 @@ def file2markdown_embed_images(file_path: Path | str|DocumentStream, formula=Fal
     try:
         result = converter.convert(file_path).document.export_to_markdown(image_mode=ImageRefMode.EMBEDDED)
     except LocalEntryNotFoundError:
-        print(f"无法连接huggingface，正在尝试换源")
+        translater_logger.info(f"无法连接huggingface，正在尝试换源")
         os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
         result = converter.convert(file_path).document.export_to_markdown(image_mode=ImageRefMode.EMBEDDED)
     return result
