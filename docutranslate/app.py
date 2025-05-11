@@ -97,80 +97,223 @@ HTML_TEMPLATE_STR = """
     <title>DocuTranslate</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@latest/css/pico.min.css">
     <style>
-        body { padding: 20px; font-family: sans-serif; }
-        .container { max-width: 900px; margin: auto; }
+        :root {
+            --primary-color: #1e88e5;
+            --border-radius: 0.25rem;
+        }
+        body {
+            padding: 20px;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f9f9f9;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        h1 a {
+            text-decoration: none;
+        }
+        h1 a:hover {
+            text-decoration: underline;
+        }
         .log-area {
-            background-color: #f0f0f0;
-            border: 1px solid #ccc;
+            background-color: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-radius: var(--border-radius);
             padding: 10px;
-            height: 250px;
+            height: 200px;
             overflow-y: scroll;
             white-space: pre-wrap; 
             word-break: break-all; 
             font-family: monospace;
-            font-size: 0.9em;
-            margin-top: 20px;
+            font-size: 0.85em;
             line-height: 1.4;
+            margin-top: 1rem;
         }
-        .error-message { color: red; font-weight: bold; }
-        .success-message { color: green; font-weight: bold; }
-        .form-group label { margin-bottom: 0.2rem; display: block;}
-        .form-group input { margin-bottom: 0.8rem; }
-        .button-group { margin-top: 1rem; }
-        .button-group button, .button-group a { margin-right: 0.5rem; }
-        summary { font-weight: bold; cursor: pointer; }
-        label input[type="checkbox"] { margin-right: 0.5rem; vertical-align: middle; }
-        #resultArea { margin-top: 20px; } /* Style for result area */
-        #downloadButtons { display: none; } /* Initially hidden */
+        .error-message { color: #d32f2f; font-weight: 500; }
+        .success-message { color: #2e7d32; font-weight: 500; }
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { 
+            margin-bottom: 0.2rem; 
+            display: block;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .button-group { 
+            margin-top: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        summary {
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0.5rem 0;
+        }
+        details {
+            border-bottom: 1px solid #eee;
+            margin-bottom: 1rem;
+        }
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+        .checkbox-label input[type="checkbox"] { 
+            margin-right: 0.5rem;
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        #resultArea { 
+            margin-top: 1.5rem;
+            padding-top: 1rem;
+            border-top: 1px solid #eee;
+        }
+        #downloadButtons { 
+            display: none; 
+            margin-top: 1rem;
+        }
+        .section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+        select, input[type="text"], input[type="password"], input[type="file"] {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            background-color: white;
+        }
+        button, a[role="button"] {
+            border-radius: var(--border-radius);
+            padding: 0.5rem 1rem;
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        @media (max-width: 768px) {
+            .form-grid, .options-grid {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                padding: 1rem;
+            }
+        }
     </style>
 </head>
 <body>
     <main class="container">
-        <h1><a href="https://github.com/xunbu/docutranslate" target="_blank">DocuTranslate</a></h1>
-        <form id="translateForm"> <!-- Removed action and method -->
-            <details open>
-                <summary>API 配置 (所有均为必填项)</summary>
-                <div class="grid">
+        <h1>
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 8l6 6"></path><path d="M4 14l6-6 2-3"></path><path d="M2 5l7 7v6"></path>
+                <path d="M15 10l6 6"></path><path d="M19 6l-7 7-6 2"></path><path d="M22 5l-7 7v6"></path>
+            </svg>
+            <a href="https://github.com/xunbu/docutranslate" target="_blank">DocuTranslate</a>
+        </h1>
+        
+        <form id="translateForm">
+            <details>
+                <summary>API 配置</summary>
+                <div class="form-grid">
                     <div class="form-group">
-                        <label for="base_url">API 地址 (Base URL)</label>
-                        <input type="text" id="base_url" name="base_url" value="" required>
+                        <label for="base_url">API 地址</label>
+                        <input type="text" id="base_url" name="base_url" placeholder="如: https://api.openai.com/v1" required>
                     </div>
                     <div class="form-group">
-                        <label for="apikey">API 密钥 (API Key)</label>
-                        <input type="password" id="apikey" name="apikey" value="" required>
+                        <label for="apikey">API 密钥</label>
+                        <input type="password" id="apikey" name="apikey" placeholder="sk-..." required>
                     </div>
                 </div>
-                 <div class="form-group">
-                    <label for="model_id">模型 ID (Model ID)</label>
-                    <input type="text" id="model_id" name="model_id" value="" required>
+                <div class="form-group">
+                    <label for="model_id">模型 ID</label>
+                    <input type="text" id="model_id" name="model_id" placeholder="如: gpt-4-turbo-preview" required>
                 </div>
             </details>
-            <div class="form-group" style="margin-top: 1rem;">
-                <label for="file">待翻译文档</label>
+            
+            <div class="form-group">
+                <label for="file">文档选择</label>
                 <input type="file" id="file" name="file" required>
             </div>
-            <fieldset>
-                <legend>选项</legend>
-                <label for="to_lang">目标语言: <input type="text" id="to_lang" name="to_lang" value="中文"></label>
-                <label for="formula_ocr"><input type="checkbox" id="formula_ocr" name="formula_ocr">启用公式识别</label>
-                <label for="code_ocr"><input type="checkbox" id="code_ocr" name="code_ocr">启用代码块识别</label>
-                <label for="refine_markdown"><input type="checkbox" id="refine_markdown" name="refine_markdown">翻译前优化 Markdown</label>
-            </fieldset>
-            <button type="submit" id="submitButton">翻译文档</button>
+            
+            <div class="options-grid">
+                <div class="form-group">
+                    <label for="to_lang">目标语言</label>
+                    <select id="to_lang" name="to_lang">
+                        <option value="中文">中文 (Chinese)</option>
+                        <option value="English">英文 (English)</option>
+                        <option value="日本語">日语 (Japanese)</option>
+                        <option value="한국어">韩语 (Korean)</option>
+                        <option value="Français">法语 (French)</option>
+                        <option value="Deutsch">德语 (German)</option>
+                        <option value="Español">西班牙语 (Spanish)</option>
+                        <option value="Italiano">意大利语 (Italian)</option>
+                        <option value="Português">葡萄牙语 (Portuguese)</option>
+                        <option value="Русский">俄语 (Russian)</option>
+                        <option value="العربية">阿拉伯语 (Arabic)</option>
+                        <option value="हिन्दी">印地语 (Hindi)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>高级选项</label>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label" for="formula_ocr">
+                            <input type="checkbox" id="formula_ocr" name="formula_ocr">
+                            公式识别
+                        </label>
+                        <label class="checkbox-label" for="code_ocr">
+                            <input type="checkbox" id="code_ocr" name="code_ocr">
+                            代码识别
+                        </label>
+                        <label class="checkbox-label" for="refine_markdown">
+                            <input type="checkbox" id="refine_markdown" name="refine_markdown">
+                            优化 Markdown
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <button type="submit" id="submitButton" class="primary">开始翻译</button>
         </form>
 
         <div id="resultArea">
             <p id="statusMessage"></p>
             <div id="downloadButtons" class="button-group">
-                <h3>下载：</h3>
-                <a id="downloadMarkdown" href="#" role="button" class="secondary">下载 Markdown</a>
-                <a id="downloadHtml" href="#" role="button" class="secondary">下载 HTML</a>
+                <div class="section-header">翻译结果</div>
+                <a id="downloadMarkdown" href="#" role="button" class="outline">下载 Markdown</a>
+                <a id="downloadHtml" href="#" role="button" class="outline">下载 HTML</a>
             </div>
         </div>
 
-        <h3>日志：</h3>
+        <div class="section-header" style="margin-top: 1.5rem;">运行日志</div>
         <div class="log-area" id="logArea"></div>
     </main>
+    
     <script>
         const base_url_input = document.getElementById('base_url');
         const apikey_input = document.getElementById('apikey');
@@ -180,19 +323,37 @@ HTML_TEMPLATE_STR = """
         const code_ocr_input = document.getElementById('code_ocr');
         const refine_markdown_input = document.getElementById('refine_markdown');
 
+        // Load saved values from localStorage
         if (localStorage.getItem('translator_base_url')) base_url_input.value = localStorage.getItem('translator_base_url');
         if (localStorage.getItem('translator_apikey')) apikey_input.value = localStorage.getItem('translator_apikey');
         if (localStorage.getItem('translator_model_id')) model_id_input.value = localStorage.getItem('translator_model_id');
-        to_lang_input.value = localStorage.getItem('translator_to_lang') || '中文';
+        if (localStorage.getItem('translator_to_lang')) {
+            const savedLang = localStorage.getItem('translator_to_lang');
+            // Find option with matching value
+            for (const option of to_lang_input.options) {
+                if (option.value === savedLang) {
+                    option.selected = true;
+                    break;
+                }
+            }
+        }
         formula_ocr_input.checked = localStorage.getItem('translator_formula_ocr') === 'true';
         code_ocr_input.checked = localStorage.getItem('translator_code_ocr') === 'true';
         refine_markdown_input.checked = localStorage.getItem('translator_refine_markdown') === 'true';
 
-        function saveToLocalStorage(key, value) { try { localStorage.setItem(key, value); } catch (e) { console.error("Error saving to localStorage:", e); }}
+        // Save to localStorage
+        function saveToLocalStorage(key, value) { 
+            try { 
+                localStorage.setItem(key, value); 
+            } catch (e) { 
+                console.error("Error saving to localStorage:", e); 
+            }
+        }
+        
         base_url_input.addEventListener('input', () => saveToLocalStorage('translator_base_url', base_url_input.value));
         apikey_input.addEventListener('input', () => saveToLocalStorage('translator_apikey', apikey_input.value));
         model_id_input.addEventListener('input', () => saveToLocalStorage('translator_model_id', model_id_input.value));
-        to_lang_input.addEventListener('input', () => saveToLocalStorage('translator_to_lang', to_lang_input.value));
+        to_lang_input.addEventListener('change', () => saveToLocalStorage('translator_to_lang', to_lang_input.value));
         formula_ocr_input.addEventListener('change', () => saveToLocalStorage('translator_formula_ocr', formula_ocr_input.checked));
         code_ocr_input.addEventListener('change', () => saveToLocalStorage('translator_code_ocr', code_ocr_input.checked));
         refine_markdown_input.addEventListener('change', () => saveToLocalStorage('translator_refine_markdown', refine_markdown_input.checked));
@@ -210,7 +371,7 @@ HTML_TEMPLATE_STR = """
                 event.preventDefault();
                 submitButton.disabled = true;
                 submitButton.setAttribute('aria-busy', 'true');
-                submitButton.textContent = '处理中...';
+                submitButton.textContent = '翻译中...';
                 if(logArea) logArea.innerHTML = '';
                 statusMessageElement.textContent = '';
                 statusMessageElement.className = '';
@@ -241,7 +402,7 @@ HTML_TEMPLATE_STR = """
                 } finally {
                     submitButton.disabled = false;
                     submitButton.removeAttribute('aria-busy');
-                    submitButton.textContent = '翻译文档';
+                    submitButton.textContent = '开始翻译';
                 }
             });
         }
