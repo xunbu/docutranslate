@@ -4,9 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/docutranslate/utils/convert.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/convert.py" afterDir="false" />
-    </list>
+    <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -366,7 +364,7 @@
       <workItem from="1746887311759" duration="14000" />
       <workItem from="1746894355924" duration="651000" />
       <workItem from="1746923054682" duration="383000" />
-      <workItem from="1746928498783" duration="4523000" />
+      <workItem from="1746928498783" duration="4677000" />
     </task>
     <servers />
   </component>

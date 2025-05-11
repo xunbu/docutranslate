@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "docling",
+    "fastapi>=0.115.12",
     "httpx",
     "markdown2",
     "mdformat>=0.7.22",
