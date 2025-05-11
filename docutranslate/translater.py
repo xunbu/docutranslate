@@ -76,7 +76,7 @@ class FileTranslater:
         }
         return result
 
-    def read_bytes(self, name: str, file: bytes, formula=False, code=False, save=False,
+    def read_bytes(self, name: str, file: bytes, formula=True, code=True, save=False,
              save_format: Literal["markdown", "html"] = "markdown", refine=False,
              refine_agent: Agent | None = None):
         ds = DocumentStream(name=name, stream=BytesIO(file))
@@ -95,7 +95,7 @@ class FileTranslater:
                 self.save_as_markdown(filename=f"{file_path.stem}.md")
         return self
 
-    def read_file(self, file_path: Path | str | None = None, formula=False, code=False, save=False,
+    def read_file(self, file_path: Path | str | None = None, formula=True, code=True, save=False,
                   save_format: Literal["markdown", "html"] = "markdown", refine=False,
                   refine_agent: Agent | None = None):
         if file_path is None:
@@ -266,8 +266,8 @@ class FileTranslater:
         return self
 
     def translate_bytes(self, name:str,file: bytes, to_lang="中文", output_dir="./output",
-                       formula=False,
-                       code=False, output_format: Literal["markdown", "html"] = "markdown", refine=False,
+                       formula=True,
+                       code=True, output_format: Literal["markdown", "html"] = "markdown", refine=False,
                        refine_agent: Agent | None = None, translate_agent: Agent | None = None,save=True):
         self.read_bytes(name=name,file=file, formula=formula, code=code)
         if refine:
