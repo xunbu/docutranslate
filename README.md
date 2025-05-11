@@ -75,7 +75,7 @@ os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 from docutranslate import app
 import uvicorn
 
-uvicorn.run(app, host="127.0.0.1", port=8010)
+uvicorn.run(app, host="127.0.0.1", port=8010)#然后浏览器打开https://127.0.0.1:8080
 ```
 
 ## 翻译文件
