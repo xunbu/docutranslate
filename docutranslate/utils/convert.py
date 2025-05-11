@@ -11,6 +11,7 @@ IMAGE_RESOLUTION_SCALE = 4
 
 
 def file2markdown_embed_images(file_path: Path | str|DocumentStream, formula=False, code=False,artifacts_path:Path|str|None=None) -> str:
+    translater_logger.info(f"正在将文档转换为markdown")
     pipeline_options = PdfPipelineOptions(artifacts_path=artifacts_path)
     # pipeline_options.do_ocr=False
     pipeline_options.images_scale = IMAGE_RESOLUTION_SCALE
@@ -28,4 +29,8 @@ def file2markdown_embed_images(file_path: Path | str|DocumentStream, formula=Fal
         translater_logger.info(f"无法连接huggingface，正在尝试换源")
         os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
         result = converter.convert(file_path).document.export_to_markdown(image_mode=ImageRefMode.EMBEDDED)
+    translater_logger.info(f"已转换为markdown")
     return result
+
+if __name__ == '__main__':
+    pass

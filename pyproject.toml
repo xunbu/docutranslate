@@ -5,9 +5,9 @@ description = "文件翻译工具"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "docling",
-    "fastapi[standard]>=0.115.12",
-    "httpx",
-    "markdown2",
-    "transformers>=4.50.1",
+        "docling>=2.31.0",
+        "httpx",
+        "markdown2",
+        "fastapi[standard]>=0.115.12",
+        "pyinstaller>=6.13.0",
 ]

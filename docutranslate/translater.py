@@ -31,6 +31,10 @@ class FileTranslater:
         self.key: str = key if key is not None else "xx"
         self.model_id: str = model_id
         self.temperature = temperature
+        if docling_artifact is None:
+            artifact_path=Path("artifact")
+            if artifact_path.exists():
+                self.docling_artifact=artifact_path
         self.docling_artifact = docling_artifact
         self.timeout = timeout
         if tips:
@@ -81,9 +85,7 @@ class FileTranslater:
         if file_path.suffix == ".md":
             self.markdown = file.decode()
         else:
-            translater_logger.info(f"正在将{file_path.resolve().name}转换为markdown")
             self.markdown = file2markdown_embed_images(ds, formula, code, artifacts_path=self.docling_artifact)
-            translater_logger.info(f"已转换为markdown")
         if refine:
             self.refine_markdown_by_agent(refine_agent)
         if save:
@@ -109,9 +111,7 @@ class FileTranslater:
             with open(file_path, "r") as f:
                 self.markdown = f.read()
         else:
-            translater_logger.info(f"正在将{file_path.resolve().name}转换为markdown")
             self.markdown = file2markdown_embed_images(file_path, formula, code, artifacts_path=self.docling_artifact)
-            translater_logger.info("已转换为markdown")
         if refine:
             self.refine_markdown_by_agent(refine_agent)
         if save:
@@ -244,8 +244,8 @@ class FileTranslater:
         return html
 
     def translate_file(self, file_path: Path | str | None = None, to_lang="中文", output_dir="./output",
-                       formula=False,
-                       code=False, output_format: Literal["markdown", "html"] = "markdown", refine=False,
+                       formula=True,
+                       code=True, output_format: Literal["markdown", "html"] = "markdown", refine=False,
                        refine_agent: Agent | None = None, translate_agent: Agent | None = None,save=True):
         if file_path is None:
             assert self.file_path is not None, "未输入文件路径"

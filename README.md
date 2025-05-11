@@ -140,8 +140,8 @@ translater = FileTranslater(base_url="<baseurl>",  # 默认的模型baseurl
 ```python
 translater.translate_file(r"<要翻译的文件路径>",
                           to_lang="中文",
-                          formula=False,  # 是否启用公式识别
-                          code=False,  # 是否启用代码识别
+                          formula=True,  # 是否启用公式识别
+                          code=True,  # 是否启用代码识别
                           refine=False,  # 是否在翻译前先修正一遍markdown文本（较耗时）
                           output_format="markdown",  # "markdown"与"html"两种输出格式
                           output_dir="./output",  # 默认输出文件夹
