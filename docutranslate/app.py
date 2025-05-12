@@ -12,7 +12,6 @@ from fastapi.templating import Jinja2Templates
 # 导入文档翻译相关模块
 from docutranslate import FileTranslater
 from docutranslate.logger import translater_logger
-
 # 设置FastAPI运行标识
 app = FastAPI()
 
@@ -105,11 +104,64 @@ HTML_TEMPLATE = """
         select, input[type="text"], input[type="password"], input[type="file"] { padding: 0.5rem; border: 1px solid #ddd; border-radius: var(--border-radius); background-color: white; }
         button, a[role="button"] { border-radius: var(--border-radius); padding: 0.5rem 1rem; }
         .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+        /* 打印样式 */
+        @media print {
+            .no-print { display: none !important; }
+            body { padding: 0; background-color: white; }
+            .container { box-shadow: none; max-width: 100%; padding: 0; }
+        }
+        /* 预览模态窗口样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            overflow: auto;
+        }
+        .modal-content {
+            position: relative;
+            background-color: #fff;
+            margin: 2% auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 900px;
+            max-height: 90vh;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            overflow: auto;
+        }
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #666;
+            cursor: pointer;
+        }
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 20px;
+            gap: 10px;
+        }
+        #previewFrame {
+            width: 100%;
+            min-height: 500px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+        }
+        /* 嵌入式iframe样式 */
+        #printFrame { display: none; }
         @media (max-width: 768px) { .form-grid, .options-grid { grid-template-columns: 1fr; } .container { padding: 1rem; } }
     </style>
 </head>
 <body>
-    <main class="container">
+    <main class="container no-print">
         <h1>
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M5 8l6 6"></path><path d="M4 14l6-6 2-3"></path><path d="M2 5l7 7v6"></path>
@@ -165,7 +217,7 @@ HTML_TEMPLATE = """
                     <div class="checkbox-group">
                         <label class="checkbox-label" for="formula_ocr"><input type="checkbox" id="formula_ocr" name="formula_ocr">公式识别</label>
                         <label class="checkbox-label" for="code_ocr"><input type="checkbox" id="code_ocr" name="code_ocr">代码识别</label>
-                        <label class="checkbox-label" for="refine_markdown"><input type="checkbox" id="refine_markdown" name="refine_markdown">优化 Markdown</label>
+                        <label class="checkbox-label" for="refine_markdown"><input type="checkbox" id="refine_markdown" name="refine_markdown">修正文本（耗时）</label>
                     </div>
                 </div>
             </div>
@@ -179,12 +231,30 @@ HTML_TEMPLATE = """
                 <div class="section-header">翻译结果</div>
                 <a id="downloadMarkdown" href="#" role="button" class="outline">下载 Markdown</a>
                 <a id="downloadHtml" href="#" role="button" class="outline">下载 HTML</a>
+                <button id="downloadPdf" class="outline">下载 PDF</button>
+                <button id="previewHtml" class="outline">预览</button>
             </div>
         </div>
 
         <div class="section-header" style="margin-top: 1.5rem;">运行日志</div>
         <div class="log-area" id="logArea"></div>
     </main>
+
+    <!-- 预览模态窗口 -->
+    <div id="previewModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" id="closeModal">&times;</span>
+            <h3>HTML 预览</h3>
+            <iframe id="previewFrame"></iframe>
+            <div class="modal-actions">
+                <button id="printFromPreview" class="primary">打印/保存为PDF</button>
+                <button id="closePreviewBtn" class="outline">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 用于生成PDF的隐藏iframe -->
+    <iframe id="printFrame" style="display:none;"></iframe>
 
     <script>
         // 加载和保存本地存储的函数
@@ -242,6 +312,38 @@ HTML_TEMPLATE = """
                 saveToStorage('translator_' + id, e.target.checked));
         });
 
+        // 模态窗口控制
+        const modal = document.getElementById('previewModal');
+        const previewFrame = document.getElementById('previewFrame');
+        const closeModal = document.getElementById('closeModal');
+        const closePreviewBtn = document.getElementById('closePreviewBtn');
+        const printFromPreview = document.getElementById('printFromPreview');
+
+        // 关闭模态窗口的事件
+        [closeModal, closePreviewBtn].forEach(elem => {
+            elem.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+        });
+
+        // 点击模态窗口外部关闭
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // 从预览打印PDF
+        printFromPreview.addEventListener('click', () => {
+            try {
+                previewFrame.contentWindow.focus();
+                previewFrame.contentWindow.print();
+            } catch (err) {
+                console.error('打印预览内容失败:', err);
+                alert('打印失败，请尝试使用浏览器的打印功能(Ctrl+P或⌘+P)。');
+            }
+        });
+
         // 表单提交处理
         const form = document.getElementById('translateForm');
         const submitButton = document.getElementById('submitButton');
@@ -250,6 +352,9 @@ HTML_TEMPLATE = """
         const downloadBtns = document.getElementById('downloadButtons');
         const markdownLink = document.getElementById('downloadMarkdown');
         const htmlLink = document.getElementById('downloadHtml');
+        const previewHtmlBtn = document.getElementById('previewHtml');
+        const downloadPdfBtn = document.getElementById('downloadPdf');
+        const printFrame = document.getElementById('printFrame');
 
         form.addEventListener('submit', async function(event) {
             event.preventDefault();
@@ -275,10 +380,85 @@ HTML_TEMPLATE = """
                 statusMsg.className = result.error ? 'error-message' : 'success-message';
 
                 if (result.download_ready) {
+                    // 设置下载链接
                     markdownLink.href = result.markdown_url;
                     markdownLink.setAttribute('download', result.original_filename_stem + '_translated.md');
+
                     htmlLink.href = result.html_url;
                     htmlLink.setAttribute('download', result.original_filename_stem + '_translated.html');
+
+                    // 预览HTML按钮（使用模态窗口）
+                    let htmlUrl = result.html_url;
+                    let fileName = result.original_filename_stem;
+                    
+                    previewHtmlBtn.onclick = function() {
+                        // 获取HTML内容并直接加载到iframe中，而不是使用URL
+                        fetch(htmlUrl)
+                            .then(response => response.text())
+                            .then(html => {
+                                // 创建一个blob并生成内存URL以避免下载提示
+                                const blob = new Blob([html], { type: 'text/html' });
+                                const blobUrl = URL.createObjectURL(blob);
+                                
+                                // 加载blob URL到预览框架
+                                previewFrame.src = blobUrl;
+                                
+                                previewFrame.onload = function() {
+                                    // 设置标题
+                                    try {
+                                        previewFrame.contentWindow.document.title = fileName + '_translated';
+                                        // 释放blob URL
+                                        URL.revokeObjectURL(blobUrl);
+                                    } catch(e) {
+                                        console.warn('无法设置iframe标题', e);
+                                    }
+                                };
+                                
+                                // 显示模态窗口
+                                modal.style.display = 'block';
+                            })
+                            .catch(err => {
+                                console.error('获取HTML内容失败:', err);
+                                alert('获取HTML内容失败，无法预览。');
+                            });
+                    };
+
+                    // PDF下载按钮
+                    downloadPdfBtn.onclick = function() {
+                        try {
+                            // 使用打印API直接生成PDF
+                            fetch(htmlUrl)
+                                .then(response => response.text())
+                                .then(html => {
+                                    const iframe = printFrame;
+                                    iframe.srcdoc = html;
+                                    
+                                    iframe.onload = function() {
+                                        try {
+                                            const iframeWindow = iframe.contentWindow;
+                                            iframeWindow.document.title = fileName + '_translated.pdf';
+                                            
+                                            // 设置一个短暂延迟确保内容完全加载
+                                            setTimeout(() => {
+                                                iframeWindow.focus();
+                                                iframeWindow.print();
+                                            }, 500);
+                                        } catch (err) {
+                                            console.error('打印PDF出错:', err);
+                                            alert('无法直接生成PDF，请使用"预览HTML"后，通过浏览器的打印功能保存为PDF。');
+                                        }
+                                    };
+                                })
+                                .catch(err => {
+                                    console.error('获取HTML内容失败:', err);
+                                    alert('获取HTML内容失败，请尝试使用"预览HTML"功能。');
+                                });
+                        } catch (err) {
+                            console.error('PDF生成过程出错:', err);
+                            alert('PDF生成失败，请尝试使用"预览HTML"功能后，通过浏览器的打印功能保存为PDF。');
+                        }
+                    };
+
                     downloadBtns.style.display = 'block';
                 }
             } catch (error) {

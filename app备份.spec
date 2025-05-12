@@ -28,12 +28,12 @@ a = Analysis(
         'docling.datamodel.pipeline_options', # 非常重要，为了 EasyOcrOptions
         'docling.models.easyocr_model', # 猜测的路径，你需要确认 docling 中 easyocr 集成模型的实际模块路径
         # 根据需要添加 easyocr 的其他依赖，例如：
-        'cv2',
-        'torch',
-        'torchvision',
-        'skimage',
-        'yaml',
-        'PIL',
+#        'cv2',
+#        'torch',
+#        'torchvision',
+#        'skimage',
+#        'yaml',
+#        'PIL',
         # 添加任何其他 docling 可能动态加载的模块或工厂类中引用的模块
     ],
     # collect_submodules 已经通过上面的 collect_submodules() 函数处理并添加到 hiddenimports
