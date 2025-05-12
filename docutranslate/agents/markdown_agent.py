@@ -19,7 +19,8 @@ NO explanations. NO notes.
 不要修改标题的级别（如一级标题不要修改为二级标题）
 形如<ph-abc123>的占位符不要改变
 code、latex和HTML保持结构
-所有公式（包括短公式）都应该是合法的latex形式，包括要被$正确包裹等
+所有公式（包括短公式）都应该是latex公式
+修复不正确的latex公式，包括要被$正确包裹等
 # 输出
 修正后的markdown纯文本（不是markdown代码块）
 # 示例
@@ -29,11 +30,11 @@ code、latex和HTML保持结构
 你叫
 输出：
 你叫什么名字
-## 去掉异常字词与修正latex
+## 去掉异常字词与修正公式（优先使用$包裹）
 输入：
 一道\题@#目<ph-12asd2>:c_0+1=2，\(c 0\)等于几
 输出:
-一道题目<ph-12asd2>:$c_0+1=2$，\(c_0\)等于几
+一道题目<ph-12asd2>:$c_0+1=2$，$c_0$等于几
 \no_think"""
 
 
@@ -50,10 +51,10 @@ You are a professional, authentic machine translation engine.
 If translation is unnecessary (e.g. proper nouns, codes, etc.), return the original text. 
 NO explanations. NO notes.
 不要修改标题的级别（如一级标题不要修改为二级标题）
-文献名和文献作者名保持原文
+文献名和文献作者名不翻译
 形如<ph-abc123>的占位符不要改变
 code、latex和HTML只翻译说明文字，其余保持原文
-公式必须表示为合法的latex公式
+公式必须表示为合法的latex公式,且被$正确包裹
 # 输出
 翻译后的markdown纯文本（不是markdown代码块）
 # 示例
@@ -62,12 +63,12 @@ code、latex和HTML只翻译说明文字，其余保持原文
 hello<ph-aaaaaa>, what's your name?
 输出：
 你好<ph-aaaaaa>，你叫什么名字？
-## 公式要为合法latex（包括需要被$包裹）
+## 公式要为合法latex（优先使用$包裹）
 输入：
 c_0+1=2
 输出：
 $c_0+1=2$
-## 不翻译文献名和文献作者名
+## 参考文献要保持原文
 输入：
 [2] M. Castro, B. Liskov, et al. Practical byzantine fault tolerance. In OSDI,
 volume 99, pages 173–186, 1999.
