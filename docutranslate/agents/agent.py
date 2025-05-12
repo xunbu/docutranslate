@@ -22,10 +22,10 @@ TIMEOUT = 500
 
 
 class Agent:
-    def __init__(self, baseurl="", key="", model_id="", system_prompt="", temperature=0.7, max_concurrent=6,timeout:int=TIMEOUT):
-        self.baseurl = baseurl
-        self.key = key
-        self.model_id = model_id
+    def __init__(self, baseurl:str="", key:str="xx", model_id:str="", system_prompt:str="", temperature=0.7, max_concurrent=6,timeout:int=TIMEOUT):
+        self.baseurl = baseurl.strip()
+        self.key = key.strip()
+        self.model_id = model_id.strip()
         self.system_prompt = system_prompt
         self.temperature = temperature
         self.client_async = httpx.AsyncClient()
