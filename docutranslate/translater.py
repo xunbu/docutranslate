@@ -12,7 +12,6 @@ from docutranslate.utils.markdown_splitter import split_markdown_text
 from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
 from docutranslate.logger import translater_logger
 
-# import mdformat
 
 
 class FileTranslater:
@@ -31,12 +30,12 @@ class FileTranslater:
         self.key: str = key if key is not None else "xx"
         self.model_id: str = model_id
         self.temperature = temperature
+        self.docling_artifact = docling_artifact
         if docling_artifact is None:
             artifact_path=Path("./artifact")
             if artifact_path.is_dir():
                 translater_logger.info("检测到artifact文件夹")
                 self.docling_artifact=artifact_path
-        self.docling_artifact = docling_artifact
         self.timeout = timeout
         if tips:
             print("""

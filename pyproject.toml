@@ -9,6 +9,7 @@ dependencies = [
         "httpx",
         "markdown2",
         "fastapi[standard]>=0.115.12",
+        "pyinstaller>=6.13.0",
 ]
 
 [project.scripts]
