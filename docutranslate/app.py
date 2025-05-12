@@ -692,9 +692,11 @@ async def download_html(filename_with_ext: str):
         headers={"Content-Disposition": f"attachment; filename=\"{actual_filename}\""}
     )
 
-
-# --- 启动服务 ---
-if __name__ == "__main__":
+def run_app():
     print("正在启动 FastAPI 文档翻译服务...")
     print("请访问 http://127.0.0.1:8010")
     uvicorn.run(app, host="127.0.0.1", port=8010)
+
+# --- 启动服务 ---
+if __name__ == "__main__":
+    run_app()

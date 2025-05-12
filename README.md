@@ -69,13 +69,10 @@ os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 - 第一次使用该库读取、翻译非markdown文本
 - 第一次使用该库的公式识别或代码识别功能
 
-## 使用ui界面
+## 使用图形化界面
 
-```python
-from docutranslate import app
-import uvicorn
-
-uvicorn.run(app, host="127.0.0.1", port=8010)#然后浏览器打开https://127.0.0.1:8080
+```commandline
+docutranslate -i
 ```
 
 ## 翻译文件
