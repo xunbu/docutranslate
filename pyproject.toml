@@ -1,6 +1,6 @@
 [project]
 name = "docutranslate"
-version = "0.2.2"
+version = "0.2.2.post1"
 description = "文件翻译工具"
 readme = "README.md"
 requires-python = ">=3.10"
