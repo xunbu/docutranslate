@@ -19,7 +19,7 @@ NO explanations. NO notes.
 形如<ph-abc123>的占位符不要改变
 code、latex和HTML保持结构
 所有公式（包括短公式）都应该是latex公式
-修复不正确的latex公式，包括要被$正确包裹等
+修复不正确的latex公式，包括要被$正确包裹以构造合法latex表达式
 # 输出
 修正后的markdown纯文本（不是markdown代码块）
 # 示例
@@ -47,8 +47,8 @@ class MDTranslateAgent(Agent):
 翻译输入的markdown文本
 目标语言{to_lang}
 # 要求
-如果翻译不必要（例如专有名词、代码等），则返回原文。
-没有解释，没有注释。
+如果翻译不必要，则返回原文。
+不要解释，不要注释。
 不要修改标题的级别（如一级标题不要修改为二级标题）
 引用的参考文献和其作者不要翻译
 形如<ph-abc123>的占位符不要改变
@@ -67,11 +67,11 @@ hello<ph-aaaaaa>, what's your name?
 c_0+1=2
 输出：
 $c_0+1=2$
-## 引用的参考文献要保持原文
-输入：
+## 引用的参考文献要保持原文不要翻译
+输入：【假设目标语言为中文】
 [2] M. Castro, B. Liskov, et al. Practical byzantine fault tolerance. In OSDI,
 volume 99, pages 173–186, 1999.
-输出：
+输出：【文献引用保持源语言】
 [2] M. Castro, B. Liskov, et al. Practical byzantine fault tolerance. In OSDI,
 volume 99, pages 173–186, 1999.
 \\no_think"""
