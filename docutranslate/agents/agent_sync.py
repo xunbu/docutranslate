@@ -1,11 +1,6 @@
-import asyncio
-
-# import re
 from typing import TypedDict
-
-import httpx
-
 from docutranslate.logger import translater_logger
+import httpx
 
 
 class AgentArgs(TypedDict, total=False):
@@ -21,16 +16,18 @@ class AgentArgs(TypedDict, total=False):
 TIMEOUT = 500
 
 
+
 class Agent:
-    def __init__(self, baseurl:str="", key:str="xx", model_id:str="", system_prompt:str="", temperature=0.7, max_concurrent=6,timeout:int=TIMEOUT):
+    def __init__(self, baseurl: str = "", key: str = "xx", model_id: str = "", system_prompt: str = "", temperature=0.7,
+                 max_concurrent=6, timeout: int = TIMEOUT):
         self.baseurl = baseurl.strip()
         self.key = key.strip()
         self.model_id = model_id.strip()
         self.system_prompt = system_prompt
         self.temperature = temperature
-        self.client_async = httpx.AsyncClient()
+        self.client = httpx.Client()
         self.max_concurrent = max_concurrent
-        self.timeout=timeout
+        self.timeout = timeout
 
     def _prepare_request_data(self, prompt: str, system_prompt: str, temperature=None, top_p=0.9):
         if temperature is None:
@@ -49,7 +46,7 @@ class Agent:
         }
         return headers, data
 
-    async def send_async(self, prompt: str, system_prompt: None | str = None) -> str:
+    def send(self, prompt: str, system_prompt: None | str = None) -> str:
         if system_prompt is None:
             system_prompt = self.system_prompt
 
@@ -58,7 +55,7 @@ class Agent:
         if self.baseurl.endswith("/"):
             self.baseurl = self.baseurl[:-1]
         try:
-            response = await self.client_async.post(
+            response = self.client.post(
                 f"{self.baseurl}/chat/completions",
                 json=data,
                 headers=headers,
@@ -66,12 +63,6 @@ class Agent:
             )
             response.raise_for_status()
             result = response.json()["choices"][0]["message"]["content"]
-            # pattern = r".*【SSS】(.*)"
-            # match = re.search(pattern, result, re.DOTALL)
-            # if match is None:
-            #     print("检测开头`【SSS】`失败")
-            # else:
-            #     result = match.group(1)
             return result
         except httpx.HTTPStatusError as e:
             raise Exception(f"AI请求错误 (async): {e.response.status_code} - {e.response.text}") from e
@@ -80,43 +71,18 @@ class Agent:
         except (KeyError, IndexError) as e:
             raise Exception(f"AI响应格式错误 (async): {e}") from e
 
-    async def send_prompts_async(
-            self,
-            prompts: list[str],
-            system_prompt: str | None = None,
-            max_concurrent: int = 5  # 新增参数，默认并发数为5
-    ) -> list[str]:
-        total = len(prompts)
-        count = 0
-        semaphore = asyncio.Semaphore(max_concurrent)
-        tasks = []
-        # 辅助协程，用于包装 self.send_async 并使用信号量
-        async def send_with_semaphore(p_text: str):
-            async with semaphore:  # 在进入代码块前获取信号量，退出时释放
-                result = await self.send_async(
-                    prompt=p_text,
-                    system_prompt=system_prompt,
-                )
-                nonlocal count
-                count += 1
-                translater_logger.info(f"进行到{count}/{total}")
-                return result
-
-        for p_text in prompts:
-            task = asyncio.create_task(send_with_semaphore(p_text))
-            tasks.append(task)
-
-        results = await asyncio.gather(*tasks, return_exceptions=False)
-        return results
 
     def send_prompts(
             self,
             prompts: list[str],
             system_prompt: str | None = None,
     ) -> list[str]:
-
-        result = asyncio.run(self.send_prompts_async(prompts, system_prompt, self.max_concurrent))
+        result=[]
+        for prompt in prompts:
+            result.append(self.send(prompt,system_prompt))
+            translater_logger.info(f"单线程-已完成{len(result)}/{len(prompts)}")
         return result
+
 
 
 if __name__ == '__main__':

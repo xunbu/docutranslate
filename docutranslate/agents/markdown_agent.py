@@ -1,6 +1,6 @@
 from typing import Unpack
 
-from .agent import Agent, AgentArgs
+from .agent_async import Agent, AgentArgs
 
 
 class MDRefineAgent(Agent):
