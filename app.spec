@@ -41,7 +41,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['docutranslate\\DocuTranslate.png'],
+    icon=['DocuTranslate.png'],
 )
 coll = COLLECT(
     exe,

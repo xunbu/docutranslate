@@ -5,13 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.spec" beforeDir="false" afterPath="$PROJECT_DIR$/app.spec" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/agents/markdown_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/agents/markdown_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/translater.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/translater.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate/DocuTranslate.png" beforeDir="false" afterPath="$PROJECT_DIR$/DocuTranslate.png" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -92,11 +87,11 @@
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\tests\files" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\jxgm\Desktop\FileTranslate" />
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\dist\DocuTranslate" />
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\dist\app" />
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\tests\files" />
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\tests\resource" />
-      <recent name="C:\Users\jxgm\Desktop\FileTranslate\docutranslate\Agents" />
     </key>
   </component>
   <component name="RunManager" selected="Python.app">
