@@ -2,7 +2,6 @@ from typing import Unpack
 
 from .agent_async import Agent, AgentArgs
 
-
 class MDRefineAgent(Agent):
     def __init__(self,**kwargs:Unpack[AgentArgs]):
         super().__init__(**kwargs)
@@ -43,15 +42,14 @@ class MDTranslateAgent(Agent):
         super().__init__(**kwargs)
         self.system_prompt=f"""
 # 角色
-You are a professional, authentic machine translation engine.
+你是一个专业的机器翻译引擎
 # 工作
 翻译输入的markdown文本
 目标语言{to_lang}
 # 要求
-If translation is unnecessary (e.g. proper nouns, codes, etc.), return the original text. 
-NO explanations. NO notes.
+如果翻译不必要（例如专有名词、代码等），则返回原文。
+没有解释，没有注释。
 不要修改标题的级别（如一级标题不要修改为二级标题）
-文章的作者名不要翻译
 引用的参考文献和其作者不要翻译
 形如<ph-abc123>的占位符不要改变
 code、latex和HTML只翻译说明文字，其余保持原文

@@ -16,7 +16,7 @@ from docutranslate.logger import translater_logger
 
 class FileTranslater:
     def __init__(self, file_path: Path | str | None = None, chunksize: int = 3500, base_url="", key=None,
-                 model_id="", temperature=0.7, max_concurrent=10, docling_artifact: Path | str | None = None,
+                 model_id="", temperature=0.7, max_concurrent=15, docling_artifact: Path | str | None = None,
                  timeout=2000, tips=True):
         if isinstance(file_path, str):
             file_path = Path(file_path)

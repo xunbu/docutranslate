@@ -118,8 +118,7 @@ HTML_TEMPLATE = """
 <body>
 <main class="container no-print">
     <h1>
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8l6 6"></path><path d="M4 14l6-6 2-3"></path><path d="M2 5l7 7v6"></path><path d="M15 10l6 6"></path><path d="M19 6l-7 7-6 2"></path><path d="M22 5l-7 7v6"></path></svg>
-        <a href="https://github.com/xunbu/docutranslate" target="_blank">DocuTranslate</a> (Polling)
+        <a href="https://github.com/xunbu/docutranslate" target="_blank">DocuTranslate</a>
     </h1>
     <form id="translateForm">
         <details open>
@@ -135,7 +134,8 @@ HTML_TEMPLATE = """
                         <option value="https://dashscope.aliyuncs.com/compatible-mode/v1">阿里云百炼</option>
                         <option value="https://www.dmxapi.cn/v1">DMXAPI</option>
                         <option value="https://openrouter.ai/api/v1">OpenRouter</option>
-                        <option value="https://api.moonshot.cn/v1">Moonshot AI (Kimi)</option>
+                        <option value="https://ark.cn-beijing.volces.com/api/v3">火山引擎</option>
+                        <option value="https://api.siliconflow.cn/v1">硅基流动</option>
                     </select>
                 </div>
                 <div class="form-group hidden" id="baseUrlGroup">
