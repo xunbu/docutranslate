@@ -85,8 +85,8 @@ HTML_TEMPLATE = """
         :root { --primary-color: #1e88e5; --border-radius: 0.25rem; }
         body { padding: 20px; background-color: #f9f9f9; }
         .container { max-width: 800px; margin: auto; background-color: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
-        h1 { font-size: 1.8rem; margin-bottom: 1.5rem; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem; }
-        .log-area { background-color: #f5f5f5; border: 1px solid #e0e0e0; border-radius: var(--border-radius); padding: 10px; height: 200px; overflow-y: scroll; white-space: pre-wrap; word-break: break-all; font-family: monospace; font-size: 0.85em; line-height: 1.4; margin-top: 1rem; }
+        h1 { font-size: 1.8rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .log-area { background-color: #f5f5f5; border: 1px solid #e0e0e0; padding: 10px; height: 200px; overflow-y: scroll; white-space: pre-wrap; word-break: break-all; font-family: monospace; font-size: 0.85em; line-height: 1.4; margin-top: 1rem; }
         .error-message { color: #d32f2f; font-weight: 500; }
         .success-message { color: #2e7d32; font-weight: 500; }
         .form-group { margin-bottom: 1rem; }
@@ -101,7 +101,7 @@ HTML_TEMPLATE = """
         #resultArea { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #eee; }
         #downloadButtons { display: none; margin-top: 1rem; }
         .section-header { display: flex; align-items: center; margin-bottom: 0.5rem; font-size: 1.1rem; font-weight: 500; }
-        select, input[type="text"], input[type="password"], input[type="file"] { padding: 0.5rem; border: 1px solid #ddd; border-radius: var(--border-radius); background-color: white; }
+        select, input[type="text"], input[type="password"], input[type="file"] { padding: 0.5rem; border: 1px solid #ddd; background-color: white; }
         button, a[role="button"] { padding: 0.5rem 1rem; }
         .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
         @media print { .no-print { display: none !important; } body { padding: 0; background-color: white; } .container { box-shadow: none; max-width: 100%; padding: 0; } }
@@ -109,7 +109,7 @@ HTML_TEMPLATE = """
         .modal-content { position: relative; background-color: #fff; margin: 2% auto; padding: 20px; width: 90%; max-width: 900px; max-height: 90vh; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); overflow: auto; }
         .close-modal { position: absolute; top: 10px; right: 10px; font-size: 24px; font-weight: bold; color: #666; cursor: pointer; }
         .modal-actions { display: flex; justify-content: flex-end; margin-top: 20px; gap: 10px; }
-        #previewFrame { width: 100%; min-height: 500px; border: 1px solid #ddd; border-radius: var(--border-radius); }
+        #previewFrame { width: 100%; min-height: 500px; border: 1px solid #ddd; }
         #printFrame { display: none; }
         .hidden { display: none !important; }
         @media (max-width: 768px) { .form-grid, .options-grid { grid-template-columns: 1fr; } .container { padding: 1rem; } }

@@ -128,7 +128,7 @@ class FileTranslater:
         if refine_agent is None:
             refine_agent = MDRefineAgent(**self.default_agent_params())
         result: list[str] = refine_agent.send_prompts(chuncks)
-        self.markdown = "\n".join(result)
+        self.markdown = "\n\n".join(result)
         self._unmask_uris_in_markdown()
         translater_logger.info("markdown已修正")
         return self.markdown
@@ -140,7 +140,7 @@ class FileTranslater:
         if translate_agent is None:
             translate_agent = MDTranslateAgent(to_lang=to_lang, **self.default_agent_params())
         result: list[str] = translate_agent.send_prompts(chuncks)
-        self.markdown = "\n".join(result)
+        self.markdown = "\n\n".join(result)
         self._unmask_uris_in_markdown()
         translater_logger.info("翻译完成")
         return self.markdown
