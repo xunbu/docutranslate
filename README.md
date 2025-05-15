@@ -6,6 +6,11 @@
 
 文件翻译工具，借助[docling](https://github.com/docling-project/docling)与大语言模型实现多种格式文件的翻译
 
+# 整合包
+
+对于只使用基本翻译功能的用户，可以在[github releases](https://github.com/xunbu/docutranslate/releases)
+上下载最新的整合包，该整合包点击即用，您所需的只是获取某个ai平台的api-key。
+
 # 安装
 
 使用pip  
@@ -17,12 +22,15 @@
 
 # 支持的文件格式
 
-| 输入格式       | 输出格式         |
-|------------|--------------|
-| PDF（非扫描版）  | Markdown（推荐） |
-| Markdown   | HTML         |
-| HTML、XHTML |              |
-| CSV        |              |
+| 输入格式           | 输出格式         |
+|----------------|--------------|
+| PDF（非扫描版）      | Markdown（推荐） |
+| Markdown       | HTML         |
+| HTML、XHTML     | PDF(仅交互界面支持) |
+| CSV            |              |
+| DOC、DOCX（部分支持） |              |
+
+> 如果想不使用交互界面获取pdf，可以先下载HTML文件，用浏览器打开并打印
 
 # 前置条件
 
