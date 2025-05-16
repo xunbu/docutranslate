@@ -167,6 +167,46 @@ HTML_TEMPLATE = """
                         <a href="https://github.com/xunbu/docutranslate" target="_blank">DocuTranslate</a>
                     </h1>
                     <form id="translateForm">
+
+                        <!-- Modified File Input Area -->
+                        <div class="form-group">
+                            <label for="file">文档选择</label>
+                            <div id="fileDropArea">
+                                <input type="file" id="file" name="file" required style="display: none;">
+                                <p>点击此处选择文件，或将文件拖拽到这里</p>
+                                <div id="fileNameDisplay">未选择文件</div>
+                            </div>
+                        </div>
+
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="to_lang">目标语言</label>
+                                <select id="to_lang" name="to_lang">
+                                    <option value="中文">中文 (Chinese)</option>
+                                    <option value="English">英文 (English)</option>
+                                    <option value="日本語">日语 (Japanese)</option>
+                                    <option value="한국어">韩语 (Korean)</option>
+                                    <option value="Français">法语 (French)</option>
+                                    <option value="Deutsch">德语 (German)</option>
+                                    <option value="Español">西班牙语 (Spanish)</option>
+                                    <option value="Italiano">意大利语 (Italian)</option>
+                                    <option value="Português">葡萄牙语 (Portuguese)</option>
+                                    <option value="Русский">俄语 (Russian)</option>
+                                    <option value="العربية">阿拉伯语 (Arabic)</option>
+                                    <option value="हिन्दी">印地语 (Hindi)</option>
+                                    <option value="Nederlands">荷兰语 (Dutch)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>高级选项</label>
+                                <div class="checkbox-group">
+                                    <label for="formula_ocr"><input type="checkbox" id="formula_ocr" name="formula_ocr">公式识别</label>
+                                    <label for="code_ocr"><input type="checkbox" id="code_ocr" name="code_ocr">代码识别</label>
+                                    <label for="refine_markdown"><input type="checkbox" id="refine_markdown"
+                                                                        name="refine_markdown">修正文本（耗时）</label>
+                                </div>
+                            </div>
+                        </div>
                         <details open>
                             <summary>API 配置</summary>
                             <div class="form-grid">
@@ -201,45 +241,6 @@ HTML_TEMPLATE = """
                                 <input type="text" id="model_id" name="model_id" placeholder="模型id" required>
                             </div>
                         </details>
-
-                        <!-- Modified File Input Area -->
-                        <div class="form-group">
-                            <label for="file">文档选择</label>
-                            <div id="fileDropArea">
-                                <input type="file" id="file" name="file" required style="display: none;">
-                                <p>点击此处选择文件，或将文件拖拽到这里</p>
-                                <div id="fileNameDisplay">未选择文件</div>
-                            </div>
-                        </div>
-
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label for="to_lang">目标语言</label>
-                                <select id="to_lang" name="to_lang">
-                                    <option value="中文">中文 (Chinese)</option>
-                                    <option value="English">英文 (English)</option>
-                                    <option value="日本語">日语 (Japanese)</option>
-                                    <option value="한국어">韩语 (Korean)</option>
-                                    <option value="Français">法语 (French)</option>
-                                    <option value="Deutsch">德语 (German)</option>
-                                    <option value="Español">西班牙语 (Spanish)</option>
-                                    <option value="Italiano">意大利语 (Italian)</option>
-                                    <option value="Português">葡萄牙语 (Portuguese)</option>
-                                    <option value="Русский">俄语 (Russian)</option>
-                                    <option value="العربية">阿拉伯语 (Arabic)</option>
-                                    <option value="हिन्दी">印地语 (Hindi)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>高级选项</label>
-                                <div class="checkbox-group">
-                                    <label for="formula_ocr"><input type="checkbox" id="formula_ocr" name="formula_ocr">公式识别</label>
-                                    <label for="code_ocr"><input type="checkbox" id="code_ocr" name="code_ocr">代码识别</label>
-                                    <label for="refine_markdown"><input type="checkbox" id="refine_markdown"
-                                                                        name="refine_markdown">修正文本（耗时）</label>
-                                </div>
-                            </div>
-                        </div>
                         <button type="submit" id="submitButton" class="primary">开始翻译</button>
                     </form>
                     <div id="resultArea">
@@ -713,6 +714,7 @@ class QueueAndHistoryHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord):
         log_entry = self.format(record)
+        print(log_entry)
         self.history.append(log_entry)
         if len(self.history) > self.max_history:
             del self.history[:len(self.history) - self.max_history]
@@ -732,15 +734,16 @@ class QueueAndHistoryHandler(logging.Handler):
 @app.on_event("startup")
 async def startup_event():
     app.state.main_event_loop = asyncio.get_running_loop()
+    if translater_logger.hasHandlers():
+        translater_logger.handlers.clear()
     queue_handler = QueueAndHistoryHandler(log_queue, log_history, MAX_LOG_HISTORY)
     queue_handler.setLevel(logging.INFO)
     queue_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-    if not any(isinstance(h, QueueAndHistoryHandler) for h in translater_logger.handlers):
-        translater_logger.addHandler(queue_handler)
-        translater_logger.propagate = False  # Avoid duplicate logs if root logger also has handlers
-        translater_logger.setLevel(logging.INFO)  # Ensure translater_logger itself is at INFO
-    translater_logger.info("应用启动完成，日志队列/历史处理器已配置。")
+    translater_logger.addHandler(queue_handler)
+    translater_logger.propagate = False  # 非常重要，阻止日志向上传播到root logger
+    translater_logger.setLevel(logging.INFO)  # 确保 translater_logger 本身的级别是 INFO
 
+    translater_logger.info("应用启动完成，日志队列/历史处理器已清除并重新配置。")
 
 # --- Background Task Logic ---
 async def _perform_translation(params: Dict[str, Any], file_contents: bytes, original_filename: str):

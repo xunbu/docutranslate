@@ -56,6 +56,7 @@ class MDTranslateAgent(Agent):
 形如<ph-abc123>的占位符不要改变
 code、latex和HTML只翻译说明文字，其余保持原文
 公式必须表示为合法的latex公式,行内公式需被$正确包裹
+去掉异常字词
 # 输出
 翻译后的markdown纯文本（不是markdown代码块）
 # 示例
