@@ -577,8 +577,7 @@ HTML_TEMPLATE = """
                     }
 
                     function loadSettings() {
-                        const lastPlatform = getFromStorage('translator_last_platform', 'custom');
-                        platformSelect.value = lastPlatform;
+                        platformSelect.value = getFromStorage('translator_last_platform', 'custom');
                         updatePlatformUI(); // This will also load API key and model for the platform
                         toLangSelect.value = getFromStorage('translator_to_lang', '中文');
                         formulaCheckbox.checked = getFromStorage('translator_formula_ocr') === 'true';
@@ -792,7 +791,7 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
         duration = end_time - current_state["task_start_time"]
         translater_logger.info(f"翻译任务 '{original_filename}' 已被取消 (用时 {duration:.2f} 秒).")
         current_state.update({
-            "status_message": f"翻译任务已取消（原先的转换阶段仍会后台进行） (用时 {duration:.2f} 秒).",
+            "status_message": f"翻译任务已取消（若有转换任务仍会后台进行） (用时 {duration:.2f} 秒).",
             "error_flag": False,
             "download_ready": False,
             "markdown_content": None,
