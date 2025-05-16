@@ -67,10 +67,10 @@ hello<ph-aaaaaa>, what's your name?
 ## 公式要为合法latex（行内公式使用$包裹）
 输入：
 The equation is E=mc 2. This is famous.
-{{c_0,c_1,c^2}}is a set.
+({{c_0,c_1,c^2}})is a set.
 输出：
 这个方程是 $E=mc^2$。这很有名。
-{{$c_0$,$c_1$,$c^2$}}是一个集合。
+${{c_0,c_1,c^2}}$是一个集合。
 ## 引用的参考文献要保持原文不要翻译
 输入：【假设目标语言为中文】
 [2] M. Castro, B. Liskov, et al. Practical byzantine fault tolerance. In OSDI,

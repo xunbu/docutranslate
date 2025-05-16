@@ -25,31 +25,14 @@ HTML_TEMPLATE = """
                     <title>DocuTranslate</title>
                     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@latest/css/pico.min.css">
                     <style>
-                        :root {
-                            --primary-color: #1e88e5;
-                            --border-radius: 0.25rem;
-                        }
-
                         body {
                             padding: 20px;
-                            background-color: #f9f9f9;
                         }
 
                         .container {
                             max-width: 800px;
                             margin: auto;
-                            background-color: white;
-                            padding: 2rem;
-                            border-radius: 8px;
-                            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-                        }
-
-                        h1 {
-                            font-size: 1.8rem;
-                            margin-bottom: 1.5rem;
-                            display: flex;
-                            align-items: center;
-                            gap: 0.5rem;
+                            padding: 1rem;
                         }
 
                         .log-area {
@@ -59,31 +42,20 @@ HTML_TEMPLATE = """
                             height: 200px;
                             overflow-y: scroll;
                             white-space: pre-wrap;
-                            word-break: break-all;
                             font-family: monospace;
-                            font-size: 0.85em;
-                            line-height: 1.4;
                             margin-top: 1rem;
                         }
 
                         .error-message {
                             color: #d32f2f;
-                            font-weight: 500;
                         }
 
                         .success-message {
                             color: #2e7d32;
-                            font-weight: 500;
                         }
 
                         .form-group {
                             margin-bottom: 1rem;
-                        }
-
-                        .form-group label {
-                            margin-bottom: 0.2rem;
-                            font-weight: 500;
-                            font-size: 0.9rem;
                         }
 
                         .form-grid {
@@ -100,29 +72,7 @@ HTML_TEMPLATE = """
                         }
 
                         details {
-                            background: transparent;
-                            border: none;
-                            box-shadow: none;
-                            padding: 0;
-                            border-bottom: 1px solid #eee;
                             margin-bottom: 1rem;
-                        }
-
-                        summary {
-                            font-weight: 500;
-                            padding: 0.5rem 0;
-                        }
-
-                        details[open] > summary {
-                            border-bottom: none;
-                            margin-bottom: 0;
-                        }
-
-                        .checkbox-label {
-                            display: flex;
-                            align-items: center;
-                            margin-right: 1rem;
-                            margin-bottom: 0.5rem;
                         }
 
                         .checkbox-group {
@@ -142,46 +92,8 @@ HTML_TEMPLATE = """
                             margin-top: 1rem;
                         }
 
-                        .section-header {
-                            display: flex;
-                            align-items: center;
-                            margin-bottom: 0.5rem;
-                            font-size: 1.1rem;
-                            font-weight: 500;
-                        }
-
-                        select, input[type="text"], input[type="password"], input[type="file"] {
-                            padding: 0.5rem;
-                            border: 1px solid #ddd;
-                            background-color: white;
-                        }
-
-                        button, a[role="button"] {
-                            padding: 0.5rem 1rem;
-                        }
-
-                        .options-grid {
-                            display: grid;
-                            grid-template-columns: 1fr 1fr;
-                            gap: 1rem;
-                            margin-bottom: 1rem;
-                        }
-
-                        @media print {
-                            .no-print {
-                                display: none !important;
-                            }
-
-                            body {
-                                padding: 0;
-                                background-color: white;
-                            }
-
-                            .container {
-                                box-shadow: none;
-                                max-width: 100%;
-                                padding: 0;
-                            }
+                        .hidden {
+                            display: none !important;
                         }
 
                         .modal {
@@ -197,7 +109,6 @@ HTML_TEMPLATE = """
                         }
 
                         .modal-content {
-                            position: relative;
                             background-color: #fff;
                             margin: 2% auto;
                             padding: 20px;
@@ -205,25 +116,7 @@ HTML_TEMPLATE = """
                             max-width: 900px;
                             max-height: 90vh;
                             border-radius: 8px;
-                            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
                             overflow: auto;
-                        }
-
-                        .close-modal {
-                            position: absolute;
-                            top: 10px;
-                            right: 10px;
-                            font-size: 24px;
-                            font-weight: bold;
-                            color: #666;
-                            cursor: pointer;
-                        }
-
-                        .modal-actions {
-                            display: flex;
-                            justify-content: flex-end;
-                            margin-top: 20px;
-                            gap: 10px;
                         }
 
                         #previewFrame {
@@ -236,23 +129,15 @@ HTML_TEMPLATE = """
                             display: none;
                         }
 
-                        .hidden {
-                            display: none !important;
-                        }
-
                         @media (max-width: 768px) {
-                            .form-grid, .options-grid {
+                            .form-grid {
                                 grid-template-columns: 1fr;
-                            }
-
-                            .container {
-                                padding: 1rem;
                             }
                         }
                     </style>
                 </head>
                 <body>
-                <main class="container no-print">
+                <main class="container">
                     <h1>
                         <a href="https://github.com/xunbu/docutranslate" target="_blank">DocuTranslate</a>
                     </h1>
@@ -295,7 +180,7 @@ HTML_TEMPLATE = """
                             <label for="file">文档选择</label>
                             <input type="file" id="file" name="file" required>
                         </div>
-                        <div class="options-grid">
+                        <div class="form-grid">
                             <div class="form-group">
                                 <label for="to_lang">目标语言</label>
                                 <select id="to_lang" name="to_lang">
@@ -316,14 +201,10 @@ HTML_TEMPLATE = """
                             <div class="form-group">
                                 <label>高级选项</label>
                                 <div class="checkbox-group">
-                                    <label class="checkbox-label" for="formula_ocr"><input type="checkbox"
-                                                                                           id="formula_ocr"
-                                                                                           name="formula_ocr">公式识别</label>
-                                    <label class="checkbox-label" for="code_ocr"><input type="checkbox" id="code_ocr"
-                                                                                        name="code_ocr">代码识别</label>
-                                    <label class="checkbox-label" for="refine_markdown"><input type="checkbox"
-                                                                                               id="refine_markdown"
-                                                                                               name="refine_markdown">修正文本（耗时，有概率修复文本流和公式识别错误）</label>
+                                    <label for="formula_ocr"><input type="checkbox" id="formula_ocr" name="formula_ocr">公式识别</label>
+                                    <label for="code_ocr"><input type="checkbox" id="code_ocr" name="code_ocr">代码识别</label>
+                                    <label for="refine_markdown"><input type="checkbox" id="refine_markdown"
+                                                                        name="refine_markdown">修正文本</label>
                                 </div>
                             </div>
                         </div>
@@ -332,22 +213,22 @@ HTML_TEMPLATE = """
                     <div id="resultArea">
                         <p id="statusMessage"></p>
                         <div id="downloadButtons" class="button-group">
-                            <div class="section-header">翻译结果</div>
+                            <h4>翻译结果</h4>
                             <a id="downloadMarkdown" href="#" role="button" class="outline">下载 Markdown</a>
                             <a id="downloadHtml" href="#" role="button" class="outline">下载 HTML</a>
                             <button id="downloadPdf" class="outline">下载 PDF</button>
                             <button id="previewHtml" class="outline">预览</button>
                         </div>
                     </div>
-                    <div class="section-header" style="margin-top: 1.5rem;">运行日志</div>
+                    <h4 style="margin-top: 1.5rem;">运行日志</h4>
                     <div class="log-area" id="logArea"></div>
                 </main>
                 <div id="previewModal" class="modal">
                     <div class="modal-content">
-                        <span class="close-modal" id="closeModalBtn">×</span>
+                        <span id="closeModalBtn" style="cursor:pointer; float:right;">×</span>
                         <h3>HTML 预览</h3>
                         <iframe id="previewFrame"></iframe>
-                        <div class="modal-actions">
+                        <div class="button-group">
                             <button id="printFromPreview" class="primary">打印/保存为PDF</button>
                             <button id="closePreviewBtn" class="outline">关闭</button>
                         </div>
