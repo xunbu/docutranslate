@@ -1,6 +1,6 @@
 from typing import Unpack
 
-from .agent_async import Agent, AgentArgs
+from .agent import (Agent, AgentArgs)
 
 class MDRefineAgent(Agent):
     def __init__(self,**kwargs:Unpack[AgentArgs]):
@@ -19,7 +19,7 @@ class MDRefineAgent(Agent):
 形如<ph-abc123>的占位符不要改变
 code、latex和HTML保持结构
 所有公式（包括短公式）都应该是latex公式
-修复不正确的latex公式，要用$正确包裹以构造合法latex表达式
+修复不正确的latex公式，行内公式要用$正确包裹以构造合法latex表达式
 # 输出
 修正后的markdown纯文本（不是markdown代码块）
 # 示例
@@ -29,11 +29,13 @@ code、latex和HTML保持结构
 你叫
 输出：
 你叫什么名字
-## 去掉异常字词与修正公式（优先使用$包裹）
+## 去掉异常字词与修正公式（行内公式使用$包裹）
 输入：
 一道\题@#目<ph-12asd2>:c_0+1=2，\(c 0\)等于几
+{c_0,c_1,c^2}是一个集合
 输出:
 一道题目<ph-12asd2>:$c_0+1=2$，$c_0$等于几
+{$c_0$,$c_1$,$c^2$}是一个集合
 \no_think"""
 
 
@@ -53,7 +55,7 @@ class MDTranslateAgent(Agent):
 引用的参考文献和其作者不要翻译
 形如<ph-abc123>的占位符不要改变
 code、latex和HTML只翻译说明文字，其余保持原文
-公式必须表示为合法的latex公式,且被$正确包裹
+公式必须表示为合法的latex公式,行内公式需被$正确包裹
 # 输出
 翻译后的markdown纯文本（不是markdown代码块）
 # 示例
@@ -62,11 +64,13 @@ code、latex和HTML只翻译说明文字，其余保持原文
 hello<ph-aaaaaa>, what's your name?
 输出：
 你好<ph-aaaaaa>，你叫什么名字？
-## 公式要为合法latex（优先使用$包裹）
+## 公式要为合法latex（行内公式使用$包裹）
 输入：
-c_0+1=2
+The equation is E=mc 2. This is famous.
+{{c_0,c_1,c^2}}is a set.
 输出：
-$c_0+1=2$
+这个方程是 $E=mc^2$。这很有名。
+{{$c_0$,$c_1$,$c^2$}}是一个集合。
 ## 引用的参考文献要保持原文不要翻译
 输入：【假设目标语言为中文】
 [2] M. Castro, B. Liskov, et al. Practical byzantine fault tolerance. In OSDI,

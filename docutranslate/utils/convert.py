@@ -1,3 +1,4 @@
+import asyncio
 import os
 from huggingface_hub.errors import LocalEntryNotFoundError
 from docling.datamodel.base_models import InputFormat
@@ -6,8 +7,7 @@ from docling_core.types.doc import ImageRefMode
 from pathlib import Path
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.document import DocumentStream
-
-from docling.backend.docling_parse_v2_backend import DoclingParseV2DocumentBackend
+from docling.datamodel.settings import settings
 from docutranslate.logger import translater_logger
 IMAGE_RESOLUTION_SCALE = 4
 
@@ -22,20 +22,25 @@ def file2markdown_embed_images(file_path: Path | str|DocumentStream, formula=Fal
         pipeline_options.do_formula_enrichment=True
     if code:
         pipeline_options.do_code_enrichment=True
-    pipeline_options.accelerator_options= AcceleratorOptions(
-        num_threads=8, device=AcceleratorDevice.AUTO
-    )
+    # pipeline_options.accelerator_options= AcceleratorOptions(
+    #     num_threads=4, device=AcceleratorDevice.AUTO
+    # )
+    #打印时间
+    settings.debug.profile_pipeline_timings=True
     converter = DocumentConverter(format_options={
         InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
 
     })
     try:
-        result = converter.convert(file_path).document.export_to_markdown(image_mode=ImageRefMode.EMBEDDED)
+        conversion_result = converter.convert(file_path)
+        result = conversion_result.document.export_to_markdown(image_mode=ImageRefMode.EMBEDDED)
     except LocalEntryNotFoundError:
         translater_logger.info(f"无法连接huggingface，正在尝试换源")
         os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
-        result = converter.convert(file_path).document.export_to_markdown(image_mode=ImageRefMode.EMBEDDED)
+        conversion_result = converter.convert(file_path)
+        result=conversion_result.document.export_to_markdown(image_mode=ImageRefMode.EMBEDDED)
     translater_logger.info(f"已转换为markdown")
+    translater_logger.info(f"pdf转换耗时: {conversion_result.timings["pipeline_total"].times}")
     return result
 
 if __name__ == '__main__':

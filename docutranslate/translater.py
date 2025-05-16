@@ -1,3 +1,4 @@
+import asyncio
 from io import BytesIO
 from pathlib import Path
 from typing import Literal
@@ -15,7 +16,7 @@ from docutranslate.logger import translater_logger
 
 
 class FileTranslater:
-    def __init__(self, file_path: Path | str | None = None, chunksize: int = 3500, base_url="", key=None,
+    def __init__(self, file_path: Path | str | None = None, chunksize: int = 2000, base_url="", key=None,
                  model_id="", temperature=0.7, max_concurrent=15, docling_artifact: Path | str | None = None,
                  timeout=2000, tips=True):
         if isinstance(file_path, str):
@@ -145,6 +146,31 @@ class FileTranslater:
         translater_logger.info("翻译完成")
         return self.markdown
 
+
+    async def refine_markdown_by_agent_async(self, refine_agent: Agent | None = None) -> str:
+        translater_logger.info("正在修正markdown")
+        self._mask_uris_in_markdown()
+        chuncks = self._split_markdown_into_chunks()
+        if refine_agent is None:
+            refine_agent = MDRefineAgent(**self.default_agent_params())
+        result: list[str] = await refine_agent.send_prompts_async(chuncks)
+        self.markdown = "\n\n".join(result)
+        self._unmask_uris_in_markdown()
+        translater_logger.info("markdown已修正")
+        return self.markdown
+
+    async def translate_markdown_by_agent_async(self, translate_agent: Agent | None = None, to_lang="中文"):
+        translater_logger.info("正在翻译markdown")
+        self._mask_uris_in_markdown()
+        chuncks = self._split_markdown_into_chunks()
+        if translate_agent is None:
+            translate_agent = MDTranslateAgent(to_lang=to_lang, **self.default_agent_params())
+        result: list[str] = await translate_agent.send_prompts_async(chuncks)
+        self.markdown = "\n\n".join(result)
+        self._unmask_uris_in_markdown()
+        translater_logger.info("翻译完成")
+        return self.markdown
+
     def save_as_markdown(self, filename: str | Path | None = None, output_dir: str | Path = "./output"):
         if isinstance(filename, str):
             filename = Path(filename)
@@ -191,7 +217,7 @@ class FileTranslater:
 
     def export_to_html(self, title="title") -> str:
         markdowner = markdown2.Markdown(extras=['tables', 'fenced-code-blocks', 'mermaid', "code-friendly"])
-
+        # language=html
         html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -206,6 +232,7 @@ class FileTranslater:
     </style>
     <script type="text/x-mathjax-config">
       MathJax.Hub.Config({{
+        messageStyle: "none",
         tex2jax: {{
           inlineMath: [ ['$','$'], ["\\\\(","\\\\)"] ],
           processEscapes: true
@@ -264,7 +291,32 @@ class FileTranslater:
                 filename = f"{file_path.stem}_{to_lang}.html"
                 self.save_as_html(filename=filename, output_dir=output_dir)
         return self
-
+    async def translate_file_async(self, file_path: Path | str | None = None, to_lang="中文", output_dir="./output",
+                       formula=True,
+                       code=True, output_format: Literal["markdown", "html"] = "markdown", refine=False,
+                       refine_agent: Agent | None = None, translate_agent: Agent | None = None,save=True):
+        if file_path is None:
+            assert self.file_path is not None, "未输入文件路径"
+            file_path = self.file_path
+        if isinstance(file_path, str):
+            file_path = Path(file_path)
+        await asyncio.to_thread(
+            self.read_file,
+            file_path,
+            formula=formula,
+            code=code
+        )
+        if refine:
+            await self.refine_markdown_by_agent_async(refine_agent)
+        await self.translate_markdown_by_agent_async(translate_agent, to_lang=to_lang)
+        if save:
+            if output_format == "markdown":
+                filename = f"{file_path.stem}_{to_lang}.md"
+                self.save_as_markdown(filename=filename, output_dir=output_dir)
+            elif output_format == "html":
+                filename = f"{file_path.stem}_{to_lang}.html"
+                self.save_as_html(filename=filename, output_dir=output_dir)
+        return self
     def translate_bytes(self, name:str,file: bytes, to_lang="中文", output_dir="./output",
                        formula=True,
                        code=True, output_format: Literal["markdown", "html"] = "markdown", refine=False,
@@ -273,6 +325,29 @@ class FileTranslater:
         if refine:
             self.refine_markdown_by_agent(refine_agent)
         self.translate_markdown_by_agent(translate_agent, to_lang=to_lang)
+        if save:
+            if output_format == "markdown":
+                filename = f"{name}_{to_lang}.md"
+                self.save_as_markdown(filename=filename, output_dir=output_dir)
+            elif output_format == "html":
+                filename = f"{name}_{to_lang}.html"
+                self.save_as_html(filename=filename, output_dir=output_dir)
+        return self
+
+    async def translate_bytes_async(self, name:str,file: bytes, to_lang="中文", output_dir="./output",
+                       formula=True,
+                       code=True, output_format: Literal["markdown", "html"] = "markdown", refine=False,
+                       refine_agent: Agent | None = None, translate_agent: Agent | None = None,save=True):
+        await asyncio.to_thread(
+            self.read_bytes,
+            name=name,
+            file=file,
+            formula=formula,
+            code=code
+        )
+        if refine:
+            await self.refine_markdown_by_agent_async(refine_agent)
+        await self.translate_markdown_by_agent_async(translate_agent, to_lang=to_lang)
         if save:
             if output_format == "markdown":
                 filename = f"{name}_{to_lang}.md"
