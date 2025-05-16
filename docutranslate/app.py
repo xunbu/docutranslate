@@ -128,6 +128,32 @@ HTML_TEMPLATE = """
                             display: none;
                         }
 
+                        /* Styles for drag and drop area */
+                        #fileDropArea {
+                            border: 2px dashed #ccc;
+                            padding: 20px;
+                            text-align: center;
+                            cursor: pointer;
+                            transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+                        }
+
+                        #fileDropArea.drag-over {
+                            border-color: #007bff; /* Pico primary color */
+                            background-color: rgba(0, 123, 255, 0.05);
+                        }
+
+                        #fileDropArea p {
+                            margin: 0.5rem 0;
+                            color: #555;
+                        } \
+
+                        #fileNameDisplay {
+                            margin-top: 0.5rem;
+                            font-style: italic;
+                            color: #333;
+                        }
+
+
                         @media (max-width: 768px) {
                             .form-grid {
                                 grid-template-columns: 1fr;
@@ -175,10 +201,17 @@ HTML_TEMPLATE = """
                                 <input type="text" id="model_id" name="model_id" placeholder="模型id" required>
                             </div>
                         </details>
+
+                        <!-- Modified File Input Area -->
                         <div class="form-group">
                             <label for="file">文档选择</label>
-                            <input type="file" id="file" name="file" required>
+                            <div id="fileDropArea">
+                                <input type="file" id="file" name="file" required style="display: none;">
+                                <p>点击此处选择文件，或将文件拖拽到这里</p>
+                                <div id="fileNameDisplay">未选择文件</div>
+                            </div>
                         </div>
+
                         <div class="form-grid">
                             <div class="form-group">
                                 <label for="to_lang">目标语言</label>
@@ -203,7 +236,7 @@ HTML_TEMPLATE = """
                                     <label for="formula_ocr"><input type="checkbox" id="formula_ocr" name="formula_ocr">公式识别</label>
                                     <label for="code_ocr"><input type="checkbox" id="code_ocr" name="code_ocr">代码识别</label>
                                     <label for="refine_markdown"><input type="checkbox" id="refine_markdown"
-                                                                        name="refine_markdown">修正文本</label>
+                                                                        name="refine_markdown">修正文本（耗时）</label>
                                 </div>
                             </div>
                         </div>
@@ -260,6 +293,12 @@ HTML_TEMPLATE = """
                     const closeModalButton = document.getElementById('closeModalBtn');
                     const closePreviewBtn = document.getElementById('closePreviewBtn');
                     const printFromPreview = document.getElementById('printFromPreview');
+
+                    // File input and drag-drop elements
+                    const fileInput = document.getElementById('file');
+                    const fileDropArea = document.getElementById('fileDropArea');
+                    const fileNameDisplay = document.getElementById('fileNameDisplay');
+
 
                     let logPollIntervalId = null;
                     let statusPollIntervalId = null;
@@ -325,6 +364,56 @@ HTML_TEMPLATE = """
                             alert('打印失败，请尝试使用浏览器的打印功能 (Ctrl+P 或 ⌘+P)。');
                         }
                     });
+
+                    // --- Drag and Drop File Handling ---
+                    fileDropArea.addEventListener('click', () => {
+                        fileInput.click(); // Trigger click on hidden file input
+                    });
+
+                    fileInput.addEventListener('change', () => {
+                        if (fileInput.files.length > 0) {
+                            fileNameDisplay.textContent = `已选择: ${fileInput.files[0].name}`;
+                        } else {
+                            fileNameDisplay.textContent = '未选择文件';
+                        }
+                    });
+
+                    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                        fileDropArea.addEventListener(eventName, preventDefaults, false);
+                    });
+
+                    function preventDefaults(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+
+                    ['dragenter', 'dragover'].forEach(eventName => {
+                        fileDropArea.addEventListener(eventName, () => {
+                            fileDropArea.classList.add('drag-over');
+                        }, false);
+                    });
+
+                    ['dragleave', 'drop'].forEach(eventName => {
+                        fileDropArea.addEventListener(eventName, () => {
+                            fileDropArea.classList.remove('drag-over');
+                        }, false);
+                    });
+
+                    fileDropArea.addEventListener('drop', (e) => {
+                        const dt = e.dataTransfer;
+                        const files = dt.files;
+
+                        if (files.length > 0) {
+                            fileInput.files = files; // Assign dropped files to the input
+                            fileNameDisplay.textContent = `已选择: ${files[0].name}`;
+                            // Manually trigger change event for any listeners on fileInput
+                            const event = new Event('change', {bubbles: true});
+                            fileInput.dispatchEvent(event);
+                        }
+                    }, false); \
+
+                    // --- End Drag and Drop ---
+
 
                     async function pollLogs() {
                         try {
@@ -537,6 +626,17 @@ HTML_TEMPLATE = """
                             return;
                         }
 
+                        // Validate file input
+                        if (fileInput.files.length === 0) {
+                            statusMsg.textContent = '请选择一个文件进行翻译。';
+                            statusMsg.className = 'error-message';
+                            fileNameDisplay.textContent = '请选择文件！';
+                            fileDropArea.classList.add('error-message'); // Optional: add error style to drop area
+                            setTimeout(() => fileDropArea.classList.remove('error-message'), 2000);
+                            return;
+                        }
+
+
                         stopPolling(); // Stop any existing polling
                         submitButton.disabled = true;
                         submitButton.setAttribute('aria-busy', 'true');
@@ -554,7 +654,7 @@ HTML_TEMPLATE = """
                             if (response.ok && result.task_started) {
                                 statusMsg.textContent = result.message || '任务已开始，正在处理...';
                                 statusMsg.className = '';
-                                submitButton.textContent = '取消翻译（pdf转换仍会后台进行）'; // Change button text
+                                submitButton.textContent = '取消翻译'; // Change button text
                                 submitButton.classList.remove('primary');
                                 submitButton.classList.add('secondary'); // Change button style
                                 isTranslating = true; // Set translation flag
@@ -692,7 +792,7 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
         duration = end_time - current_state["task_start_time"]
         translater_logger.info(f"翻译任务 '{original_filename}' 已被取消 (用时 {duration:.2f} 秒).")
         current_state.update({
-            "status_message": f"翻译任务已取消 (用时 {duration:.2f} 秒).",
+            "status_message": f"翻译任务已取消（原先的转换阶段仍会后台进行） (用时 {duration:.2f} 秒).",
             "error_flag": False,
             "download_ready": False,
             "markdown_content": None,
@@ -747,6 +847,12 @@ async def handle_translate(
             content={"task_started": False, "message": "另一个翻译任务正在进行中，请稍后再试。"}
         )
 
+    if not file or not file.filename:  # Check if a file was actually uploaded
+        return JSONResponse(
+            status_code=400,
+            content={"task_started": False, "message": "没有选择文件或文件无效。"}
+        )
+
     current_state["is_processing"] = True  # Set this immediately
     original_filename_for_init = file.filename or "uploaded_file"
 
@@ -769,7 +875,7 @@ async def handle_translate(
 
     try:
         file_contents = await file.read()
-        original_filename = file.filename or "uploaded_file"  # Use the actual filename
+        original_filename = file.filename  # Use the actual filename (already checked it's not None)
         await file.close()
 
         task_params = {
