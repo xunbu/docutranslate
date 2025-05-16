@@ -146,7 +146,7 @@ HTML_TEMPLATE = """
                             margin: 0.5rem 0;
                             color: #555;
                         } \
-
+ \
                         #fileNameDisplay {
                             margin-top: 0.5rem;
                             font-style: italic;
@@ -411,7 +411,7 @@ HTML_TEMPLATE = """
                             fileInput.dispatchEvent(event);
                         }
                     }, false); \
-
+ \
                     // --- End Drag and Drop ---
 
 
