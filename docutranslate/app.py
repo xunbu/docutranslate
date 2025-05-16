@@ -2,12 +2,11 @@ import asyncio
 import io
 import logging
 import time
-import traceback
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 import uvicorn
-from fastapi import FastAPI, File, Form, UploadFile, Request, HTTPException, BackgroundTasks
+from fastapi import FastAPI, File, Form, UploadFile, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 
@@ -265,6 +264,7 @@ HTML_TEMPLATE = """
                     let logPollIntervalId = null;
                     let statusPollIntervalId = null;
                     let lastLogCount = 0;
+                    let isTranslating = false; // Flag to track translation state for cancel button
 
                     function saveToStorage(key, value) {
                         try {
@@ -297,16 +297,6 @@ HTML_TEMPLATE = """
                             baseUrlInput.value = selectedPlatformValue;
                         }
                         saveToStorage('translator_last_platform', selectedPlatformValue);
-                    }
-
-                    function loadSettings() {
-                        const lastPlatform = getFromStorage('translator_last_platform', 'custom');
-                        platformSelect.value = lastPlatform;
-                        updatePlatformUI();
-                        toLangSelect.value = getFromStorage('translator_to_lang', '中文');
-                        formulaCheckbox.checked = getFromStorage('translator_formula_ocr') === 'true';
-                        codeCheckbox.checked = getFromStorage('translator_code_ocr') === 'true';
-                        refineCheckbox.checked = getFromStorage('translator_refine_markdown') === 'true';
                     }
 
                     loadSettings();
@@ -375,6 +365,9 @@ HTML_TEMPLATE = """
                                 submitButton.disabled = false;
                                 submitButton.removeAttribute('aria-busy');
                                 submitButton.textContent = '开始翻译';
+                                submitButton.classList.remove('secondary', 'contrast'); // PicoCSS: remove secondary/contrast
+                                submitButton.classList.add('primary');    // PicoCSS: add primary
+                                isTranslating = false;
 
                                 if (status.download_ready && !status.error_flag) {
                                     markdownLink.href = status.markdown_url;
@@ -382,8 +375,8 @@ HTML_TEMPLATE = """
                                     htmlLink.href = status.html_url;
                                     htmlLink.setAttribute('download', status.original_filename_stem + '_translated.html');
 
-                                    let htmlUrl = status.html_url; // Stays in scope for click handlers
-                                    let fileName = status.original_filename_stem; // Stays in scope
+                                    let htmlUrl = status.html_url;
+                                    let fileName = status.original_filename_stem;
 
                                     previewHtmlBtn.onclick = function () {
                                         const currentHtmlUrl = htmlUrl;
@@ -428,7 +421,7 @@ HTML_TEMPLATE = """
                                                 })
                                                 .then(htmlContent => {
                                                     iframe.onload = () => {
-                                                        iframe.onload = null; // Critical: prevent re-trigger
+                                                        iframe.onload = null;
                                                         try {
                                                             const iframeWindow = iframe.contentWindow;
                                                             if (!iframeWindow) throw new Error("无法访问打印框架。");
@@ -440,7 +433,7 @@ HTML_TEMPLATE = """
                                                             statusMsg.textContent = '无法直接生成PDF。请预览HTML后，使用浏览器的打印功能 (Ctrl+P) 保存。';
                                                             statusMsg.className = 'error-message';
                                                         } finally {
-                                                            setTimeout(() => { // Re-enable button after a delay
+                                                            setTimeout(() => {
                                                                 downloadPdfBtn.disabled = false;
                                                                 downloadPdfBtn.textContent = '下载 PDF';
                                                             }, 2000);
@@ -460,7 +453,13 @@ HTML_TEMPLATE = """
                                 } else {
                                     downloadBtns.style.display = 'none';
                                 }
-                            } else {
+                            } else { // Task is still processing
+                                submitButton.textContent = '取消翻译';
+                                submitButton.classList.remove('primary');
+                                submitButton.classList.add('secondary'); // PicoCSS: use secondary for cancel
+                                isTranslating = true;
+                                submitButton.disabled = false; // Enable button to allow cancellation
+                                submitButton.removeAttribute('aria-busy');
                                 downloadBtns.style.display = 'none';
                             }
                         } catch (error) {
@@ -474,8 +473,8 @@ HTML_TEMPLATE = """
                         stopPolling();
                         lastLogCount = 0;
                         logArea.innerHTML = '';
-                        pollLogs();
-                        pollStatus();
+                        pollLogs(); // Initial poll
+                        pollStatus(); // Initial poll
                         logPollIntervalId = setInterval(pollLogs, 2000);
                         statusPollIntervalId = setInterval(pollStatus, 1500);
                     }
@@ -485,12 +484,60 @@ HTML_TEMPLATE = """
                         if (statusPollIntervalId) clearInterval(statusPollIntervalId);
                         logPollIntervalId = null;
                         statusPollIntervalId = null;
-                        setTimeout(pollLogs, 100); // Final log poll
+                        setTimeout(pollLogs, 100);
+                    }
+
+                    function loadSettings() {
+                        const lastPlatform = getFromStorage('translator_last_platform', 'custom');
+                        platformSelect.value = lastPlatform;
+                        updatePlatformUI(); // This will also load API key and model for the platform
+                        toLangSelect.value = getFromStorage('translator_to_lang', '中文');
+                        formulaCheckbox.checked = getFromStorage('translator_formula_ocr') === 'true';
+                        codeCheckbox.checked = getFromStorage('translator_code_ocr') === 'true';
+                        refineCheckbox.checked = getFromStorage('translator_refine_markdown') === 'true';
+                    }
+
+
+                    async function cancelTranslation() {
+                        submitButton.disabled = true;
+                        submitButton.textContent = '正在取消...';
+                        submitButton.setAttribute('aria-busy', 'true');
+
+                        try {
+                            const response = await fetch('/cancel-translate', {method: 'POST'});
+                            const result = await response.json();
+
+                            if (response.ok && result.cancelled) {
+                                statusMsg.textContent = result.message || '取消请求已发送。';
+                                statusMsg.className = ''; // Neutral message
+                            } else {
+                                statusMsg.textContent = result.message || '取消失败。';
+                                statusMsg.className = 'error-message';
+                                // Re-enable button as "Cancel Translation" if cancellation failed but task might still be running
+                                submitButton.disabled = false;
+                                submitButton.textContent = '取消翻译';
+                                submitButton.removeAttribute('aria-busy');
+                            }
+                        } catch (error) {
+                            console.error('取消请求失败:', error);
+                            statusMsg.textContent = '取消请求发送失败。';
+                            statusMsg.className = 'error-message';
+                            submitButton.disabled = false;
+                            submitButton.textContent = '取消翻译'; // Or '开始翻译' if we assume it stopped
+                            submitButton.removeAttribute('aria-busy');
+                        }
+                        // Polling will handle the final state update for the button and status.
                     }
 
                     form.addEventListener('submit', async function (event) {
                         event.preventDefault();
-                        stopPolling();
+
+                        if (isTranslating) {
+                            await cancelTranslation();
+                            return;
+                        }
+
+                        stopPolling(); // Stop any existing polling
                         submitButton.disabled = true;
                         submitButton.setAttribute('aria-busy', 'true');
                         submitButton.textContent = '初始化...';
@@ -507,14 +554,19 @@ HTML_TEMPLATE = """
                             if (response.ok && result.task_started) {
                                 statusMsg.textContent = result.message || '任务已开始，正在处理...';
                                 statusMsg.className = '';
-                                submitButton.textContent = '翻译中...';
-                                startPolling();
+                                submitButton.textContent = '取消翻译（pdf转换仍会后台进行）'; // Change button text
+                                submitButton.classList.remove('primary');
+                                submitButton.classList.add('secondary'); // Change button style
+                                isTranslating = true; // Set translation flag
+                                submitButton.removeAttribute('aria-busy'); // No longer busy submitting, now in "cancellable" state
+                                startPolling(); // Start polling for status and logs
                             } else {
                                 statusMsg.textContent = result.message || `请求失败 (${response.status})`;
                                 statusMsg.className = 'error-message';
                                 submitButton.disabled = false;
                                 submitButton.removeAttribute('aria-busy');
                                 submitButton.textContent = '开始翻译';
+                                isTranslating = false;
                             }
                         } catch (error) {
                             console.error('请求失败:', error);
@@ -523,6 +575,7 @@ HTML_TEMPLATE = """
                             submitButton.disabled = false;
                             submitButton.removeAttribute('aria-busy');
                             submitButton.textContent = '开始翻译';
+                            isTranslating = false;
                         }
                     });
                 </script>
@@ -544,6 +597,7 @@ current_state: Dict[str, Any] = {
     "original_filename_stem": None,
     "task_start_time": 0,
     "task_end_time": 0,
+    "current_task_ref": None,  # Stores the asyncio.Task object
 }
 templates = Jinja2Templates(directory=".")
 MAX_LOG_HISTORY = 200
@@ -568,8 +622,10 @@ class QueueAndHistoryHandler(logging.Handler):
             if main_loop and main_loop.is_running():
                 main_loop.call_soon_threadsafe(self.queue.put_nowait, log_entry)
             else:
+                # Fallback if loop isn't available or running (e.g. during shutdown)
                 self.queue.put_nowait(log_entry)
         except Exception as e:
+            # Avoid crashing the logger if queue operations fail
             print(f"Error putting log to queue: {e}")
 
 
@@ -582,35 +638,17 @@ async def startup_event():
     queue_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
     if not any(isinstance(h, QueueAndHistoryHandler) for h in translater_logger.handlers):
         translater_logger.addHandler(queue_handler)
-        translater_logger.propagate = False
-        translater_logger.setLevel(logging.INFO)
+        translater_logger.propagate = False  # Avoid duplicate logs if root logger also has handlers
+        translater_logger.setLevel(logging.INFO)  # Ensure translater_logger itself is at INFO
     translater_logger.info("应用启动完成，日志队列/历史处理器已配置。")
 
 
 # --- Background Task Logic ---
 async def _perform_translation(params: Dict[str, Any], file_contents: bytes, original_filename: str):
-    start_time = time.time()
     global current_state
-    global log_history
 
-    file_stem = Path(original_filename).stem
-    translater_logger.info(f"后台任务开始: 文件 '{original_filename}'")
-
-    current_state.update({
-        "status_message": f"正在处理 '{original_filename}'...",
-        "error_flag": False,
-        "download_ready": False,
-        "markdown_content": None,
-        "html_content": None,
-        "original_filename_stem": file_stem,
-        "task_start_time": start_time,
-        "task_end_time": 0,
-    })
-    log_history.clear()
-    log_history.append(translater_logger.handlers[0].format(logging.LogRecord(
-        name=translater_logger.name, level=logging.INFO, pathname="", lineno=0,
-        msg=f"开始处理文件: {original_filename}", args=[], exc_info=None, func=""
-    )))
+    translater_logger.info(f"后台翻译任务开始: 文件 '{original_filename}'")
+    current_state["status_message"] = f"正在处理 '{original_filename}'..."
 
     try:
         translater_logger.info(f"使用 Base URL: {params['base_url']}, Model: {params['model_id']}")
@@ -633,20 +671,11 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
             refine=params['refine_markdown'],
             save=False
         )
-        # await asyncio.to_thread(
-        #     ft.translate_bytes,
-        #     name=original_filename,
-        #     file=file_contents,
-        #     to_lang=params['to_lang'],
-        #     formula=params['formula_ocr'],
-        #     code=params['code_ocr'],
-        #     refine=params['refine_markdown'],
-        #     save=False
-        # )
+
         md_content = ft.export_to_markdown()
-        html_content = ft.export_to_html(title=file_stem)
+        html_content = ft.export_to_html(title=current_state["original_filename_stem"])
         end_time = time.time()
-        duration = end_time - start_time
+        duration = end_time - current_state["task_start_time"]
 
         current_state.update({
             "markdown_content": md_content,
@@ -657,12 +686,26 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
             "task_end_time": end_time,
         })
         translater_logger.info(f"翻译成功完成，用时 {duration:.2f} 秒。")
+
+    except asyncio.CancelledError:
+        end_time = time.time()
+        duration = end_time - current_state["task_start_time"]
+        translater_logger.info(f"翻译任务 '{original_filename}' 已被取消 (用时 {duration:.2f} 秒).")
+        current_state.update({
+            "status_message": f"翻译任务已取消 (用时 {duration:.2f} 秒).",
+            "error_flag": False,
+            "download_ready": False,
+            "markdown_content": None,
+            "html_content": None,
+            "task_end_time": end_time,
+        })
+        # Do not re-raise CancelledError, it's handled.
     except Exception as e:
         end_time = time.time()
-        duration = end_time - start_time
+        duration = end_time - current_state["task_start_time"]
         error_message = f"翻译失败: {e}"
         translater_logger.error(error_message, exc_info=True)
-        tb_str = traceback.format_exc()
+        # tb_str = traceback.format_exc() # Not used directly, exc_info=True logs it
         current_state.update({
             "status_message": f"翻译过程中发生错误 (用时 {duration:.2f} 秒): {e}",
             "error_flag": True,
@@ -673,7 +716,8 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
         })
     finally:
         current_state["is_processing"] = False
-        translater_logger.info("后台翻译任务结束。")
+        current_state["current_task_ref"] = None  # Clear the task reference
+        translater_logger.info(f"后台翻译任务 '{original_filename}' 处理结束。")
 
 
 # --- API Endpoints ---
@@ -684,7 +728,7 @@ async def main_page(request: Request):
 
 @app.post("/translate")
 async def handle_translate(
-        background_tasks: BackgroundTasks,
+        # No BackgroundTasks needed here for the main task
         base_url: str = Form(...),
         apikey: str = Form(...),
         model_id: str = Form(...),
@@ -695,32 +739,37 @@ async def handle_translate(
         file: UploadFile = File(...)
 ):
     global current_state
-    if current_state["is_processing"]:
+    if current_state["is_processing"] and \
+            current_state["current_task_ref"] and \
+            not current_state["current_task_ref"].done():
         return JSONResponse(
             status_code=429,
             content={"task_started": False, "message": "另一个翻译任务正在进行中，请稍后再试。"}
         )
 
-    current_state["is_processing"] = True
+    current_state["is_processing"] = True  # Set this immediately
+    original_filename_for_init = file.filename or "uploaded_file"
+
     current_state.update({
         "status_message": "任务初始化中...",
         "error_flag": False,
         "download_ready": False,
         "markdown_content": None,
         "html_content": None,
-        "original_filename_stem": None,
-        "task_start_time": 0,
+        "original_filename_stem": Path(original_filename_for_init).stem,
+        "task_start_time": time.time(),
         "task_end_time": 0,
+        "current_task_ref": None,  # Will be set after task creation
     })
-    log_history.clear()
+    log_history.clear()  # Clear logs for the new task
     log_history.append(translater_logger.handlers[0].format(logging.LogRecord(
         name=translater_logger.name, level=logging.INFO, pathname="", lineno=0,
-        msg="收到新的翻译请求...", args=[], exc_info=None, func=""
+        msg=f"收到新的翻译请求: {original_filename_for_init}", args=[], exc_info=None, func=""
     )))
 
     try:
         file_contents = await file.read()
-        original_filename = file.filename or "uploaded_file"
+        original_filename = file.filename or "uploaded_file"  # Use the actual filename
         await file.close()
 
         task_params = {
@@ -728,14 +777,64 @@ async def handle_translate(
             "to_lang": to_lang, "formula_ocr": formula_ocr,
             "code_ocr": code_ocr, "refine_markdown": refine_markdown,
         }
-        background_tasks.add_task(_perform_translation, task_params, file_contents, original_filename)
+
+        loop = asyncio.get_running_loop()
+        task = loop.create_task(
+            _perform_translation(task_params, file_contents, original_filename)
+        )
+        current_state["current_task_ref"] = task
+
         return JSONResponse(content={"task_started": True, "message": "翻译任务已成功启动，请稍候..."})
     except Exception as e:
         translater_logger.error(f"启动翻译任务失败: {e}", exc_info=True)
-        current_state["is_processing"] = False
+        current_state["is_processing"] = False  # Reset processing flag
         current_state["status_message"] = f"启动任务失败: {e}"
         current_state["error_flag"] = True
+        current_state["current_task_ref"] = None  # Ensure task ref is cleared
         return JSONResponse(status_code=500, content={"task_started": False, "message": f"启动翻译任务时出错: {e}"})
+
+
+@app.post("/cancel-translate")
+async def cancel_translate_task():
+    global current_state
+    if not current_state["is_processing"] or not current_state["current_task_ref"]:
+        return JSONResponse(
+            status_code=400,
+            content={"cancelled": False, "message": "没有正在进行的翻译任务可取消。"}
+        )
+
+    task_to_cancel: Optional[asyncio.Task] = current_state["current_task_ref"]
+
+    if not task_to_cancel or task_to_cancel.done():
+        # Task might have finished or been cancelled just before this request arrived
+        current_state["is_processing"] = False  # Ensure state consistency
+        current_state["current_task_ref"] = None
+        return JSONResponse(
+            status_code=400,
+            content={"cancelled": False, "message": "任务已完成或已被取消。"}
+        )
+
+    translater_logger.info("收到取消翻译任务的请求。")
+    task_to_cancel.cancel()
+    current_state["status_message"] = "正在取消任务..."  # Optimistic update
+
+    try:
+        # Give the task a moment to process cancellation
+        await asyncio.wait_for(task_to_cancel, timeout=2.0)
+    except asyncio.CancelledError:
+        translater_logger.info("任务已成功取消并结束。")
+        # State update (is_processing=False, status_message="已取消") is handled by _perform_translation's finally/except block
+    except asyncio.TimeoutError:
+        translater_logger.warning("任务取消请求已发送，但任务未在2秒内结束。可能仍在清理中。")
+        # The task is cancelled, but it might take longer. Frontend polling will get the final state.
+    except Exception as e:
+        # This might happen if the task errored out while we were waiting for it after cancellation.
+        translater_logger.error(f"等待任务取消时发生意外错误: {e}")
+        # The task's own error handling should manage state.
+
+    # The final state (is_processing=False, specific status message) will be set by _perform_translation.
+    # This endpoint just initiates the cancellation.
+    return JSONResponse(content={"cancelled": True, "message": "取消请求已发送。请等待状态更新。"})
 
 
 @app.get("/get-status")
@@ -748,9 +847,13 @@ async def get_status():
         "download_ready": current_state["download_ready"],
         "original_filename_stem": current_state["original_filename_stem"],
         "markdown_url": f"/download/markdown/{current_state['original_filename_stem']}_translated.md" if current_state[
-            "download_ready"] else None,
+                                                                                                             "download_ready"] and
+                                                                                                         current_state[
+                                                                                                             "original_filename_stem"] else None,
         "html_url": f"/download/html/{current_state['original_filename_stem']}_translated.html" if current_state[
-            "download_ready"] else None,
+                                                                                                       "download_ready"] and
+                                                                                                   current_state[
+                                                                                                       "original_filename_stem"] else None,
         "task_start_time": current_state["task_start_time"],
         "task_end_time": current_state["task_end_time"],
     }
@@ -760,6 +863,7 @@ async def get_status():
 @app.get("/get-logs")
 async def get_logs(since: int = 0):
     global log_history
+    # Ensure 'since' is within bounds
     since = max(0, min(since, len(log_history)))
     new_logs = log_history[since:]
     return JSONResponse(content={"logs": new_logs, "total_count": len(log_history)})
@@ -770,9 +874,12 @@ async def download_markdown(filename_with_ext: str):
     if not current_state["download_ready"] or not current_state["markdown_content"] or not current_state[
         "original_filename_stem"]:
         raise HTTPException(status_code=404, detail="Markdown 内容尚未准备好或不可用。")
+
+    # Basic check to prevent arbitrary filename access, though content is from current_state
     requested_stem = Path(filename_with_ext).stem.replace("_translated", "")
     if requested_stem != current_state["original_filename_stem"]:
         raise HTTPException(status_code=404, detail="请求的文件名与当前结果不符。")
+
     actual_filename = f"{current_state['original_filename_stem']}_translated.md"
     return StreamingResponse(
         io.StringIO(current_state["markdown_content"]),
@@ -786,14 +893,16 @@ async def download_html(filename_with_ext: str):
     if not current_state["download_ready"] or not current_state["html_content"] or not current_state[
         "original_filename_stem"]:
         raise HTTPException(status_code=404, detail="HTML 内容尚未准备好或不可用。")
+
     requested_stem = Path(filename_with_ext).stem.replace("_translated", "")
     if requested_stem != current_state["original_filename_stem"]:
         raise HTTPException(status_code=404, detail="请求的文件名与当前结果不符。")
+
     actual_filename = f"{current_state['original_filename_stem']}_translated.html"
     return HTMLResponse(
         content=current_state["html_content"],
-        media_type="text/html",
-        headers={"Content-Disposition": f"attachment; filename=\"{actual_filename}\""}
+        media_type="text/html",  # For direct viewing, browser decides on download based on Content-Disposition
+        headers={"Content-Disposition": f"attachment; filename=\"{actual_filename}\""}  # Prompts download
     )
 
 
