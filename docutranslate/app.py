@@ -69,8 +69,11 @@ HTML_TEMPLATE = """
             gap: 0.5rem;
             flex-wrap: wrap;
             justify-content: right;
+            align-items: baseline;
         }
-
+        .spacer{
+            flex-grow: 1;
+        }
         details {
             margin-bottom: 1rem;
         }
@@ -268,6 +271,7 @@ HTML_TEMPLATE = """
         <p id="statusMessage"></p>
         <div id="downloadButtons" class="button-group">
             <h4>翻译结果</h4>
+            <div class="spacer"></div> 
             <a id="downloadMarkdown" href="#" role="button" class="outline">下载 Markdown</a>
             <a id="downloadHtml" href="#" role="button" class="outline">下载 HTML</a>
             <button id="downloadPdf" class="outline">下载 PDF</button>
