@@ -1,4 +1,3 @@
-import asyncio
 import os
 from huggingface_hub.errors import LocalEntryNotFoundError
 from docling.datamodel.base_models import InputFormat

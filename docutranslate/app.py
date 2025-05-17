@@ -775,21 +775,21 @@ class QueueAndHistoryHandler(logging.Handler):
 async def startup_event():
     app.state.main_event_loop = asyncio.get_running_loop()
 
-    # Clear ALL existing handlers (not just checking if any exist)
+    # 清除所有现有的处理器
     for handler in translater_logger.handlers[:]:
         translater_logger.removeHandler(handler)
 
-    # Configure the new handler
+    # 配置新的处理器
     queue_handler = QueueAndHistoryHandler(log_queue, log_history, MAX_LOG_HISTORY)
     queue_handler.setLevel(logging.INFO)
     queue_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 
-    # Add the handler and configure the logger
+    # 添加处理器并配置日志记录器
     translater_logger.addHandler(queue_handler)
-    translater_logger.propagate = False
+    translater_logger.propagate = False  # 这一点很重要，防止日志重复
     translater_logger.setLevel(logging.INFO)
 
-    # Clear the log history for a fresh start
+    # 清空日志历史，重新开始
     log_history.clear()
 
     translater_logger.info("应用启动完成，日志队列/历史处理器已正确配置。")
