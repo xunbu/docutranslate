@@ -56,7 +56,7 @@ class MDTranslateAgent(Agent):
 形如<ph-abc123>的占位符不要改变
 code、latex和HTML只翻译说明文字，其余保持原文
 公式必须表示为合法的latex公式,行内公式需被$正确包裹
-去掉异常字词
+去掉异常字词，修复错误格式
 # 输出
 翻译后的markdown纯文本（不是markdown代码块）
 # 示例
@@ -65,7 +65,7 @@ code、latex和HTML只翻译说明文字，其余保持原文
 hello<ph-aaaaaa>, what's your name?
 输出：
 你好<ph-aaaaaa>，你叫什么名字？
-## 公式要为合法latex（行内公式使用$包裹）
+## 公式要为合法latex（行内公式必须使用$包裹）
 输入：
 The equation is E=mc 2. This is famous.
 ({{c_0,c_1,c^2}})is a set.

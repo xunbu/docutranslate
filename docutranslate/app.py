@@ -37,7 +37,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             background-color: #f5f5f5;
             border: 1px solid #e0e0e0;
             padding: 10px;
-            height: 200px;
+            height: 300px;
             overflow-y: scroll;
             white-space: pre-wrap;
             font-family: monospace;
@@ -149,7 +149,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         #fileDropArea p { /* General style for <p> inside drop area */
             margin: 0.5rem 0;
             color: #555;
-        }
+        } \
+
         /* #fileDropPrompt will be hidden/shown by JS using .hidden class */
 
 
@@ -167,7 +168,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
         #fileDropArea.input-error {
             border-color: var(--pico-form-element-invalid-border-color, #d32f2f) !important;
-        }
+        } \
+
         #fileNameDisplay.input-error-text {
             color: var(--pico-form-element-invalid-border-color, #d32f2f) !important;
             font-weight: bold;
@@ -315,17 +317,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     const closePreviewBtn = document.getElementById('closePreviewBtn');
     const printFromPreview = document.getElementById('printFromPreview');
 
-    // File input and drag-drop elements
     const fileInput = document.getElementById('file');
     const fileDropArea = document.getElementById('fileDropArea');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
-    const fileDropPrompt = document.getElementById('fileDropPrompt'); // <-- 获取提示文字元素
-
+    const fileDropPrompt = document.getElementById('fileDropPrompt');
 
     let logPollIntervalId = null;
     let statusPollIntervalId = null;
-    let lastLogCount = 0;
-    let isTranslating = false; // Flag to track translation state for cancel button
+    // let lastLogCount = 0; // No longer needed for fetching logs
+    let isTranslating = false;
 
     function saveToStorage(key, value) {
         try {
@@ -387,9 +387,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
     });
 
-    // --- Drag and Drop File Handling ---
     fileDropArea.addEventListener('click', () => {
-        fileInput.click(); // Trigger click on hidden file input
+        fileInput.click();
     });
 
     fileInput.addEventListener('change', () => {
@@ -397,7 +396,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             fileNameDisplay.textContent = `已选择: ${fileInput.files[0].name}`;
             fileDropArea.classList.add('file-selected');
             fileNameDisplay.classList.add('has-file');
-            fileDropPrompt.classList.add('hidden'); // <-- 隐藏提示文字
+            fileDropPrompt.classList.add('hidden');
             fileDropArea.classList.remove('input-error');
             fileNameDisplay.classList.remove('input-error-text');
             statusMsg.textContent = '';
@@ -406,7 +405,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             fileNameDisplay.textContent = '未选择文件';
             fileDropArea.classList.remove('file-selected');
             fileNameDisplay.classList.remove('has-file');
-            fileDropPrompt.classList.remove('hidden'); // <-- 显示提示文字
+            fileDropPrompt.classList.remove('hidden');
         }
     });
 
@@ -422,7 +421,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     ['dragenter', 'dragover'].forEach(eventName => {
         fileDropArea.addEventListener(eventName, () => {
             if (!fileDropArea.classList.contains('file-selected')) {
-                 fileDropArea.classList.add('drag-over');
+                fileDropArea.classList.add('drag-over');
             }
         }, false);
     });
@@ -444,12 +443,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
     }, false);
 
-    // --- End Drag and Drop ---
-
-
     async function pollLogs() {
         try {
-            const response = await fetch(`/get-logs?since=${lastLogCount}`);
+            // const response = await fetch(`/get-logs?since=${lastLogCount}`); // OLD
+            const response = await fetch('/get-logs'); // NEW: No 'since' parameter
             if (!response.ok) {
                 console.warn(`Log polling failed: ${response.status}`);
                 return;
@@ -460,9 +457,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     const escapedLog = log.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
                     logArea.innerHTML += escapedLog + "<br>";
                 });
-                logArea.scrollTop = logArea.scrollHeight;
+                logArea.scrollTop = logArea.scrollHeight; // Scroll to bottom
             }
-            lastLogCount = data.total_count;
+            // lastLogCount = data.total_count; // OLD: No longer tracking count this way
         } catch (error) {
             console.warn("Error polling logs:", error);
         }
@@ -574,159 +571,155 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 } else {
                     downloadBtns.style.display = 'none';
                 }
-                            } else { // Task is still processing
-                                submitButton.textContent = '取消翻译';
-                                submitButton.classList.remove('primary');
-                                submitButton.classList.add('secondary');
-                                isTranslating = true;
-                                submitButton.disabled = false;
-                                submitButton.removeAttribute('aria-busy');
-                                downloadBtns.style.display = 'none';
-                            }
-                        } catch (error) {
-                            console.error("Error polling status:", error);
-                            statusMsg.textContent = '状态更新出错。';
-                            statusMsg.className = 'error-message';
-                        }
-                    }
+            } else {
+                submitButton.textContent = '取消翻译';
+                submitButton.classList.remove('primary');
+                submitButton.classList.add('secondary');
+                isTranslating = true;
+                submitButton.disabled = false;
+                submitButton.removeAttribute('aria-busy');
+                downloadBtns.style.display = 'none';
+            }
+        } catch (error) {
+            console.error("Error polling status:", error);
+            statusMsg.textContent = '状态更新出错。';
+            statusMsg.className = 'error-message';
+        }
+    }
 
-                    function startPolling() {
-                        stopPolling();
-                        lastLogCount = 0;
-                        logArea.innerHTML = '';
-                        pollLogs();
-                        pollStatus();
-                        logPollIntervalId = setInterval(pollLogs, 2000);
-                        statusPollIntervalId = setInterval(pollStatus, 1500);
-                    }
+    function startPolling() {
+        stopPolling();
+        // lastLogCount = 0; // No longer needed
+        logArea.innerHTML = ''; // Clear log area for new task
+        pollLogs(); // Initial poll for logs
+        pollStatus(); // Initial poll for status
+        logPollIntervalId = setInterval(pollLogs, 2000);
+        statusPollIntervalId = setInterval(pollStatus, 1500);
+    }
 
-                    function stopPolling() {
-                        if (logPollIntervalId) clearInterval(logPollIntervalId);
-                        if (statusPollIntervalId) clearInterval(statusPollIntervalId);
-                        logPollIntervalId = null;
-                        statusPollIntervalId = null;
-                        setTimeout(pollLogs, 100);
-                    }
+    function stopPolling() {
+        if (logPollIntervalId) clearInterval(logPollIntervalId);
+        if (statusPollIntervalId) clearInterval(statusPollIntervalId);
+        logPollIntervalId = null;
+        statusPollIntervalId = null;
+    }
 
-                    function loadSettings() {
-                        platformSelect.value = getFromStorage('translator_last_platform', 'custom');
-                        updatePlatformUI();
-                        toLangSelect.value = getFromStorage('translator_to_lang', '中文');
-                        formulaCheckbox.checked = getFromStorage('translator_formula_ocr') === 'true';
-                        codeCheckbox.checked = getFromStorage('translator_code_ocr') === 'true';
-                        refineCheckbox.checked = getFromStorage('translator_refine_markdown') === 'true';
-                    }
+    function loadSettings() {
+        platformSelect.value = getFromStorage('translator_last_platform', 'custom');
+        updatePlatformUI();
+        toLangSelect.value = getFromStorage('translator_to_lang', '中文');
+        formulaCheckbox.checked = getFromStorage('translator_formula_ocr') === 'true';
+        codeCheckbox.checked = getFromStorage('translator_code_ocr') === 'true';
+        refineCheckbox.checked = getFromStorage('translator_refine_markdown') === 'true';
+    }
 
+    async function cancelTranslation() {
+        submitButton.disabled = true;
+        submitButton.textContent = '正在取消...';
+        submitButton.setAttribute('aria-busy', 'true');
 
-                    async function cancelTranslation() {
-                        submitButton.disabled = true;
-                        submitButton.textContent = '正在取消...';
-                        submitButton.setAttribute('aria-busy', 'true');
+        try {
+            const response = await fetch('/cancel-translate', {method: 'POST'});
+            const result = await response.json();
 
-                        try {
-                            const response = await fetch('/cancel-translate', {method: 'POST'});
-                            const result = await response.json();
+            if (response.ok && result.cancelled) {
+                statusMsg.textContent = result.message || '取消请求已发送。';
+                statusMsg.className = '';
+            } else {
+                statusMsg.textContent = result.message || '取消失败。';
+                statusMsg.className = 'error-message';
+                submitButton.disabled = false;
+                submitButton.textContent = '取消翻译';
+                submitButton.removeAttribute('aria-busy');
+            }
+        } catch (error) {
+            console.error('取消请求失败:', error);
+            statusMsg.textContent = '取消请求发送失败。';
+            statusMsg.className = 'error-message';
+            submitButton.disabled = false;
+            submitButton.textContent = '取消翻译';
+            submitButton.removeAttribute('aria-busy');
+        }
+    }
 
-                            if (response.ok && result.cancelled) {
-                                statusMsg.textContent = result.message || '取消请求已发送。';
-                                statusMsg.className = '';
-                            } else {
-                                statusMsg.textContent = result.message || '取消失败。';
-                                statusMsg.className = 'error-message';
-                                submitButton.disabled = false;
-                                submitButton.textContent = '取消翻译';
-                                submitButton.removeAttribute('aria-busy');
-                            }
-                        } catch (error) {
-                            console.error('取消请求失败:', error);
-                            statusMsg.textContent = '取消请求发送失败。';
-                            statusMsg.className = 'error-message';
-                            submitButton.disabled = false;
-                            submitButton.textContent = '取消翻译';
-                            submitButton.removeAttribute('aria-busy');
-                        }
-                    }
+    form.addEventListener('submit', async function (event) {
+        event.preventDefault();
 
-                    form.addEventListener('submit', async function (event) {
-                        event.preventDefault();
+        if (isTranslating) {
+            await cancelTranslation();
+            return;
+        }
 
-                        if (isTranslating) {
-                            await cancelTranslation();
-                            return;
-                        }
+        if (fileInput.files.length === 0) {
+            statusMsg.textContent = '请选择一个文件进行翻译。';
+            statusMsg.className = 'error-message';
+            fileNameDisplay.textContent = '请选择文件！';
+            fileNameDisplay.classList.add('input-error-text');
+            fileDropArea.classList.add('input-error');
+            fileDropPrompt.classList.remove('hidden');
+            setTimeout(() => {
+                fileDropArea.classList.remove('input-error');
+                fileNameDisplay.classList.remove('input-error-text');
+                if (fileNameDisplay.textContent === '请选择文件！') {
+                    fileNameDisplay.textContent = '未选择文件';
+                }
+                if (fileInput.files.length === 0) {
+                    fileDropPrompt.classList.remove('hidden');
+                }
 
-                        if (fileInput.files.length === 0) {
-                            statusMsg.textContent = '请选择一个文件进行翻译。';
-                            statusMsg.className = 'error-message';
-                            fileNameDisplay.textContent = '请选择文件！';
-                            fileNameDisplay.classList.add('input-error-text');
-                            fileDropArea.classList.add('input-error');
-                            fileDropPrompt.classList.remove('hidden'); // 确保错误时提示文字可见
-                            setTimeout(() => {
-                                fileDropArea.classList.remove('input-error');
-                                fileNameDisplay.classList.remove('input-error-text');
-                                if (fileNameDisplay.textContent === '请选择文件！') {
-                                    fileNameDisplay.textContent = '未选择文件';
-                                }
-                                // 如果没有文件被选中，提示文字应该保持可见
-                                if (fileInput.files.length === 0) {
-                                    fileDropPrompt.classList.remove('hidden');
-                                }
+            }, 3000);
+            return;
+        }
 
-                            }, 3000);
-                            return;
-                        }
+        stopPolling();
+        submitButton.disabled = true;
+        submitButton.setAttribute('aria-busy', 'true');
+        submitButton.textContent = '初始化...';
+        logArea.innerHTML = '';
+        statusMsg.textContent = '正在提交任务...';
+        statusMsg.className = '';
+        downloadBtns.style.display = 'none';
+        // lastLogCount = 0; // No longer needed
 
-
-                        stopPolling();
-                        submitButton.disabled = true;
-                        submitButton.setAttribute('aria-busy', 'true');
-                        submitButton.textContent = '初始化...';
-                        logArea.innerHTML = '';
-                        statusMsg.textContent = '正在提交任务...';
-                        statusMsg.className = '';
-                        downloadBtns.style.display = 'none';
-                        lastLogCount = 0;
-
-                        const formData = new FormData(form);
-                        try {
-                            const response = await fetch('/translate', {method: 'POST', body: formData});
-                            const result = await response.json();
-                            if (response.ok && result.task_started) {
-                                statusMsg.textContent = result.message || '任务已开始，正在处理...';
-                                statusMsg.className = '';
-                                submitButton.textContent = '取消翻译';
-                                submitButton.classList.remove('primary');
-                                submitButton.classList.add('secondary');
-                                isTranslating = true;
-                                submitButton.removeAttribute('aria-busy');
-                                startPolling();
-                            } else {
-                                statusMsg.textContent = result.message || `请求失败 (${response.status})`;
-                                statusMsg.className = 'error-message';
-                                submitButton.disabled = false;
-                                submitButton.removeAttribute('aria-busy');
-                                submitButton.textContent = '开始翻译';
-                                isTranslating = false;
-                            }
-                        } catch (error) {
-                            console.error('请求失败:', error);
-                            statusMsg.textContent = '请求翻译失败，请检查网络或服务状态。';
-                            statusMsg.className = 'error-message';
-                            submitButton.disabled = false;
-                            submitButton.removeAttribute('aria-busy');
-                            submitButton.textContent = '开始翻译';
-                            isTranslating = false;
-                        }
-                    });
-                </script>
+        const formData = new FormData(form);
+        try {
+            const response = await fetch('/translate', {method: 'POST', body: formData});
+            const result = await response.json();
+            if (response.ok && result.task_started) {
+                statusMsg.textContent = result.message || '任务已开始，正在处理...';
+                statusMsg.className = '';
+                submitButton.textContent = '取消翻译';
+                submitButton.classList.remove('primary');
+                submitButton.classList.add('secondary');
+                isTranslating = true;
+                submitButton.removeAttribute('aria-busy');
+                startPolling();
+            } else {
+                statusMsg.textContent = result.message || `请求失败 (${response.status})`;
+                statusMsg.className = 'error-message';
+                submitButton.disabled = false;
+                submitButton.removeAttribute('aria-busy');
+                submitButton.textContent = '开始翻译';
+                isTranslating = false;
+            }
+        } catch (error) {
+            console.error('请求失败:', error);
+            statusMsg.textContent = '请求翻译失败，请检查网络或服务状态。';
+            statusMsg.className = 'error-message';
+            submitButton.disabled = false;
+            submitButton.removeAttribute('aria-busy');
+            submitButton.textContent = '开始翻译';
+            isTranslating = false;
+        }
+    });
+</script>
 </body>
 </html>"""
 
 app = FastAPI()
 
 # --- 全局配置 ---
-log_queue = asyncio.Queue()
+log_queue: Optional[asyncio.Queue] = None  # Will be initialized in startup_event
 current_state: Dict[str, Any] = {
     "is_processing": False,
     "status_message": "空闲",
@@ -737,62 +730,73 @@ current_state: Dict[str, Any] = {
     "original_filename_stem": None,
     "task_start_time": 0,
     "task_end_time": 0,
-    "current_task_ref": None,  # Stores the asyncio.Task object
+    "current_task_ref": None,
 }
 templates = Jinja2Templates(directory=".")
-MAX_LOG_HISTORY = 200
-log_history: List[str] = []
+MAX_LOG_HISTORY = 200  # Max items for the persistent log_history list
+log_history: List[str] = []  # Keeps a longer history, not directly for "unread"
 
 
 # --- 日志处理器 ---
 class QueueAndHistoryHandler(logging.Handler):
-    def __init__(self, queue: asyncio.Queue, history: List[str], max_history: int):
+    def __init__(self, queue_ref: asyncio.Queue, history_list_ref: List[str], max_history_items: int):
         super().__init__()
-        self.queue = queue
-        self.history = history
-        self.max_history = max_history
+        self.queue = queue_ref
+        self.history_list = history_list_ref
+        self.max_history = max_history_items
 
     def emit(self, record: logging.LogRecord):
         log_entry = self.format(record)
-        print(log_entry)
-        self.history.append(log_entry)
-        if len(self.history) > self.max_history:
-            del self.history[:len(self.history) - self.max_history]
+
+        # Add to the persistent history (capped)
+        self.history_list.append(log_entry)
+        if len(self.history_list) > self.max_history:
+            del self.history_list[:len(self.history_list) - self.max_history]
+
+        # Add to the "unread" queue for frontend consumption
         try:
-            main_loop = getattr(app.state, "main_event_loop", None)
-            if main_loop and main_loop.is_running():
-                main_loop.call_soon_threadsafe(self.queue.put_nowait, log_entry)
+            # Ensure self.queue is not None (it's initialized at startup)
+            if self.queue is not None:
+                main_loop = getattr(app.state, "main_event_loop", None)
+                if main_loop and main_loop.is_running():
+                    main_loop.call_soon_threadsafe(self.queue.put_nowait, log_entry)
+                else:
+                    self.queue.put_nowait(log_entry)  # Fallback
             else:
-                # Fallback if loop isn't available or running (e.g. during shutdown)
-                self.queue.put_nowait(log_entry)
+                print(f"CRITICAL: Log queue not initialized. Log: {log_entry}")
+        except asyncio.QueueFull:
+            print(f"Log queue is full. Log dropped: {log_entry}")  # Or handle differently
         except Exception as e:
-            # Avoid crashing the logger if queue operations fail
-            print(f"Error putting log to queue: {e}")
+            print(f"Error putting log to queue: {e}. Log: {log_entry}")
 
 
 # --- 应用生命周期事件 ---
 @app.on_event("startup")
 async def startup_event():
+    global log_queue
     app.state.main_event_loop = asyncio.get_running_loop()
+    log_queue = asyncio.Queue()  # Initialize the global log_queue
 
-    # 清除所有现有的处理器
     for handler in translater_logger.handlers[:]:
         translater_logger.removeHandler(handler)
 
-    # 配置新的处理器
     queue_handler = QueueAndHistoryHandler(log_queue, log_history, MAX_LOG_HISTORY)
     queue_handler.setLevel(logging.INFO)
     queue_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
 
-    # 添加处理器并配置日志记录器
     translater_logger.addHandler(queue_handler)
-    translater_logger.propagate = False  # 这一点很重要，防止日志重复
+    translater_logger.propagate = False
     translater_logger.setLevel(logging.INFO)
 
-    # 清空日志历史，重新开始
     log_history.clear()
+    while not log_queue.empty():  # Clear queue just in case
+        try:
+            log_queue.get_nowait()
+        except asyncio.QueueEmpty:
+            break
 
     translater_logger.info("应用启动完成，日志队列/历史处理器已正确配置。")
+
 
 # --- Background Task Logic ---
 async def _perform_translation(params: Dict[str, Any], file_contents: bytes, original_filename: str):
@@ -844,19 +848,17 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
         translater_logger.info(f"翻译任务 '{original_filename}' 已被取消 (用时 {duration:.2f} 秒).")
         current_state.update({
             "status_message": f"翻译任务已取消（若有转换任务仍会后台进行） (用时 {duration:.2f} 秒).",
-            "error_flag": False,
+            "error_flag": False,  # Cancellation is not an error in this context
             "download_ready": False,
             "markdown_content": None,
             "html_content": None,
             "task_end_time": end_time,
         })
-        # Do not re-raise CancelledError, it's handled.
     except Exception as e:
         end_time = time.time()
         duration = end_time - current_state["task_start_time"]
         error_message = f"翻译失败: {e}"
         translater_logger.error(error_message, exc_info=True)
-        # tb_str = traceback.format_exc() # Not used directly, exc_info=True logs it
         current_state.update({
             "status_message": f"翻译过程中发生错误 (用时 {duration:.2f} 秒): {e}",
             "error_flag": True,
@@ -867,7 +869,7 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
         })
     finally:
         current_state["is_processing"] = False
-        current_state["current_task_ref"] = None  # Clear the task reference
+        current_state["current_task_ref"] = None
         translater_logger.info(f"后台翻译任务 '{original_filename}' 处理结束。")
 
 
@@ -879,7 +881,6 @@ async def main_page(request: Request):
 
 @app.post("/translate")
 async def handle_translate(
-        # No BackgroundTasks needed here for the main task
         base_url: str = Form(...),
         apikey: str = Form(...),
         model_id: str = Form(...),
@@ -889,7 +890,7 @@ async def handle_translate(
         refine_markdown: bool = Form(False),
         file: UploadFile = File(...)
 ):
-    global current_state
+    global current_state, log_queue, log_history
     if current_state["is_processing"] and \
             current_state["current_task_ref"] and \
             not current_state["current_task_ref"].done():
@@ -898,13 +899,13 @@ async def handle_translate(
             content={"task_started": False, "message": "另一个翻译任务正在进行中，请稍后再试。"}
         )
 
-    if not file or not file.filename:  # Check if a file was actually uploaded
+    if not file or not file.filename:
         return JSONResponse(
             status_code=400,
             content={"task_started": False, "message": "没有选择文件或文件无效。"}
         )
 
-    current_state["is_processing"] = True  # Set this immediately
+    current_state["is_processing"] = True
     original_filename_for_init = file.filename or "uploaded_file"
 
     current_state.update({
@@ -916,17 +917,34 @@ async def handle_translate(
         "original_filename_stem": Path(original_filename_for_init).stem,
         "task_start_time": time.time(),
         "task_end_time": 0,
-        "current_task_ref": None,  # Will be set after task creation
+        "current_task_ref": None,
     })
-    log_history.clear()  # Clear logs for the new task
-    log_history.append(translater_logger.handlers[0].format(logging.LogRecord(
-        name=translater_logger.name, level=logging.INFO, pathname="", lineno=0,
-        msg=f"收到新的翻译请求: {original_filename_for_init}", args=[], exc_info=None, func=""
-    )))
+
+    # Clear logs for the new task
+    log_history.clear()
+    if log_queue:  # Ensure log_queue is initialized
+        while not log_queue.empty():
+            try:
+                log_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+
+    # Add initial log entry for the new task
+    # We create a LogRecord manually to ensure it goes through the formatter and handler
+    initial_log_msg = f"收到新的翻译请求: {original_filename_for_init}"
+    if translater_logger.handlers and isinstance(translater_logger.handlers[0], QueueAndHistoryHandler):
+        # Use the existing handler to format and queue/store the log
+        record = logging.LogRecord(
+            name=translater_logger.name, level=logging.INFO, pathname="", lineno=0,
+            msg=initial_log_msg, args=(), exc_info=None, func=""
+        )
+        translater_logger.handlers[0].emit(record)  # This will add to both queue and history
+    else:  # Fallback if handler setup is unusual
+        translater_logger.info(initial_log_msg)
 
     try:
         file_contents = await file.read()
-        original_filename = file.filename  # Use the actual filename (already checked it's not None)
+        original_filename = file.filename
         await file.close()
 
         task_params = {
@@ -944,10 +962,10 @@ async def handle_translate(
         return JSONResponse(content={"task_started": True, "message": "翻译任务已成功启动，请稍候..."})
     except Exception as e:
         translater_logger.error(f"启动翻译任务失败: {e}", exc_info=True)
-        current_state["is_processing"] = False  # Reset processing flag
+        current_state["is_processing"] = False
         current_state["status_message"] = f"启动任务失败: {e}"
         current_state["error_flag"] = True
-        current_state["current_task_ref"] = None  # Ensure task ref is cleared
+        current_state["current_task_ref"] = None
         return JSONResponse(status_code=500, content={"task_started": False, "message": f"启动翻译任务时出错: {e}"})
 
 
@@ -963,8 +981,7 @@ async def cancel_translate_task():
     task_to_cancel: Optional[asyncio.Task] = current_state["current_task_ref"]
 
     if not task_to_cancel or task_to_cancel.done():
-        # Task might have finished or been cancelled just before this request arrived
-        current_state["is_processing"] = False  # Ensure state consistency
+        current_state["is_processing"] = False
         current_state["current_task_ref"] = None
         return JSONResponse(
             status_code=400,
@@ -973,24 +990,17 @@ async def cancel_translate_task():
 
     translater_logger.info("收到取消翻译任务的请求。")
     task_to_cancel.cancel()
-    current_state["status_message"] = "正在取消任务..."  # Optimistic update
+    current_state["status_message"] = "正在取消任务..."
 
     try:
-        # Give the task a moment to process cancellation
         await asyncio.wait_for(task_to_cancel, timeout=2.0)
     except asyncio.CancelledError:
         translater_logger.info("任务已成功取消并结束。")
-        # State update (is_processing=False, status_message="已取消") is handled by _perform_translation's finally/except block
     except asyncio.TimeoutError:
         translater_logger.warning("任务取消请求已发送，但任务未在2秒内结束。可能仍在清理中。")
-        # The task is cancelled, but it might take longer. Frontend polling will get the final state.
     except Exception as e:
-        # This might happen if the task errored out while we were waiting for it after cancellation.
         translater_logger.error(f"等待任务取消时发生意外错误: {e}")
-        # The task's own error handling should manage state.
 
-    # The final state (is_processing=False, specific status message) will be set by _perform_translation.
-    # This endpoint just initiates the cancellation.
     return JSONResponse(content={"cancelled": True, "message": "取消请求已发送。请等待状态更新。"})
 
 
@@ -1018,12 +1028,19 @@ async def get_status():
 
 
 @app.get("/get-logs")
-async def get_logs(since: int = 0):
-    global log_history
-    # Ensure 'since' is within bounds
-    since = max(0, min(since, len(log_history)))
-    new_logs = log_history[since:]
-    return JSONResponse(content={"logs": new_logs, "total_count": len(log_history)})
+async def get_logs_from_queue():  # Renamed for clarity, though path is the same
+    global log_queue
+    new_logs = []
+    if log_queue:  # Ensure log_queue is initialized
+        while not log_queue.empty():
+            try:
+                log_entry = log_queue.get_nowait()  # Consume from queue
+                new_logs.append(log_entry)
+                log_queue.task_done()  # Important for queue management if using join() elsewhere
+            except asyncio.QueueEmpty:
+                break
+                # No total_count, as the frontend just appends what it receives
+    return JSONResponse(content={"logs": new_logs})
 
 
 @app.get("/download/markdown/{filename_with_ext}")
@@ -1032,7 +1049,6 @@ async def download_markdown(filename_with_ext: str):
         "original_filename_stem"]:
         raise HTTPException(status_code=404, detail="Markdown 内容尚未准备好或不可用。")
 
-    # Basic check to prevent arbitrary filename access, though content is from current_state
     requested_stem = Path(filename_with_ext).stem.replace("_translated", "")
     if requested_stem != current_state["original_filename_stem"]:
         raise HTTPException(status_code=404, detail="请求的文件名与当前结果不符。")
@@ -1058,8 +1074,8 @@ async def download_html(filename_with_ext: str):
     actual_filename = f"{current_state['original_filename_stem']}_translated.html"
     return HTMLResponse(
         content=current_state["html_content"],
-        media_type="text/html",  # For direct viewing, browser decides on download based on Content-Disposition
-        headers={"Content-Disposition": f"attachment; filename=\"{actual_filename}\""}  # Prompts download
+        media_type="text/html",
+        headers={"Content-Disposition": f"attachment; filename=\"{actual_filename}\""}
     )
 
 
