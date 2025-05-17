@@ -15,7 +15,8 @@ from docutranslate.logger import translater_logger
 
 # --- HTML模板 (JS part needs modification) ---
 # language=HTML
-HTML_TEMPLATE = """<!DOCTYPE html>
+HTML_TEMPLATE = """
+                <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -67,6 +68,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             display: flex;
             gap: 0.5rem;
             flex-wrap: wrap;
+            justify-content: right;
         }
 
         details {
@@ -137,23 +139,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
 
         #fileDropArea.drag-over {
-            border-color: var(--pico-primary-focus); /* Pico primary color */
-            background-color: var(--pico-primary-background);
+            border-color: #1095c1; /* Pico primary color (定量替换 var(--pico-primary-focus)) */
+            background-color: #e7f5fa; /* Pico primary background (定量替换 var(--pico-primary-background)) */
         }
 
         #fileDropArea.file-selected {
-            border-color: var(--pico-form-element-valid-border-color, #2e7d32); /* Pico success color */
-            background-color: var(--pico-form-element-valid-background-color, #e8f5e9); /* Light green */
+            border-color: #2e7d32; /* Pico success color (定量替换 var(--pico-form-element-valid-border-color, #2e7d32)) */
+            background-color: #e8f5e9; /* Light green (定量替换 var(--pico-form-element-valid-background-color, #e8f5e9)) */
         }
 
         #fileDropArea p { /* General style for <p> inside drop area */
             margin: 0.5rem 0;
             color: #555;
-        } \
-
-        /* #fileDropPrompt will be hidden/shown by JS using .hidden class */
-
-
+        }
+        
         #fileNameDisplay {
             margin-top: 0.5rem;
             font-style: italic;
@@ -163,15 +162,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         #fileNameDisplay.has-file {
             font-style: normal;
             font-weight: bold;
-            color: var(--pico-form-element-valid-border-color, #1a531d); /* Darker green or success color */
+            color: #1a531d; /* Darker green or success color (定量替换 var(--pico-form-element-valid-border-color, #1a531d)) */
         }
 
         #fileDropArea.input-error {
-            border-color: var(--pico-form-element-invalid-border-color, #d32f2f) !important;
-        } \
+            border-color: #d32f2f !important; /* (定量替换 var(--pico-form-element-invalid-border-color, #d32f2f)) */
+        }
 
         #fileNameDisplay.input-error-text {
-            color: var(--pico-form-element-invalid-border-color, #d32f2f) !important;
+            color: #d32f2f !important; /* (定量替换 var(--pico-form-element-invalid-border-color, #d32f2f)) */
             font-weight: bold;
         }
 
@@ -229,7 +228,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 </div>
             </div>
         </div>
-        <details open>
+        <details>
             <summary>API 配置</summary>
             <div class="form-grid">
                 <div class="form-group">
@@ -602,6 +601,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         if (statusPollIntervalId) clearInterval(statusPollIntervalId);
         logPollIntervalId = null;
         statusPollIntervalId = null;
+        setTimeout(pollLogs, 500);
     }
 
     function loadSettings() {
