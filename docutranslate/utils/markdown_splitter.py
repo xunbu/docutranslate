@@ -233,5 +233,15 @@ def split_markdown_text(markdown_text, max_block_size=5000):
     return splitter.split_markdown(markdown_text)
 
 
+def join_markdown_texts(markdown_texts:list[str])->str:
+    result=""
+    for text in markdown_texts:
+        #只有表格会收到多余空行的影响
+        if text.lstrip().startswith("|"):
+            result=result+"\n"+text
+        else:
+            result+="\n\n"+text
+    return result
+
 if __name__ == '__main__':
     pass

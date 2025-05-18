@@ -9,7 +9,7 @@ from docling.datamodel.document import DocumentStream
 from docutranslate.agents import Agent, AgentArgs
 from docutranslate.agents import MDRefineAgent, MDTranslateAgent
 from docutranslate.utils.convert import file2markdown_embed_images
-from docutranslate.utils.markdown_splitter import split_markdown_text
+from docutranslate.utils.markdown_splitter import split_markdown_text,join_markdown_texts
 from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
 from docutranslate.logger import translater_logger
 
@@ -17,7 +17,7 @@ from docutranslate.logger import translater_logger
 
 class FileTranslater:
     def __init__(self, file_path: Path | str | None = None, chunksize: int = 2000, base_url="", key=None,
-                 model_id="", temperature=0.7, max_concurrent=15, docling_artifact: Path | str | None = None,
+                 model_id="", temperature=0.7, max_concurrent=20, docling_artifact: Path | str | None = None,
                  timeout=2000, tips=True):
         if isinstance(file_path, str):
             file_path = Path(file_path)
@@ -129,7 +129,7 @@ class FileTranslater:
         if refine_agent is None:
             refine_agent = MDRefineAgent(**self.default_agent_params())
         result: list[str] = refine_agent.send_prompts(chuncks)
-        self.markdown = "\n\n".join(result)
+        self.markdown=join_markdown_texts(result)
         self._unmask_uris_in_markdown()
         translater_logger.info("markdown已修正")
         return self.markdown
@@ -141,7 +141,7 @@ class FileTranslater:
         if translate_agent is None:
             translate_agent = MDTranslateAgent(to_lang=to_lang, **self.default_agent_params())
         result: list[str] = translate_agent.send_prompts(chuncks)
-        self.markdown = "\n\n".join(result)
+        self.markdown=join_markdown_texts(result)
         self._unmask_uris_in_markdown()
         translater_logger.info("翻译完成")
         return self.markdown
@@ -154,7 +154,7 @@ class FileTranslater:
         if refine_agent is None:
             refine_agent = MDRefineAgent(**self.default_agent_params())
         result: list[str] = await refine_agent.send_prompts_async(chuncks)
-        self.markdown = "\n\n".join(result)
+        self.markdown=join_markdown_texts(result)
         self._unmask_uris_in_markdown()
         translater_logger.info("markdown已修正")
         return self.markdown
@@ -166,7 +166,7 @@ class FileTranslater:
         if translate_agent is None:
             translate_agent = MDTranslateAgent(to_lang=to_lang, **self.default_agent_params())
         result: list[str] = await translate_agent.send_prompts_async(chuncks)
-        self.markdown = "\n\n".join(result)
+        self.markdown=join_markdown_texts(result)
         self._unmask_uris_in_markdown()
         translater_logger.info("翻译完成")
         return self.markdown

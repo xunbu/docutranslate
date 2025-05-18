@@ -144,7 +144,7 @@ translater = FileTranslater(base_url="<baseurl>",  # 默认的模型baseurl
                             key="<key>",  # 默认的模型api-key
                             model_id="<model-id>",  # 默认的模型id
                             chunksize=2000,  # markdown分块长度（单位byte），分块越大效果越好（也越慢），不建议超过8000
-                            max_concurrent=15,  # 并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
+                            max_concurrent=20,  # 并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
                             docling_artifact=None,  # 使用提前下载好的docling模型
                             timeout=2000,  # 调用api的超时时间
                             tips=True  # 开场提示

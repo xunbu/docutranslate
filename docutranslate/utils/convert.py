@@ -17,6 +17,7 @@ def file2markdown_embed_images(file_path: Path | str|DocumentStream, formula=Fal
     pipeline_options.do_ocr=False
     pipeline_options.images_scale = IMAGE_RESOLUTION_SCALE
     pipeline_options.generate_picture_images = True
+    pipeline_options.table_structure_options.do_cell_matching=False
     if formula:
         pipeline_options.do_formula_enrichment=True
     if code:
