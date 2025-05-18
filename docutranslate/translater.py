@@ -245,7 +245,7 @@ class FileTranslater:
     </script>
 </head>
 <body>
-{markdowner.convert(self.markdown)}
+{markdowner.convert(self.markdown.replace("\\","\\\\"))}
 </body>
 <script type="module" defer>
   import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.esm.min.mjs';
