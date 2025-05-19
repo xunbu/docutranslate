@@ -1,6 +1,6 @@
 [project]
 name = "docutranslate"
-version = "0.2.17"
+version = "0.2.18"
 description = "文件翻译工具"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,3 +12,10 @@ dependencies = [
 ]
 [project.scripts]
 docutranslate="docutranslate.cli:main"
+
+[build-system]
+requires = ["setuptools>=61.0"] # 或者你需要的 setuptools 版本
+build-backend = "setuptools.build_meta"
+backend-path = ["."]
+[tool.setuptools.package-data]
+docutranslate = ["static/**"]
