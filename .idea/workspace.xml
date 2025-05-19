@@ -5,10 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/docutranslate/utils/resource_utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.spec" beforeDir="false" afterPath="$PROJECT_DIR$/app.spec" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/app.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -39,59 +37,59 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "JavaScript 调试.output.html (1).executor": "Run",
-    "JavaScript 调试.output.html.executor": "Run",
-    "JavaScript 调试.regex.md_中文.html.executor": "Run",
-    "JavaScript 调试.regex_中文.html.executor": "Run",
-    "JavaScript 调试.test.html.executor": "Run",
-    "JavaScript 调试.test2.html.executor": "Run",
-    "JavaScript 调试.test2_英文.html.executor": "Run",
-    "JavaScript 调试.test4-1_中文.html.executor": "Run",
-    "JavaScript 调试.互联网认证授权机制.html.executor": "Run",
-    "JavaScript 调试.互联网认证授权机制_英文.html.executor": "Run",
-    "JavaScript 调试.毕业论文_英文.html.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python 测试.Python 测试 (markdown_mask.py 内).executor": "Run",
-    "Python 测试.markdown_mask.Test.test_basic_link_masking 的 Python 测试.executor": "Run",
-    "Python 测试.pytest (test_html.py 内).executor": "Run",
-    "Python.2test2 (1).executor": "Run",
-    "Python.PDFtranslater (1).executor": "Run",
-    "Python.PDFtranslater (2).executor": "Run",
-    "Python.agent.executor": "Debug",
-    "Python.agent_utils.executor": "Run",
-    "Python.app (1).executor": "Run",
-    "Python.app.executor": "Run",
-    "Python.app2.executor": "Run",
-    "Python.app_test (1).executor": "Run",
-    "Python.convert.executor": "Run",
-    "Python.markdown_splitter.executor": "Debug",
-    "Python.markdown_utils.executor": "Run",
-    "Python.test.executor": "Run",
-    "Python.test1.executor": "Run",
-    "Python.test2.executor": "Run",
-    "Python.test3.executor": "Run",
-    "Python.test4.executor": "Run",
-    "Python.testhtml.executor": "Run",
-    "Python.translater.executor": "Run",
-    "Python.切分测试.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "main",
-    "last_opened_file_path": "C:/Users/jxgm/Desktop/FileTranslate/dist/DocuTranslate",
-    "list.type.of.created.stylesheet": "CSS",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;JavaScript 调试.output.html (1).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.output.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.regex.md_中文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.regex_中文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.test.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.test2.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.test2_英文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.test4-1_中文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.互联网认证授权机制.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.互联网认证授权机制_英文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.毕业论文_英文.html.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python 测试.Python 测试 (markdown_mask.py 内).executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.markdown_mask.Test.test_basic_link_masking 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.pytest (test_html.py 内).executor&quot;: &quot;Run&quot;,
+    &quot;Python.2test2 (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.PDFtranslater (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.PDFtranslater (2).executor&quot;: &quot;Run&quot;,
+    &quot;Python.agent.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.agent_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.app.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app2.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app_test (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.convert.executor&quot;: &quot;Run&quot;,
+    &quot;Python.markdown_splitter.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.markdown_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test1.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test2.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test3.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test4.executor&quot;: &quot;Run&quot;,
+    &quot;Python.testhtml.executor&quot;: &quot;Run&quot;,
+    &quot;Python.translater.executor&quot;: &quot;Run&quot;,
+    &quot;Python.切分测试.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/jxgm/Desktop/FileTranslate/dist/DocuTranslate&quot;,
+    &quot;list.type.of.created.stylesheet&quot;: &quot;CSS&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\dist\DocuTranslate" />
@@ -569,7 +567,9 @@
       <workItem from="1747617855241" duration="190000" />
       <workItem from="1747619759939" duration="205000" />
       <workItem from="1747624297447" duration="65000" />
-      <workItem from="1747628254543" duration="7231000" />
+      <workItem from="1747628254543" duration="7347000" />
+      <workItem from="1747635705571" duration="391000" />
+      <workItem from="1747650908714" duration="84000" />
     </task>
     <servers />
   </component>
