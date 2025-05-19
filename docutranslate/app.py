@@ -2,8 +2,10 @@ import asyncio
 import io
 import logging
 import time
+import urllib
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+from urllib.parse import quote
 
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Request, HTTPException
@@ -1061,7 +1063,7 @@ async def download_markdown(filename_with_ext: str):
     return StreamingResponse(
         io.StringIO(current_state["markdown_content"]),
         media_type="text/markdown",
-        headers={"Content-Disposition": f"attachment; filename=\"{actual_filename}\""}
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(actual_filename, safe='', encoding='utf-8')}"}
     )
 
 
@@ -1079,7 +1081,7 @@ async def download_html(filename_with_ext: str):
     return HTMLResponse(
         content=current_state["html_content"],
         media_type="text/html",
-        headers={"Content-Disposition": f"attachment; filename=\"{actual_filename}\""}
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(actual_filename, safe='', encoding='utf-8')}"}
     )
 
 
