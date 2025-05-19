@@ -13,13 +13,13 @@ from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from docutranslate import FileTranslater
 from docutranslate.logger import translater_logger
+from docutranslate.utils.resource_utils import resource_path
 
 app = FastAPI()
 
-BASE_DIR = Path(__file__).resolve().parent
-STATIC_DIR=BASE_DIR/"static"
+STATIC_DIR=resource_path("static")
 
-
+# print(f"__file__:{Path(__file__).resolve()}")
 app.mount("/static",StaticFiles(directory=STATIC_DIR), name="static")
 
 # --- 全局配置 ---

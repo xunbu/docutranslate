@@ -1,7 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('C:\\\\Users\\\\jxgm\\\\Desktop\\\\FileTranslate\\\\.venv\\\\Lib\\\\site-packages\\\\docling_parse\\\\pdf_resources_v2', 'docling_parse/pdf_resources_v2')]
+datas = [('C:/Users/jxgm/Desktop/FileTranslate/.venv/Lib/site-packages/docling_parse/pdf_resources_v2', 'docling_parse/pdf_resources_v2'),
+('C:/Users/jxgm\Desktop/FileTranslate/docutranslate/static', 'docutranslate/static')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('easyocr')
