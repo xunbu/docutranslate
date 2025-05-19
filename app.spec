@@ -2,7 +2,7 @@
 from PyInstaller.utils.hooks import collect_all
 
 datas = [('C:/Users/jxgm/Desktop/FileTranslate/.venv/Lib/site-packages/docling_parse/pdf_resources_v2', 'docling_parse/pdf_resources_v2'),
-('C:/Users/jxgm/esktop/FileTranslate/docutranslate/static', 'docutranslate/static')]
+('C:/Users/jxgm/desktop/FileTranslate/docutranslate/static', 'docutranslate/static')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('easyocr')
