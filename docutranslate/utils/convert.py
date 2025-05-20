@@ -9,7 +9,7 @@ from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling_core.types.doc import ImageRefMode
 from huggingface_hub.errors import LocalEntryNotFoundError
 
-from docutranslate_lite.logger import translater_logger
+from docutranslate.logger import translater_logger
 
 IMAGE_RESOLUTION_SCALE = 4
 

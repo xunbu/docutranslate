@@ -5,40 +5,34 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/docutranslate_lite/converter/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/logo.ico" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/.name" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/filetranslate.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/docutranslate_lite.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/docutranslate_lite.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/docutranslate.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app.spec" beforeDir="false" afterPath="$PROJECT_DIR$/app.spec" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/agents/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/agents/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/agents/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/agents/agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/agents/markdown_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/agents/markdown_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/cli.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/cli.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/converter/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/converter/converter.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/converter/converter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/converter/converter_docling.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/converter/converter_mineru.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/converter/converter_mineru.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/logger/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/logger/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/logger/logger.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/logger/logger.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/static/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/static/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/static/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/static/pico.css" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/static/pico.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/translater.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/translater.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/utils/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/utils/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/utils/convert.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/utils/convert.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/utils/docling_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/utils/docling_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/utils/markdown_splitter.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/utils/markdown_splitter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/utils/markdown_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/utils/markdown_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/utils/resource_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate_lite/utils/resource_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/uv.lock" beforeDir="false" afterPath="$PROJECT_DIR$/uv.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/agents/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/agents/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/agents/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/agents/agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/agents/markdown_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/agents/markdown_agent.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/app.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/cli.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/cli.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/converter/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/converter/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/converter/converter.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/converter/converter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/converter/converter_mineru.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/converter/converter_mineru.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/logger/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/logger/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/logger/logger.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/logger/logger.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/static/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/static/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/static/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/static/pico.css" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/static/pico.css" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/translater.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/translater.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/convert.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/convert.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/docling_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/docling_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/markdown_splitter.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/markdown_splitter.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/markdown_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/markdown_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/resource_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/resource_utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -68,62 +62,62 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "JavaScript 调试.output.html (1).executor": "Run",
-    "JavaScript 调试.output.html.executor": "Run",
-    "JavaScript 调试.regex.md_中文.html.executor": "Run",
-    "JavaScript 调试.regex_中文.html.executor": "Run",
-    "JavaScript 调试.test.html.executor": "Run",
-    "JavaScript 调试.test2.html.executor": "Run",
-    "JavaScript 调试.test2_英文.html.executor": "Run",
-    "JavaScript 调试.test4-1_中文.html.executor": "Run",
-    "JavaScript 调试.互联网认证授权机制.html.executor": "Run",
-    "JavaScript 调试.互联网认证授权机制_英文.html.executor": "Run",
-    "JavaScript 调试.毕业论文_英文.html.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python 测试.Python 测试 (markdown_mask.py 内).executor": "Run",
-    "Python 测试.markdown_mask.Test.test_basic_link_masking 的 Python 测试.executor": "Run",
-    "Python 测试.pytest (test_html.py 内).executor": "Run",
-    "Python.1test.executor": "Run",
-    "Python.2test2 (1).executor": "Run",
-    "Python.PDFtranslater (1).executor": "Run",
-    "Python.PDFtranslater (2).executor": "Run",
-    "Python.agent.executor": "Debug",
-    "Python.agent_utils.executor": "Run",
-    "Python.app (1).executor": "Run",
-    "Python.app.executor": "Run",
-    "Python.app2.executor": "Run",
-    "Python.app_test (1).executor": "Run",
-    "Python.convert.executor": "Run",
-    "Python.converter_docling.executor": "Run",
-    "Python.converter_mineru.executor": "Run",
-    "Python.markdown_splitter.executor": "Debug",
-    "Python.markdown_utils.executor": "Run",
-    "Python.test.executor": "Run",
-    "Python.test1.executor": "Run",
-    "Python.test2.executor": "Run",
-    "Python.test3.executor": "Run",
-    "Python.test4.executor": "Run",
-    "Python.testhtml.executor": "Run",
-    "Python.translater.executor": "Run",
-    "Python.切分测试.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "lite",
-    "last_opened_file_path": "C:/Users/jxgm/Desktop/translate/docutranslate-minerU轻量版",
-    "list.type.of.created.stylesheet": "CSS",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "settings.editor.selected.configurable": "preferences.pluginManager",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;JavaScript 调试.output.html (1).executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.output.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.regex.md_中文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.regex_中文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.test.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.test2.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.test2_英文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.test4-1_中文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.互联网认证授权机制.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.互联网认证授权机制_英文.html.executor&quot;: &quot;Run&quot;,
+    &quot;JavaScript 调试.毕业论文_英文.html.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python 测试.Python 测试 (markdown_mask.py 内).executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.markdown_mask.Test.test_basic_link_masking 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.pytest (test_html.py 内).executor&quot;: &quot;Run&quot;,
+    &quot;Python.1test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.2test2 (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.PDFtranslater (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.PDFtranslater (2).executor&quot;: &quot;Run&quot;,
+    &quot;Python.agent.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.agent_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.app.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app2.executor&quot;: &quot;Run&quot;,
+    &quot;Python.app_test (1).executor&quot;: &quot;Run&quot;,
+    &quot;Python.convert.executor&quot;: &quot;Run&quot;,
+    &quot;Python.converter_docling.executor&quot;: &quot;Run&quot;,
+    &quot;Python.converter_mineru.executor&quot;: &quot;Run&quot;,
+    &quot;Python.markdown_splitter.executor&quot;: &quot;Debug&quot;,
+    &quot;Python.markdown_utils.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test1.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test2.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test3.executor&quot;: &quot;Run&quot;,
+    &quot;Python.test4.executor&quot;: &quot;Run&quot;,
+    &quot;Python.testhtml.executor&quot;: &quot;Run&quot;,
+    &quot;Python.translater.executor&quot;: &quot;Run&quot;,
+    &quot;Python.切分测试.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;lite&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/jxgm/Desktop/translate/docutranslate-minerU轻量版&quot;,
+    &quot;list.type.of.created.stylesheet&quot;: &quot;CSS&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\jxgm\Desktop\translate\docutranslate-minerU轻量版" />
@@ -304,7 +298,7 @@
       <method v="2" />
     </configuration>
     <configuration name="1test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="docutranslate_lite" />
+      <module name="docutranslate" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -327,7 +321,7 @@
       <method v="2" />
     </configuration>
     <configuration name="2test2 (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="docutranslate_lite" />
+      <module name="docutranslate" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -373,7 +367,7 @@
       <method v="2" />
     </configuration>
     <configuration name="app_test (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="docutranslate_lite" />
+      <module name="docutranslate" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -396,7 +390,7 @@
       <method v="2" />
     </configuration>
     <configuration name="converter_docling" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="docutranslate_lite" />
+      <module name="docutranslate" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -419,7 +413,7 @@
       <method v="2" />
     </configuration>
     <configuration name="converter_mineru" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="docutranslate_lite" />
+      <module name="docutranslate" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -539,7 +533,7 @@
       <method v="2" />
     </configuration>
     <configuration default="true" type="tests" factoryName="py.test">
-      <module name="docutranslate_lite" />
+      <module name="docutranslate" />
       <option name="ENV_FILES" value="" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -649,7 +643,8 @@
       <workItem from="1747650908714" duration="121000" />
       <workItem from="1747731199599" duration="4260000" />
       <workItem from="1747736824574" duration="361000" />
-      <workItem from="1747737201378" duration="942000" />
+      <workItem from="1747737201378" duration="1183000" />
+      <workItem from="1747738756417" duration="189000" />
     </task>
     <servers />
   </component>

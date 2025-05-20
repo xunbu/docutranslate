@@ -1,13 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('./docutranslate_lite/static', 'docutranslate_lite/static')]
+datas = [('./docutranslate/static', 'docutranslate/static')]
 binaries = []
 hiddenimports = []
 
 
 a = Analysis(
-    ['./docutranslate_lite/app.py'],
+    ['./docutranslate/app.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,
@@ -46,5 +46,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='DocuTranslate_lite',
+    name='DocuTranslate轻量版',
 )

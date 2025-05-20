@@ -2,12 +2,12 @@ import asyncio
 from pathlib import Path
 from typing import Literal
 import markdown2
-from docutranslate_lite.agents import Agent, AgentArgs
-from docutranslate_lite.agents import MDRefineAgent, MDTranslateAgent
-from docutranslate_lite.converter import Document, ConverterMineru
-from docutranslate_lite.utils.markdown_splitter import split_markdown_text, join_markdown_texts
-from docutranslate_lite.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
-from docutranslate_lite.logger import translater_logger
+from docutranslate.agents import Agent, AgentArgs
+from docutranslate.agents import MDRefineAgent, MDTranslateAgent
+from docutranslate.converter import Document, ConverterMineru
+from docutranslate.utils.markdown_splitter import split_markdown_text, join_markdown_texts
+from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
+from docutranslate.logger import translater_logger
 
 
 class FileTranslater:

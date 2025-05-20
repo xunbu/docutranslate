@@ -11,9 +11,9 @@ from fastapi import FastAPI, File, Form, UploadFile, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse,FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from docutranslate_lite import FileTranslater # Assuming FileTranslater is in docutranslate module
-from docutranslate_lite.logger import translater_logger
-from docutranslate_lite.utils.resource_utils import resource_path
+from docutranslate import FileTranslater # Assuming FileTranslater is in docutranslate module
+from docutranslate.logger import translater_logger
+from docutranslate.utils.resource_utils import resource_path
 
 app = FastAPI()
 
