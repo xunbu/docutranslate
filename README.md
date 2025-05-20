@@ -14,6 +14,8 @@
 上下载最新的整合包，该整合包点击即用，您所需的只是获取某个ai平台的api-key。
 以及可以在mineru申请token进行pdf识别【可选】
 
+对于轻量版，只支持minerU转换引擎，因此需要申请minerU的API-Token
+
 # 安装
 
 使用pip  
