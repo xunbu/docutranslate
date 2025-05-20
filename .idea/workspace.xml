@@ -5,34 +5,12 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.name" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/docutranslate_lite.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/docutranslate.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/DocuTranslate.ico" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/app.spec" beforeDir="false" afterPath="$PROJECT_DIR$/app.spec" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/agents/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/agents/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/agents/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/agents/agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/agents/markdown_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/agents/markdown_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/cli.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/cli.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/converter/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/converter/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/converter/converter.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/converter/converter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/converter/converter_mineru.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/converter/converter_mineru.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/logger/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/logger/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/logger/logger.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/logger/logger.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/static/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/static/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/static/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/static/pico.css" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/static/pico.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/translater.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/translater.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/convert.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/convert.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/docling_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/docling_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/markdown_splitter.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/markdown_splitter.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/markdown_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/markdown_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate_lite/utils/resource_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/utils/resource_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docutranslate/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/static/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/logo.ico" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -127,11 +105,11 @@
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\dist" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\jxgm\Desktop\translate\docutranslate" />
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\src" />
       <recent name="C:\Users\jxgm\Desktop\FileTranslate" />
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\dist\DocuTranslate" />
       <recent name="C:\Users\jxgm\Desktop\FileTranslate\dist\app" />
-      <recent name="C:\Users\jxgm\Desktop\FileTranslate\tests\files" />
     </key>
   </component>
   <component name="RunManager" selected="Python.app_test (1)">
@@ -530,24 +508,6 @@
       <option name="TEST_TYPE" value="TEST_SCRIPT" />
       <option name="PATTERN" value="" />
       <option name="USE_PATTERN" value="false" />
-      <method v="2" />
-    </configuration>
-    <configuration default="true" type="tests" factoryName="py.test">
-      <module name="docutranslate" />
-      <option name="ENV_FILES" value="" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="" />
-      <option name="IS_MODULE_SDK" value="false" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
-      <option name="_new_keywords" value="&quot;&quot;" />
-      <option name="_new_parameters" value="&quot;&quot;" />
-      <option name="_new_additionalArguments" value="&quot;&quot;" />
-      <option name="_new_target" value="&quot;&quot;" />
-      <option name="_new_targetType" value="&quot;PATH&quot;" />
       <method v="2" />
     </configuration>
     <recent_temporary>
