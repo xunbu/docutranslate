@@ -6,8 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/agents/markdown_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/agents/markdown_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
