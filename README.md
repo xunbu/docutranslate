@@ -4,12 +4,15 @@
 
 [![image](https://img.shields.io/badge/github-DocuTranslate-blue)](https://github.com/xunbu/docutranslate)
 
-文件翻译工具，借助[docling](https://github.com/docling-project/docling)与大语言模型实现多种格式文件的翻译
+文件翻译工具，借助[docling](https://github.com/docling-project/docling)、[minerU](https://mineru.net/)与大语言模型实现多种格式文件的翻译
+
+> QQ交流群：1047781902
 
 # 整合包
 
 对于只使用基本翻译功能的用户，可以在[github releases](https://github.com/xunbu/docutranslate/releases)
 上下载最新的整合包，该整合包点击即用，您所需的只是获取某个ai平台的api-key。
+以及可以在mineru申请token进行pdf识别【可选】
 
 # 安装
 
@@ -34,7 +37,16 @@
 
 # 前置条件
 
-## huggingface换源
+本翻译工具的翻译流程总体如下：
+
+1. 使用文本转换引擎将文档转换成markdown（有docling（本地）、minerU（联网）两种引擎）
+2. 使用大语言模型翻译markdown文本（需要申请api-key或本地部署）
+
+## 使用docling引擎注意事项
+
+使用docling将文档转换为markdown时，需要下载模型到本地（也可以提前下载，见FAQ），因此可能会遇到一些网络问题
+
+### huggingface换源
 
 > 不能科学上网的友友注意了
 
@@ -43,12 +55,12 @@
 - 第一次读取非markdown文本
 - 第一次使用公式识别或代码识别功能
 
-### 方法1
+#### 方法1
 
 设置电脑的环境变量(记得设置后重启IDE)  
 `HF_ENDPOINT=https://hf-mirror.com`
 
-### 方法2
+#### 方法2
 
 在代码开头设置环境变量
 
@@ -59,6 +71,13 @@ os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 ###其余代码写在下方
 ```
+
+## 使用minerU引擎注意事项
+
+使用minerU将文档转换为markdown时，需要在minerU平台申请token
+
+1. 打开[minerU官网](https://mineru.net/apiManage/docs)申请token
+2. 申请成功后，在[API Token管理界面](https://mineru.net/apiManage/token)创建API Token
 
 ## 获取大模型平台的baseurl、key、model-id
 
@@ -90,7 +109,12 @@ from docutranslate.translater import FileTranslater
 
 translater = FileTranslater(base_url="<baseurl>",
                             key="<key>",
-                            model_id="<model-id>")
+                            model_id="<model-id>",
+                            convert_engin="docling"  # 默认使用docling
+                            # convert_engin="mineru",# 使用mineru
+                            # mineru_token="<申请的mineru_token>"#使用mineru时必填
+                            )
+
 # 不开启公式、代码识别（默认输出为markdown文件）
 translater.translate_file("<文件路径>", to_lang="中文")
 
@@ -141,12 +165,14 @@ translater.read_file("<文件路径>").save_as_markdown()
 from docutranslate import FileTranslater
 
 translater = FileTranslater(base_url="<baseurl>",  # 默认的模型baseurl
-                            key="<key>",  # 默认的模型api-key
+                            key="<api-key>",  # 默认的大语言模型平台api-key
                             model_id="<model-id>",  # 默认的模型id
                             chunksize=2000,  # markdown分块长度（单位byte），分块越大效果越好（也越慢），不建议超过8000
                             max_concurrent=20,  # 并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
-                            docling_artifact=None,  # 使用提前下载好的docling模型
                             timeout=2000,  # 调用api的超时时间
+                            docling_artifact=None,  # 使用提前下载好的docling模型
+                            convert_engin="mineru",  # 可选docling或minerU
+                            mineru_token="<mineru-token>",  # minerU的token，使用minerU时必填
                             tips=True  # 开场提示
                             )
 
@@ -206,7 +232,8 @@ from docutranslate.utils.docling_utils import get_docling_artifacts
 print(get_docling_artifacts())  # 会显示模型下载文件夹，通常在`C:\Users\<user>\.cache\docling\models`
 ```
 
-> 创建FileTranslater时携带模型文件夹即可
+> 将模型文件夹命名为docling_artifact放置在项目下
+> 或创建FileTranslater时docling_artifact参数设置为文件夹位置
 
 ```python
 from docutranslate import FileTranslater

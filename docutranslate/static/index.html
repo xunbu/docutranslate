@@ -28,11 +28,11 @@
         }
 
         .error-message {
-            color: #d32f2f;
+            color: #d32f2f; /* Pico invalid color */
         }
 
         .success-message {
-            color: #2e7d32;
+            color: #2e7d32; /* Pico valid color */
         }
 
         .form-group {
@@ -65,8 +65,14 @@
         .checkbox-group {
             display: flex;
             flex-wrap: wrap;
+            gap: 1rem; /* Added gap for better spacing */
             margin-bottom: 1rem;
         }
+
+        .checkbox-group label { /* Ensure checkboxes are aligned */
+            margin-right: 10px;
+        }
+
 
         #resultArea {
             margin-top: 1.5rem;
@@ -116,7 +122,6 @@
             display: none;
         }
 
-        /* Styles for drag and drop area */
         #fileDropArea {
             border: 2px dashed #ccc;
             padding: 20px;
@@ -126,16 +131,16 @@
         }
 
         #fileDropArea.drag-over {
-            border-color: #1095c1; /* Pico primary color (定量替换 var(--pico-primary-focus)) */
-            background-color: #e7f5fa; /* Pico primary background (定量替换 var(--pico-primary-background)) */
+            border-color: #1095c1;
+            background-color: #e7f5fa;
         }
 
         #fileDropArea.file-selected {
-            border-color: #2e7d32; /* Pico success color (定量替换 var(--pico-form-element-valid-border-color, #2e7d32)) */
-            background-color: #e8f5e9; /* Light green (定量替换 var(--pico-form-element-valid-background-color, #e8f5e9)) */
+            border-color: #2e7d32;
+            background-color: #e8f5e9;
         }
 
-        #fileDropArea p { /* General style for <p> inside drop area */
+        #fileDropArea p {
             margin: 0.5rem 0;
             color: #555;
         }
@@ -149,18 +154,17 @@
         #fileNameDisplay.has-file {
             font-style: normal;
             font-weight: bold;
-            color: #1a531d; /* Darker green or success color (定量替换 var(--pico-form-element-valid-border-color, #1a531d)) */
+            color: #1a531d;
         }
 
-        #fileDropArea.input-error {
-            border-color: #d32f2f !important; /* (定量替换 var(--pico-form-element-invalid-border-color, #d32f2f)) */
+        #fileDropArea.input-error, input.input-error, select.input-error { /* Extended to input/select */
+            border-color: #d32f2f !important;
         }
 
         #fileNameDisplay.input-error-text {
-            color: #d32f2f !important; /* (定量替换 var(--pico-form-element-invalid-border-color, #d32f2f)) */
+            color: #d32f2f !important;
             font-weight: bold;
         }
-
 
         @media (max-width: 768px) {
             .form-grid {
@@ -176,7 +180,6 @@
     </h1>
     <form id="translateForm">
 
-        <!-- Modified File Input Area -->
         <div class="form-group">
             <label for="file">文档选择</label>
             <div id="fileDropArea">
@@ -206,17 +209,34 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>高级选项</label>
+                <label>选项</label>
                 <div class="checkbox-group">
-                    <label for="formula_ocr"><input type="checkbox" id="formula_ocr" name="formula_ocr">公式识别</label>
-                    <label for="code_ocr"><input type="checkbox" id="code_ocr" name="code_ocr">代码识别</label>
-                    <label for="refine_markdown"><input type="checkbox" id="refine_markdown"
-                                                        name="refine_markdown">修正文本（耗时）</label>
+                    <label for="formula_ocr"><input type="checkbox" id="formula_ocr" name="formula_ocr" role="switch">公式识别</label>
+                    <label for="code_ocr"><input type="checkbox" id="code_ocr" name="code_ocr"
+                                                 role="switch">代码识别</label>
+                    <label for="refine_markdown"><input type="checkbox" id="refine_markdown" name="refine_markdown"
+                                                        role="switch">修正文本（耗时）</label>
                 </div>
             </div>
         </div>
         <details>
-            <summary>API 配置</summary>
+            <summary>文档转换引擎配置</summary>
+            <div class="form-group">
+                <label for="convert_engin">转换引擎</label>
+                <select id="convert_engin" name="convert_engin">
+                    <option value="mineru" selected>Mineru</option>
+                    <option value="docling">Docling</option>
+                </select>
+            </div>
+            <div class="form-group hidden" id="mineruTokenGroup">
+                <label for="mineru_token">Mineru Token</label>
+                <input type="password" id="mineru_token" name="mineru_token" placeholder="使用 Mineru 引擎时必须填写">
+            </div>
+        </details>
+
+
+        <details>
+            <summary>翻译API配置</summary>
             <div class="form-grid">
                 <div class="form-group">
                     <label for="platform_select">AI 平台</label>
@@ -225,8 +245,7 @@
                         <option value="https://api.openai.com/v1">OpenAI</option>
                         <option value="https://open.bigmodel.cn/api/paas/v4">智谱AI</option>
                         <option value="https://api.deepseek.com/v1">DeepSeek</option>
-                        <option value="https://dashscope.aliyuncs.com/compatible-mode/v1">阿里云百炼
-                        </option>
+                        <option value="https://dashscope.aliyuncs.com/compatible-mode/v1">阿里云百炼</option>
                         <option value="https://www.dmxapi.cn/v1">DMXAPI</option>
                         <option value="https://openrouter.ai/api/v1">OpenRouter</option>
                         <option value="https://ark.cn-beijing.volces.com/api/v3">火山引擎</option>
@@ -235,14 +254,12 @@
                 </div>
                 <div class="form-group hidden" id="baseUrlGroup">
                     <label for="base_url">API 地址 (Base URL)</label>
-                    <input type="text" id="base_url" name="base_url"
-                           placeholder="https://api.openai.com/v1">
+                    <input type="text" id="base_url" name="base_url" placeholder="https://api.openai.com/v1">
                 </div>
             </div>
             <div class="form-group">
                 <label for="apikey">API 密钥</label>
-                <input type="password" id="apikey" name="apikey" placeholder="平台对应的API Key"
-                       required>
+                <input type="password" id="apikey" name="apikey" placeholder="平台对应的API Key" required>
             </div>
             <div class="form-group">
                 <label for="model_id">模型 ID</label>
@@ -267,7 +284,7 @@
 </main>
 <div id="previewModal" class="modal">
     <div class="modal-content">
-        <span id="closeModalBtn" style="cursor:pointer; float:right;">×</span>
+        <span id="closeModalBtn" style="cursor:pointer; float:right; font-size: 1.5rem; line-height: 1;">×</span>
         <h3>HTML 预览</h3>
         <iframe id="previewFrame"></iframe>
         <div class="button-group">
@@ -277,7 +294,6 @@
     </div>
 </div>
 <iframe id="printFrame" style="display:none;"></iframe>
-
 <script>
     const platformSelect = document.getElementById('platform_select');
     const baseUrlGroup = document.getElementById('baseUrlGroup');
@@ -288,6 +304,11 @@
     const formulaCheckbox = document.getElementById('formula_ocr');
     const codeCheckbox = document.getElementById('code_ocr');
     const refineCheckbox = document.getElementById('refine_markdown');
+
+    const convertEnginSelect = document.getElementById('convert_engin');
+    const mineruTokenGroup = document.getElementById('mineruTokenGroup');
+    const mineruTokenInput = document.getElementById('mineru_token');
+
     const form = document.getElementById('translateForm');
     const submitButton = document.getElementById('submitButton');
     const logArea = document.getElementById('logArea');
@@ -311,7 +332,6 @@
 
     let logPollIntervalId = null;
     let statusPollIntervalId = null;
-    // let lastLogCount = 0; // No longer needed for fetching logs
     let isTranslating = false;
 
     function saveToStorage(key, value) {
@@ -347,7 +367,34 @@
         saveToStorage('translator_last_platform', selectedPlatformValue);
     }
 
-    loadSettings();
+    function updateConvertEnginUI() {
+        const selectedEngin = convertEnginSelect.value;
+        if (selectedEngin === 'mineru') {
+            mineruTokenGroup.classList.remove('hidden');
+            mineruTokenInput.required = true;
+            mineruTokenInput.value = getFromStorage('translator_mineru_token');
+        } else {
+            mineruTokenGroup.classList.add('hidden');
+            mineruTokenInput.required = false;
+            // Optionally clear if not needed: mineruTokenInput.value = '';
+        }
+        saveToStorage('translator_convert_engin', selectedEngin);
+    }
+
+    function loadSettings() {
+        platformSelect.value = getFromStorage('translator_last_platform', 'custom');
+        updatePlatformUI();
+
+        convertEnginSelect.value = getFromStorage('translator_convert_engin', 'mineru');
+        updateConvertEnginUI(); // Must be after setting convertEnginSelect.value
+
+        toLangSelect.value = getFromStorage('translator_to_lang', '中文');
+        formulaCheckbox.checked = getFromStorage('translator_formula_ocr') === 'true';
+        codeCheckbox.checked = getFromStorage('translator_code_ocr') === 'true';
+        refineCheckbox.checked = getFromStorage('translator_refine_markdown') === 'true';
+    }
+
+    loadSettings(); // Initial load
 
     platformSelect.addEventListener('change', updatePlatformUI);
     apikeyInput.addEventListener('input', (e) => saveToStorage(`translator_platform_${platformSelect.value}_apikey`, e.target.value));
@@ -355,10 +402,14 @@
     baseUrlInput.addEventListener('input', (e) => {
         if (platformSelect.value === 'custom') saveToStorage('translator_platform_custom_base_url', e.target.value);
     });
+
+    convertEnginSelect.addEventListener('change', updateConvertEnginUI);
+    mineruTokenInput.addEventListener('input', (e) => saveToStorage('translator_mineru_token', e.target.value));
+
     toLangSelect.addEventListener('change', e => saveToStorage('translator_to_lang', e.target.value));
-    formulaCheckbox.addEventListener('change', e => saveToStorage('translator_formula_ocr', e.target.checked));
-    codeCheckbox.addEventListener('change', e => saveToStorage('translator_code_ocr', e.target.checked));
-    refineCheckbox.addEventListener('change', e => saveToStorage('translator_refine_markdown', e.target.checked));
+    formulaCheckbox.addEventListener('change', e => saveToStorage('translator_formula_ocr', e.target.checked.toString()));
+    codeCheckbox.addEventListener('change', e => saveToStorage('translator_code_ocr', e.target.checked.toString()));
+    refineCheckbox.addEventListener('change', e => saveToStorage('translator_refine_markdown', e.target.checked.toString()));
 
     [closeModalButton, closePreviewBtn].forEach(elem => elem.addEventListener('click', () => modal.style.display = 'none'));
     window.addEventListener('click', (event) => {
@@ -374,9 +425,7 @@
         }
     });
 
-    fileDropArea.addEventListener('click', () => {
-        fileInput.click();
-    });
+    fileDropArea.addEventListener('click', () => fileInput.click());
 
     fileInput.addEventListener('change', () => {
         if (fileInput.files.length > 0) {
@@ -422,7 +471,6 @@
     fileDropArea.addEventListener('drop', (e) => {
         const dt = e.dataTransfer;
         const files = dt.files;
-
         if (files.length > 0) {
             fileInput.files = files;
             const event = new Event('change', {bubbles: true});
@@ -432,8 +480,7 @@
 
     async function pollLogs() {
         try {
-            // const response = await fetch(`/get-logs?since=${lastLogCount}`); // OLD
-            const response = await fetch('/get-logs'); // NEW: No 'since' parameter
+            const response = await fetch('/get-logs');
             if (!response.ok) {
                 console.warn(`Log polling failed: ${response.status}`);
                 return;
@@ -444,9 +491,8 @@
                     const escapedLog = log.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
                     logArea.innerHTML += escapedLog + "<br>";
                 });
-                logArea.scrollTop = logArea.scrollHeight; // Scroll to bottom
+                logArea.scrollTop = logArea.scrollHeight;
             }
-            // lastLogCount = data.total_count; // OLD: No longer tracking count this way
         } catch (error) {
             console.warn("Error polling logs:", error);
         }
@@ -561,7 +607,7 @@
             } else {
                 submitButton.textContent = '取消翻译';
                 submitButton.classList.remove('primary');
-                submitButton.classList.add('secondary');
+                submitButton.classList.add('secondary', 'contrast'); // Using contrast for cancel
                 isTranslating = true;
                 submitButton.disabled = false;
                 submitButton.removeAttribute('aria-busy');
@@ -576,10 +622,9 @@
 
     function startPolling() {
         stopPolling();
-        // lastLogCount = 0; // No longer needed
-        logArea.innerHTML = ''; // Clear log area for new task
-        pollLogs(); // Initial poll for logs
-        pollStatus(); // Initial poll for status
+        logArea.innerHTML = '';
+        pollLogs();
+        pollStatus();
         logPollIntervalId = setInterval(pollLogs, 2000);
         statusPollIntervalId = setInterval(pollStatus, 1500);
     }
@@ -589,16 +634,7 @@
         if (statusPollIntervalId) clearInterval(statusPollIntervalId);
         logPollIntervalId = null;
         statusPollIntervalId = null;
-        setTimeout(pollLogs, 500);
-    }
-
-    function loadSettings() {
-        platformSelect.value = getFromStorage('translator_last_platform', 'custom');
-        updatePlatformUI();
-        toLangSelect.value = getFromStorage('translator_to_lang', '中文');
-        formulaCheckbox.checked = getFromStorage('translator_formula_ocr') === 'true';
-        codeCheckbox.checked = getFromStorage('translator_code_ocr') === 'true';
-        refineCheckbox.checked = getFromStorage('translator_refine_markdown') === 'true';
+        setTimeout(pollLogs, 500); // One last poll for logs
     }
 
     async function cancelTranslation() {
@@ -609,13 +645,13 @@
         try {
             const response = await fetch('/cancel-translate', {method: 'POST'});
             const result = await response.json();
-
             if (response.ok && result.cancelled) {
                 statusMsg.textContent = result.message || '取消请求已发送。';
-                statusMsg.className = '';
+                statusMsg.className = ''; // Clear error class
             } else {
                 statusMsg.textContent = result.message || '取消失败。';
                 statusMsg.className = 'error-message';
+                // Re-enable button if cancellation failed to register server-side
                 submitButton.disabled = false;
                 submitButton.textContent = '取消翻译';
                 submitButton.removeAttribute('aria-busy');
@@ -628,6 +664,7 @@
             submitButton.textContent = '取消翻译';
             submitButton.removeAttribute('aria-busy');
         }
+        // Status poller will eventually update the button state correctly
     }
 
     form.addEventListener('submit', async function (event) {
@@ -637,6 +674,10 @@
             await cancelTranslation();
             return;
         }
+
+        // Clear previous input errors
+        [fileDropArea, mineruTokenInput].forEach(el => el.classList.remove('input-error'));
+        fileNameDisplay.classList.remove('input-error-text');
 
         if (fileInput.files.length === 0) {
             statusMsg.textContent = '请选择一个文件进行翻译。';
@@ -648,14 +689,18 @@
             setTimeout(() => {
                 fileDropArea.classList.remove('input-error');
                 fileNameDisplay.classList.remove('input-error-text');
-                if (fileNameDisplay.textContent === '请选择文件！') {
-                    fileNameDisplay.textContent = '未选择文件';
-                }
-                if (fileInput.files.length === 0) {
-                    fileDropPrompt.classList.remove('hidden');
-                }
-
+                if (fileNameDisplay.textContent === '请选择文件！') fileNameDisplay.textContent = '未选择文件';
+                if (fileInput.files.length === 0) fileDropPrompt.classList.remove('hidden');
             }, 3000);
+            return;
+        }
+
+        if (convertEnginSelect.value === 'mineru' && !mineruTokenInput.value.trim()) {
+            statusMsg.textContent = '使用 Mineru 引擎时，必须填写 Mineru Token。';
+            statusMsg.className = 'error-message';
+            mineruTokenInput.classList.add('input-error');
+            mineruTokenInput.focus();
+            setTimeout(() => mineruTokenInput.classList.remove('input-error'), 3000);
             return;
         }
 
@@ -667,9 +712,10 @@
         statusMsg.textContent = '正在提交任务...';
         statusMsg.className = '';
         downloadBtns.style.display = 'none';
-        // lastLogCount = 0; // No longer needed
 
         const formData = new FormData(form);
+        // FormData automatically includes convert_engin and mineru_token due to 'name' attributes
+
         try {
             const response = await fetch('/translate', {method: 'POST', body: formData});
             const result = await response.json();
@@ -678,8 +724,9 @@
                 statusMsg.className = '';
                 submitButton.textContent = '取消翻译';
                 submitButton.classList.remove('primary');
-                submitButton.classList.add('secondary');
+                submitButton.classList.add('secondary', 'contrast');
                 isTranslating = true;
+                submitButton.disabled = false; // Enable cancel button
                 submitButton.removeAttribute('aria-busy');
                 startPolling();
             } else {

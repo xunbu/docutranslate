@@ -11,7 +11,7 @@ from fastapi import FastAPI, File, Form, UploadFile, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse,FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from docutranslate import FileTranslater
+from docutranslate import FileTranslater # Assuming FileTranslater is in docutranslate module
 from docutranslate.logger import translater_logger
 from docutranslate.utils.resource_utils import resource_path
 
@@ -19,11 +19,10 @@ app = FastAPI()
 
 STATIC_DIR=resource_path("static")
 
-# print(f"__file__:{Path(__file__).resolve()}")
 app.mount("/static",StaticFiles(directory=STATIC_DIR), name="static")
 
 # --- 全局配置 ---
-log_queue: Optional[asyncio.Queue] = None  # Will be initialized in startup_event
+log_queue: Optional[asyncio.Queue] = None
 current_state: Dict[str, Any] = {
     "is_processing": False,
     "status_message": "空闲",
@@ -36,9 +35,9 @@ current_state: Dict[str, Any] = {
     "task_end_time": 0,
     "current_task_ref": None,
 }
-templates = Jinja2Templates(directory=".")
-MAX_LOG_HISTORY = 200  # Max items for the persistent log_history list
-log_history: List[str] = []  # Keeps a longer history, not directly for "unread"
+templates = Jinja2Templates(directory=".") # Not strictly used if index.html is served as FileResponse
+MAX_LOG_HISTORY = 200
+log_history: List[str] = []
 
 
 # --- 日志处理器 ---
@@ -51,27 +50,22 @@ class QueueAndHistoryHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord):
         log_entry = self.format(record)
-
-        # Add to the persistent history (capped)
+        print(log_entry) # Keep console log for server visibility
         self.history_list.append(log_entry)
         if len(self.history_list) > self.max_history:
             del self.history_list[:len(self.history_list) - self.max_history]
 
-        # Add to the "unread" queue for frontend consumption
-        try:
-            # Ensure self.queue is not None (it's initialized at startup)
-            if self.queue is not None:
+        if self.queue is not None:
+            try:
                 main_loop = getattr(app.state, "main_event_loop", None)
                 if main_loop and main_loop.is_running():
                     main_loop.call_soon_threadsafe(self.queue.put_nowait, log_entry)
                 else:
-                    self.queue.put_nowait(log_entry)  # Fallback
-            else:
-                print(f"CRITICAL: Log queue not initialized. Log: {log_entry}")
-        except asyncio.QueueFull:
-            print(f"Log queue is full. Log dropped: {log_entry}")  # Or handle differently
-        except Exception as e:
-            print(f"Error putting log to queue: {e}. Log: {log_entry}")
+                    self.queue.put_nowait(log_entry)
+            except asyncio.QueueFull:
+                print(f"Log queue is full. Log dropped: {log_entry}")
+            except Exception as e:
+                print(f"Error putting log to queue: {e}. Log: {log_entry}")
 
 
 # --- 应用生命周期事件 ---
@@ -79,7 +73,7 @@ class QueueAndHistoryHandler(logging.Handler):
 async def startup_event():
     global log_queue
     app.state.main_event_loop = asyncio.get_running_loop()
-    log_queue = asyncio.Queue()  # Initialize the global log_queue
+    log_queue = asyncio.Queue()
 
     for handler in translater_logger.handlers[:]:
         translater_logger.removeHandler(handler)
@@ -93,7 +87,7 @@ async def startup_event():
     translater_logger.setLevel(logging.INFO)
 
     log_history.clear()
-    while not log_queue.empty():  # Clear queue just in case
+    while not log_queue.empty():
         try:
             log_queue.get_nowait()
         except asyncio.QueueEmpty:
@@ -112,6 +106,7 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
     try:
         translater_logger.info(f"使用 Base URL: {params['base_url']}, Model: {params['model_id']}")
         translater_logger.info(f"文件大小: {len(file_contents)} 字节。目标语言: {params['to_lang']}")
+        translater_logger.info(f"使用转换引擎: {params['convert_engin']}")
         translater_logger.info(
             f"选项 - 公式: {params['formula_ocr']}, 代码: {params['code_ocr']}, 修正: {params['refine_markdown']}")
 
@@ -119,7 +114,9 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
             base_url=params['base_url'],
             key=params['apikey'],
             model_id=params['model_id'],
-            tips=False
+            convert_engin=params['convert_engin'],
+            mineru_token=params['mineru_token'],
+            tips=False  # Assuming tips are not needed for server-side processing
         )
         await ft.translate_bytes_async(
             name=original_filename,
@@ -152,7 +149,7 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
         translater_logger.info(f"翻译任务 '{original_filename}' 已被取消 (用时 {duration:.2f} 秒).")
         current_state.update({
             "status_message": f"翻译任务已取消（若有转换任务仍会后台进行） (用时 {duration:.2f} 秒).",
-            "error_flag": False,  # Cancellation is not an error in this context
+            "error_flag": False,
             "download_ready": False,
             "markdown_content": None,
             "html_content": None,
@@ -180,11 +177,25 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
 # --- API Endpoints ---
 @app.get("/", response_class=HTMLResponse)
 async def main_page(request: Request):
-    return FileResponse(STATIC_DIR/"index.html")
+    # Serve index.html from the static directory or root project directory
+    # Assuming index.html is at the same level as app.py or in STATIC_DIR
+    # For simplicity, if index.html is at root:
+    # return FileResponse(Path(__file__).parent / "index.html")
+    # If using Jinja2Templates and index.html is in "templates" folder:
+    # return templates.TemplateResponse("index.html", {"request": request})
+    # Using FileResponse for index.html directly:
+    index_path = Path("index.html") # Adjust if index.html is elsewhere
+    if not index_path.exists():
+         # Fallback to static dir if not in root
+        index_path = STATIC_DIR / "index.html"
+        if not index_path.exists():
+            raise HTTPException(status_code=404, detail="index.html not found")
+    return FileResponse(index_path)
 
 
 @app.post("/translate")
 async def handle_translate(
+        request: Request, # Added request for potential future use, not strictly needed now
         base_url: str = Form(...),
         apikey: str = Form(...),
         model_id: str = Form(...),
@@ -192,6 +203,8 @@ async def handle_translate(
         formula_ocr: bool = Form(False),
         code_ocr: bool = Form(False),
         refine_markdown: bool = Form(False),
+        convert_engin: str = Form(...), # New parameter
+        mineru_token: Optional[str] = Form(None), # New parameter
         file: UploadFile = File(...)
 ):
     global current_state, log_queue, log_history
@@ -209,6 +222,12 @@ async def handle_translate(
             content={"task_started": False, "message": "没有选择文件或文件无效。"}
         )
 
+    if convert_engin == "mineru" and (not mineru_token or not mineru_token.strip()):
+        return JSONResponse(
+            status_code=400,
+            content={"task_started": False, "message": "使用 Mineru 引擎时必须提供有效的 Mineru Token。"}
+        )
+
     current_state["is_processing"] = True
     original_filename_for_init = file.filename or "uploaded_file"
 
@@ -224,26 +243,22 @@ async def handle_translate(
         "current_task_ref": None,
     })
 
-    # Clear logs for the new task
     log_history.clear()
-    if log_queue:  # Ensure log_queue is initialized
+    if log_queue:
         while not log_queue.empty():
             try:
                 log_queue.get_nowait()
             except asyncio.QueueEmpty:
                 break
 
-    # Add initial log entry for the new task
-    # We create a LogRecord manually to ensure it goes through the formatter and handler
     initial_log_msg = f"收到新的翻译请求: {original_filename_for_init}"
     if translater_logger.handlers and isinstance(translater_logger.handlers[0], QueueAndHistoryHandler):
-        # Use the existing handler to format and queue/store the log
         record = logging.LogRecord(
             name=translater_logger.name, level=logging.INFO, pathname="", lineno=0,
             msg=initial_log_msg, args=(), exc_info=None, func=""
         )
-        translater_logger.handlers[0].emit(record)  # This will add to both queue and history
-    else:  # Fallback if handler setup is unusual
+        translater_logger.handlers[0].emit(record)
+    else:
         translater_logger.info(initial_log_msg)
 
     try:
@@ -255,6 +270,8 @@ async def handle_translate(
             "base_url": base_url, "apikey": apikey, "model_id": model_id,
             "to_lang": to_lang, "formula_ocr": formula_ocr,
             "code_ocr": code_ocr, "refine_markdown": refine_markdown,
+            "convert_engin": convert_engin, # Pass to task
+            "mineru_token": mineru_token,   # Pass to task
         }
 
         loop = asyncio.get_running_loop()
@@ -332,18 +349,17 @@ async def get_status():
 
 
 @app.get("/get-logs")
-async def get_logs_from_queue():  # Renamed for clarity, though path is the same
+async def get_logs_from_queue():
     global log_queue
     new_logs = []
-    if log_queue:  # Ensure log_queue is initialized
+    if log_queue:
         while not log_queue.empty():
             try:
-                log_entry = log_queue.get_nowait()  # Consume from queue
+                log_entry = log_queue.get_nowait()
                 new_logs.append(log_entry)
-                log_queue.task_done()  # Important for queue management if using join() elsewhere
+                log_queue.task_done()
             except asyncio.QueueEmpty:
                 break
-                # No total_count, as the frontend just appends what it receives
     return JSONResponse(content={"logs": new_logs})
 
 
@@ -384,10 +400,11 @@ async def download_html(filename_with_ext: str):
 
 
 def run_app():
-    print("正在启动 DocuTranslate")
+    print("正在启动 DocuTranslate WebUI")
     print("请访问 http://127.0.0.1:8010")
     uvicorn.run(app, host="127.0.0.1", port=8010, workers=1)
 
 
 if __name__ == "__main__":
+
     run_app()
