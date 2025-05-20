@@ -88,9 +88,9 @@ os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 # 使用方式
 
-## 注意事项（第一次使用必看）
+## 注意事项（使用docling转换引擎必看，使用minerU或使用整合包时可跳过）
 
-以下操作会自动从[huggingface](https://huggingface.co)下载模型，windows需要使用**管理员模式**
+使用docling转换引擎时以下操作会自动从[huggingface](https://huggingface.co)下载模型，windows需要使用**管理员模式**
 打开IDE运行脚本，并按需换源[换源指南](#huggingface换源)
 
 - 第一次使用该库读取、翻译非markdown文本
