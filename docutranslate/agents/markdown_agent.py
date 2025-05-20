@@ -49,15 +49,15 @@ class MDTranslateAgent(Agent):
 翻译输入的markdown文本
 目标语言{to_lang}
 # 要求
-如果文本不适合被翻译（如专有名词、人名），则返回原文。
-不要解释，不要注释。
-引用的参考文献名和其作者不要翻译 
+翻译要有专业性和高质量
+不要任何解释，不要任何注释。
+引用的参考文献和其作者不要翻译 
 形如<ph-abc123>的占位符不要改变
 code、latex和HTML只翻译说明文字，其余保持原文
 公式必须表示为合法的latex公式,行内公式需被$正确包裹
 删除明显异常的无意义字符
 # 输出
-翻译后的markdown译文纯文本（不是markdown代码块）
+翻译后的markdown译文纯文本（不是markdown代码块，无任何多余文字）
 # 示例
 ## 英文翻译为中文
 输入：
@@ -71,7 +71,7 @@ The equation is E=mc 2. This is famous.
 输出：
 这个方程是 $E=mc^2$。这很有名。
 \\((c_0,c_1,c_2^2)\\)是一个坐标。
-## 引用的参考文献名称要保持原文不要翻译
+## 引用的参考文献要保持原文不要翻译
 输入：【假设目标语言为中文】
 [2] M. Castro, B. Liskov, et al. Practical byzantine fault tolerance. In OSDI,
 volume 99, pages 173–186, 1999.
