@@ -1,8 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('C:/Users/jxgm/Desktop/FileTranslate/.venv/Lib/site-packages/docling_parse/pdf_resources_v2', 'docling_parse/pdf_resources_v2'),
-('C:/Users/jxgm/desktop/FileTranslate/docutranslate/static', 'docutranslate/static')]
+datas = [('./.venv/Lib/site-packages/docling_parse/pdf_resources_v2', 'docling_parse/pdf_resources_v2'),
+('./docutranslate/static', 'docutranslate/static')]
 binaries = []
 hiddenimports = []
 tmp_ret = collect_all('easyocr')
@@ -12,7 +12,7 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 
 a = Analysis(
-    ['C:\\Users\\jxgm\\Desktop\\FileTranslate\\docutranslate\\app.py'],
+    ['./docutranslate/app.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,
@@ -42,7 +42,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['DocuTranslate.png'],
+    icon=['DocuTranslate.ico'],
 )
 coll = COLLECT(
     exe,

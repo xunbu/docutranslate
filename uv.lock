@@ -329,8 +329,8 @@ wheels = [
 
 [[package]]
 name = "docutranslate"
-version = "0.2.11.dev0"
-source = { virtual = "." }
+version = "0.2.20"
+source = { editable = "." }
 dependencies = [
     { name = "docling" },
     { name = "fastapi", extra = ["standard"] },
