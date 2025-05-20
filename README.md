@@ -105,7 +105,7 @@ docutranslate -i
 ## 翻译文件
 
 ```python
-from docutranslate.translater import FileTranslater
+from docutranslate_lite.translater import FileTranslater
 
 translater = FileTranslater(base_url="<baseurl>",
                             key="<key>",
@@ -131,8 +131,8 @@ translater.translate_file("<文件路径>", to_lang="中文", refine=True)
 ## 使用不同的agent分别进行文本修正和翻译
 
 ```python
-from docutranslate import FileTranslater
-from docutranslate.agents import MDRefineAgent, MDTranslateAgent
+from docutranslate_lite import FileTranslater
+from docutranslate_lite.agents import MDRefineAgent, MDTranslateAgent
 
 translater = FileTranslater()
 
@@ -146,7 +146,7 @@ translater.translate_file("<文件路径>", to_lang="中文", refine_agent=refin
 ## 文件转换(pdf/markdown/HTML/Doc等->markdown/html)
 
 ```python
-from docutranslate import FileTranslater
+from docutranslate_lite import FileTranslater
 
 translater = FileTranslater(base_url="<baseurl>",
                             key="<key>",
@@ -162,7 +162,7 @@ translater.read_file("<文件路径>").save_as_markdown()
 ### 创建FileTranslater
 
 ```python
-from docutranslate import FileTranslater
+from docutranslate_lite import FileTranslater
 
 translater = FileTranslater(base_url="<baseurl>",  # 默认的模型baseurl
                             key="<api-key>",  # 默认的大语言模型平台api-key
@@ -227,7 +227,7 @@ translater.translate_file(r"<要翻译的文件路径>",
 > 可以，对于docling提供的解析pdf、html等功能，可以使用以下方式提前下载所需的模型
 
 ```python
-from docutranslate.utils.docling_utils import get_docling_artifacts
+from docutranslate_lite.utils.docling_utils import get_docling_artifacts
 
 print(get_docling_artifacts())  # 会显示模型下载文件夹，通常在`C:\Users\<user>\.cache\docling\models`
 ```
@@ -236,7 +236,7 @@ print(get_docling_artifacts())  # 会显示模型下载文件夹，通常在`C:\
 > 或创建FileTranslater时docling_artifact参数设置为文件夹位置
 
 ```python
-from docutranslate import FileTranslater
+from docutranslate_lite import FileTranslater
 
 translater = FileTranslater(base_url="<baseurl>",
                             key="<key>",

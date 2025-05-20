@@ -2,20 +2,19 @@ import asyncio
 from pathlib import Path
 from typing import Literal
 import markdown2
-from docutranslate.agents import Agent, AgentArgs
-from docutranslate.agents import MDRefineAgent, MDTranslateAgent
-from docutranslate.converter import Document, ConverterDocling, ConverterMineru
-from docutranslate.utils.markdown_splitter import split_markdown_text, join_markdown_texts
-from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
-from docutranslate.logger import translater_logger
+from docutranslate_lite.agents import Agent, AgentArgs
+from docutranslate_lite.agents import MDRefineAgent, MDTranslateAgent
+from docutranslate_lite.converter import Document, ConverterMineru
+from docutranslate_lite.utils.markdown_splitter import split_markdown_text, join_markdown_texts
+from docutranslate_lite.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
+from docutranslate_lite.logger import translater_logger
 
 
 class FileTranslater:
     def __init__(self, file_path: Path | str | None = None, chunksize: int = 2000,
                  base_url="", key=None, model_id="", temperature=0.7,
                  max_concurrent=20, timeout=2000,
-                 convert_engin: Literal["docling", "mineru"] = "docling",
-                 docling_artifact: Path | str | None = None,
+                 convert_engin = "mineru",
                  mineru_token: str = None,
                  tips=True):
         self.convert_engin = convert_engin
@@ -32,12 +31,6 @@ class FileTranslater:
         self.key: str = key if key is not None else "xx"
         self.model_id: str = model_id
         self.temperature = temperature
-        self.docling_artifact = docling_artifact
-        if docling_artifact is None:
-            artifact_path = Path("./docling_artifact")
-            if artifact_path.is_dir():
-                translater_logger.info("检测到docling_artifact文件夹")
-                self.docling_artifact = artifact_path
         self.timeout = timeout
         if tips:
             print("""
@@ -78,36 +71,23 @@ class FileTranslater:
         }
         return result
 
-    def _convert2markdown(self, document: Document, formula: bool, code: bool, artifact: Path = None) -> str:
+    def _convert2markdown(self, document: Document, formula: bool, code: bool) -> str:
         translater_logger.info(f"正在使用{self.convert_engin}转换文件为markdown")
-        if self.convert_engin == "docling":
-            if artifact is None:
-                artifact = self.docling_artifact
-            mdconverter = ConverterDocling(formula=formula, code=code, artifact=artifact)
-            result = mdconverter.convert(document)
-        else:
-            if self.mineru_token is None:
-                raise Exception("mineru_token未配置")
-            if code:
-                translater_logger.info("mineru暂不支持code识别")
-            mdconverter = ConverterMineru(token=self.mineru_token, formula=formula)
-            result = mdconverter.convert(document)
+        if self.mineru_token is None:
+            raise Exception("mineru_token未配置")
+        if code:
+            translater_logger.info("mineru暂不支持code识别")
+        mdconverter = ConverterMineru(token=self.mineru_token, formula=formula)
+        result = mdconverter.convert(document)
         return result
 
-    async def _convert2markdown_async(self, document: Document, formula: bool, code: bool,
-                                      artifact: Path = None) -> str:
-        if self.convert_engin == "docling":
-            if artifact is None:
-                artifact = self.docling_artifact
-            mdconverter = ConverterDocling(formula=formula, code=code, artifact=artifact)
-            result = await mdconverter.convert_async(document)
-        else:
-            if self.mineru_token is None:
-                raise Exception("mineru_token未配置")
-            if code:
-                translater_logger.info("mineru暂不支持code识别")
-            mdconverter = ConverterMineru(token=self.mineru_token, formula=formula)
-            result = await mdconverter.convert_async(document)
+    async def _convert2markdown_async(self, document: Document, formula: bool, code: bool) -> str:
+        if self.mineru_token is None:
+            raise Exception("mineru_token未配置")
+        if code:
+            translater_logger.info("mineru暂不支持code识别")
+        mdconverter = ConverterMineru(token=self.mineru_token, formula=formula)
+        result = await mdconverter.convert_async(document)
         return result
 
     def read_bytes(self, name: str, file: bytes, formula=True, code=True, save=False,
@@ -119,7 +99,7 @@ class FileTranslater:
         if file_path.suffix == ".md":
             self.markdown = file.decode()
         else:
-            self.markdown = self._convert2markdown(document, formula=formula, code=code, artifact=self.docling_artifact)
+            self.markdown = self._convert2markdown(document, formula=formula, code=code)
         if refine:
             self.refine_markdown_by_agent(refine_agent)
         if save:
@@ -138,8 +118,7 @@ class FileTranslater:
         if file_path.suffix == ".md":
             self.markdown = file.decode()
         else:
-            self.markdown = await self._convert2markdown_async(document, formula=formula, code=code,
-                                                               artifact=self.docling_artifact)
+            self.markdown = await self._convert2markdown_async(document, formula=formula, code=code)
         if refine:
             await self.refine_markdown_by_agent_async(refine_agent)
         if save:
@@ -166,7 +145,7 @@ class FileTranslater:
                 self.markdown = f.read()
         else:
             document = Document(file_path)
-            self.markdown = self._convert2markdown(document, formula=formula, code=code, artifact=self.docling_artifact)
+            self.markdown = self._convert2markdown(document, formula=formula, code=code)
         if refine:
             self.refine_markdown_by_agent(refine_agent)
         if save:
@@ -193,8 +172,7 @@ class FileTranslater:
                 self.markdown = f.read()
         else:
             document = Document(file_path)
-            self.markdown = await self._convert2markdown_async(document, formula=formula, code=code,
-                                                               artifact=self.docling_artifact)
+            self.markdown = await self._convert2markdown_async(document, formula=formula, code=code)
         if refine:
             await self.refine_markdown_by_agent_async(refine_agent)
         if save:

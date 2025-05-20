@@ -5,7 +5,7 @@ from typing import TypedDict
 
 import httpx
 
-from docutranslate.logger import translater_logger
+from docutranslate_lite.logger import translater_logger
 
 
 class AgentArgs(TypedDict, total=False):

@@ -33,7 +33,7 @@ def main():
 
     # 调用核心逻辑
     if args.interactive: # 注意这里是 args.interactive，对应 "--interactive"
-        from docutranslate.app import run_app
+        from docutranslate_lite.app import run_app
         run_app()
     else:
         print("提示：若要启动 DocuTranslate 图形界面，请使用 -i 或 --interactive 选项。")

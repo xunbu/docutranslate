@@ -7,8 +7,8 @@ import re
 import time
 import zipfile
 import httpx
-from docutranslate.converter import Converter, Document
-from docutranslate.logger import translater_logger
+from docutranslate_lite.converter import Converter, Document
+from docutranslate_lite.logger import translater_logger
 
 URL = 'https://mineru.net/api/v4/file-urls/batch'
 
