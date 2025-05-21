@@ -8,7 +8,6 @@ dependencies = [
     "httpx",
     "markdown2",
     "fastapi[standard]>=0.115.12",
-    "docling>=2.33.0",
 ]
 [project.scripts]
 docutranslate = "docutranslate.cli:main"

@@ -177,20 +177,18 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
 # --- API Endpoints ---
 @app.get("/", response_class=HTMLResponse)
 async def main_page(request: Request):
-    # Serve index.html from the static directory or root project directory
-    # Assuming index.html is at the same level as app.py or in STATIC_DIR
-    # For simplicity, if index.html is at root:
-    # return FileResponse(Path(__file__).parent / "index.html")
-    # If using Jinja2Templates and index.html is in "templates" folder:
-    # return templates.TemplateResponse("index.html", {"request": request})
-    # Using FileResponse for index.html directly:
     index_path = Path("index.html") # Adjust if index.html is elsewhere
     if not index_path.exists():
          # Fallback to static dir if not in root
         index_path = STATIC_DIR / "index.html"
         if not index_path.exists():
             raise HTTPException(status_code=404, detail="index.html not found")
-    return FileResponse(index_path)
+    no_cache_headers = {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",  # 兼容 HTTP/1.0
+        "Expires": "0",        # 兼容旧版代理/缓存
+    }
+    return FileResponse(index_path,headers=no_cache_headers)
 
 
 @app.post("/translate")
@@ -408,7 +406,7 @@ async def download_html(filename_with_ext: str):
 
 def run_app():
     print("正在启动 DocuTranslate WebUI")
-    print("请访问 http://127.0.0.1:8010")
+    print("请访问 http://127.0.0.1:8010 （ctrl+点击链接即可打开）")
     uvicorn.run(app, host="127.0.0.1", port=8010, workers=1)
 
 

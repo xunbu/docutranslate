@@ -229,7 +229,7 @@
             <div class="form-group">
                 <label for="convert_engin">转换引擎</label>
                 <select id="convert_engin" name="convert_engin">
-                    <option value="mineru" selected>Mineru</option>
+                    <option value="mineru" selected>minerU</option>
                     <option value="docling" id="docling">Docling</option>
                 </select>
             </div>
@@ -360,6 +360,7 @@
             return defaultValue;
         }
     }
+
     //api访问地址到获取地址的映射
     const apiHrefMap = {
         "https://openrouter.ai/api/v1": "https://openrouter.ai/settings/keys",
@@ -513,12 +514,14 @@
                 console.warn(`get engine list failed: ${response.status}`);
                 return;
             }
-            const status = await response.json();
+            const enginList = await response.json();
             statusMsg.textContent = '正在初始化';
-            status.forEach((engin) => {
-                let option = convertEnginSelect.querySelector(`option[value="${engin}"]`);
-                option.disabled = true;
-                option.textContent += "(不可用)"
+            let options = convertEnginSelect.querySelectors(`option[value="${engin}"]`);
+            options.forEach((option) => {
+                if (!enginList.includes(option.value)) {
+                    option.disabled = true;
+                    option.textContent += "(不可用)"
+                }
             })
             if (status.includes(convertEnginSelect.value)) {
                 convertEnginSelect.value = "mineru";
