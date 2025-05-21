@@ -5,17 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
-      <change afterPath="$PROJECT_DIR$/docutranslate/static/DocuTranslate.ico" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/full_onefile.spec" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/images/双语对照.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/converter/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/converter/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/static/index.html" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/full.spec" beforeDir="false" afterPath="$PROJECT_DIR$/full.spec" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/uv.lock" beforeDir="false" afterPath="$PROJECT_DIR$/uv.lock" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -611,7 +604,7 @@
       <workItem from="1747740341909" duration="145000" />
       <workItem from="1747752718385" duration="81000" />
       <workItem from="1747754618316" duration="16566000" />
-      <workItem from="1747828300140" duration="3391000" />
+      <workItem from="1747828300140" duration="4611000" />
     </task>
     <servers />
   </component>

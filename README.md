@@ -8,29 +8,34 @@
 
 > QQ交流群：1047781902
 
+![翻译效果](/images/双语对照.png)
+
 # 整合包
 
-对于只使用基本翻译功能的用户，可以在[github releases](https://github.com/xunbu/docutranslate/releases)
-上下载最新的整合包，该整合包点击即用，您所需的只是获取某个ai平台的api-key。
-以及可以在mineru申请token进行pdf识别【可选】
-
-对于轻量版，只支持minerU转换引擎，因此需要申请minerU的API-Token
+- 对于只使用基本翻译功能的用户，可以在[github releases](https://github.com/xunbu/docutranslate/releases)
+  上下载最新的整合包，该整合包点击即用，您所需的只是获取某个ai平台的api-key，和minerU的token
+- 名字为DocuTranslate的软件不支持docling，需要在minerU申请token以进行文档解析【推荐】
+- 名字为DocuTranslate_full的软件包，自带docling模型，支持docling与minerU等所有解析文档引擎
 
 # 安装
 
 使用pip  
-1. `pip install docutranslate`  
-2. `pip install docling`#如果使用docling进行文档解析
 
-使用uv  
-1. `uv init`  
-2. `uv add docutranslate`  
-3. `uv add docling`#如果使用docling进行文档解析
+`pip install docutranslate`  
+`pip install docutranslate[docling]`#如果需要使用docling进行文档解析
+
+使用uv
+
+1. `uv init`
+2. `uv add docutranslate`
+3. `uv add docling`#如果需要使用docling进行文档解析
 
 使用git
+
 1. `git clone https://github.com/xunbu/docutranslate.git`
 2. `uv sync`
-3. `uv pip install -U -e .`
+3. `uv pip install -e .`
+
 # 支持的文件格式
 
 | 输入格式           | 输出格式         |
@@ -50,9 +55,18 @@
 1. 使用文本转换引擎将文档转换成markdown（有docling（本地）、minerU（联网）两种引擎）
 2. 使用大语言模型翻译markdown文本（需要申请api-key或本地部署）
 
+## 使用minerU引擎注意事项（minerU Token获取方式）
+
+使用minerU将文档转换为markdown时，需要在minerU平台申请token
+
+1. 打开[minerU官网](https://mineru.net/apiManage/docs)申请token
+2. 申请成功后，在[API Token管理界面](https://mineru.net/apiManage/token)创建API Token
+
 ## 使用docling引擎注意事项
 
 使用docling将文档转换为markdown时，需要下载模型到本地（也可以提前下载，见FAQ），因此可能会遇到一些网络问题
+
+可以在[github release](https://github.com/xunbu/docutranslate/releases)中下载docling_artifact压缩包，将该压缩包解压放置在项目下可以解决模型下载的网络问题
 
 ### huggingface换源
 
@@ -79,13 +93,6 @@ os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
 
 ###其余代码写在下方
 ```
-
-## 使用minerU引擎注意事项
-
-使用minerU将文档转换为markdown时，需要在minerU平台申请token
-
-1. 打开[minerU官网](https://mineru.net/apiManage/docs)申请token
-2. 申请成功后，在[API Token管理界面](https://mineru.net/apiManage/token)创建API Token
 
 ## 获取大模型平台的baseurl、key、model-id
 
@@ -118,8 +125,8 @@ from docutranslate.translater import FileTranslater
 translater = FileTranslater(base_url="<baseurl>",
                             key="<key>",
                             model_id="<model-id>",
-                            convert_engin="mineru",# 使用mineru解析文档
-                            mineru_token="<申请的mineru_token>"#使用mineru时必填
+                            convert_engin="mineru",  # 使用mineru解析文档
+                            mineru_token="<申请的mineru_token>"  # 使用mineru时必填
                             # convert_engin="docling"  # 使用docling解析文档
                             )
 
@@ -185,7 +192,9 @@ translater = FileTranslater(base_url="<baseurl>",  # 默认的模型baseurl
                             )
 
 ```
+
 > 使用docling需要先`pip install docling`或`uv add docling`
+
 ### 翻译文件
 
 ```python
