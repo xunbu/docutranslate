@@ -35,6 +35,11 @@
             color: #2e7d32; /* Pico valid color */
         }
 
+        a.no-style {
+            text-decoration: none;
+            color: inherit;
+        }
+
         .form-group {
             margin-bottom: 1rem;
         }
@@ -176,7 +181,7 @@
 <body>
 <main class="container">
     <h1>
-        <a href="https://github.com/xunbu/docutranslate" target="_blank">DocuTranslate</a>
+        <a href="https://github.com/xunbu/docutranslate" target="_blank">DocuTranslate🔗</a>
     </h1>
     <form id="translateForm">
 
@@ -229,7 +234,9 @@
                 </select>
             </div>
             <div class="form-group hidden" id="mineruTokenGroup">
-                <label for="mineru_token">Mineru Token</label>
+                <label for="mineru_token">Mineru Token<a class="no-style" href="https://mineru.net/apiManage/token"
+                                                         target="_blank"
+                                                         title="获取令牌">🔗</a></label>
                 <input type="password" id="mineru_token" name="mineru_token" placeholder="使用 Mineru 引擎时必须填写">
             </div>
         </details>
@@ -239,7 +246,9 @@
             <summary>翻译API配置</summary>
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="platform_select">AI 平台</label>
+                    <label for="platform_select">AI 平台 <a id="api_href" class="no-style" href="/"
+                                                            target="_blank"
+                                                            title="获取API-KEY">🔗</a></label>
                     <select id="platform_select" name="platform_select_ui">
                         <option value="custom">自定义接口</option>
                         <option value="https://api.openai.com/v1">OpenAI</option>
@@ -296,6 +305,7 @@
 <iframe id="printFrame" style="display:none;"></iframe>
 <script>
     const platformSelect = document.getElementById('platform_select');
+    const apiHref = document.getElementById('api_href')
     const baseUrlGroup = document.getElementById('baseUrlGroup');
     const baseUrlInput = document.getElementById('base_url');
     const apikeyInput = document.getElementById('apikey');
@@ -306,7 +316,6 @@
     const refineCheckbox = document.getElementById('refine_markdown');
 
     const convertEnginSelect = document.getElementById('convert_engin');
-    const doclingOption = document.getElementById('docling')
     const mineruTokenGroup = document.getElementById('mineruTokenGroup');
     const mineruTokenInput = document.getElementById('mineru_token');
 
@@ -351,6 +360,17 @@
             return defaultValue;
         }
     }
+    //api访问地址到获取地址的映射
+    const apiHrefMap = {
+        "https://openrouter.ai/api/v1": "https://openrouter.ai/settings/keys",
+        "https://api.openai.com/v1": "https://platform.openai.com/api-keys",
+        "https://api.deepseek.com/v1": "https://platform.deepseek.com/api_keys",
+        "https://open.bigmodel.cn/api/paas/v4": "https://open.bigmodel.cn/usercenter/apikeys",
+        "https://dashscope.aliyuncs.com/compatible-mode/v1": "https://bailian.console.aliyun.com/?tab=model#/api-key",
+        "https://ark.cn-beijing.volces.com/api/v3": "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey?apikey=%7B%7D",
+        "https://api.siliconflow.cn/v1": "https://cloud.siliconflow.cn/account/ak",
+        "https://www.dmxapi.cn/v1": "https://www.dmxapi.cn/token"
+    }
 
     function updatePlatformUI() {
         const selectedPlatformValue = platformSelect.value;
@@ -360,11 +380,15 @@
             baseUrlGroup.classList.remove('hidden');
             baseUrlInput.required = true;
             baseUrlInput.value = getFromStorage('translator_platform_custom_base_url');
+            apiHref.classList.add('hidden')
         } else {
             baseUrlGroup.classList.add('hidden');
             baseUrlInput.required = false;
             baseUrlInput.value = selectedPlatformValue;
+            apiHref.classList.remove('hidden')
+            apiHref.href = apiHrefMap[baseUrlInput.value]
         }
+
         saveToStorage('translator_last_platform', selectedPlatformValue);
     }
 
@@ -491,15 +515,15 @@
             }
             const status = await response.json();
             statusMsg.textContent = '正在初始化';
-            if (!status.includes("docling")) {
-                // docling不存在时禁用docling
-                doclingOption.disabled = true;
-                doclingOption.textContent = "docling（未检测到）"
-                if (convertEnginSelect.value === "docling") {
-                    convertEnginSelect.value = "mineru";
-                    updateConvertEnginUI()
-                    statusMsg.textContent = '初始化完成';
-                }
+            status.forEach((engin) => {
+                let option = convertEnginSelect.querySelector(`option[value="${engin}"]`);
+                option.disabled = true;
+                option.textContent += "(不可用)"
+            })
+            if (status.includes(convertEnginSelect.value)) {
+                convertEnginSelect.value = "mineru";
+                updateConvertEnginUI()
+                statusMsg.textContent = '初始化完成';
             }
         } catch (error) {
             console.warn("Error get engin-list", error);
