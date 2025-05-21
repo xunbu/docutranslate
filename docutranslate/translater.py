@@ -38,6 +38,7 @@ class FileTranslater:
         self.docling_artifact = docling_artifact
         if docling_artifact is None:
             artifact_path = Path("./docling_artifact")
+            print(f"artifact_path:{artifact_path.resolve()}，existed：{artifact_path.is_dir()}")
             if artifact_path.is_dir():
                 translater_logger.info("检测到docling_artifact文件夹")
                 self.docling_artifact = artifact_path
