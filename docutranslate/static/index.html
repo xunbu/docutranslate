@@ -28,11 +28,11 @@
         }
 
         .error-message {
-            color: #d32f2f; /* Pico invalid color */
+            color: #d32f2f;
         }
 
         .success-message {
-            color: #2e7d32; /* Pico valid color */
+            color: #2e7d32;
         }
 
         a.no-style {
@@ -70,14 +70,13 @@
         .checkbox-group {
             display: flex;
             flex-wrap: wrap;
-            gap: 1rem; /* Added gap for better spacing */
+            gap: 1rem;
             margin-bottom: 1rem;
         }
 
-        .checkbox-group label { /* Ensure checkboxes are aligned */
+        .checkbox-group label {
             margin-right: 10px;
         }
-
 
         #resultArea {
             margin-top: 1.5rem;
@@ -110,17 +109,86 @@
             background-color: #fff;
             margin: 2% auto;
             padding: 20px;
-            width: 90%;
-            max-width: 900px;
-            max-height: 90vh;
+            width: 95%;
+            max-width: 1400px;
+            height: 90vh;
             border-radius: 8px;
-            overflow: auto;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
-        #previewFrame {
-            width: 100%;
-            min-height: 500px;
+        #previewTitleBar {
+            display: flex;
+            align-items: center; /* Vertically align items */
+            margin-bottom: 10px;
+            flex-shrink: 0; /* Prevent shrinking when content is large */
+        }
+
+        #previewModalTitle {
+            margin: 0; /* Remove default h3 margin */
+            font-size: 1.2rem; /* Adjust title size */
+        }
+
+        .preview-view-mode-buttons { /* This is a Pico .button-group */
+            margin-left: 1.5rem; /* Space from title */
+            /* Pico styles will apply display:flex, gap */
+        }
+        .preview-view-mode-buttons button {
+             font-size: 0.85rem; /* Smaller buttons for toggle */
+             padding: 0.4rem 0.8rem;
+        }
+
+
+        #closeModalBtnInTitle { /* Renamed to avoid conflict if another element has closeModalBtn */
+            cursor: pointer;
+            margin-left: auto; /* Pushes close button to the very right */
+            font-size: 1.5rem;
+            line-height: 1;
+            padding: 0 0.5rem; /* Add some clickable area */
+        }
+
+
+        #previewContainer {
+            display: flex;
+            flex-grow: 1;
+            gap: 15px;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .preview-pane {
+            flex: 1 1 0; /* Grow, Shrink, Basis. Basis 0 for even distribution with gap */
+            min-width: 0; /* Important for flex items that might contain oversized content */
             border: 1px solid #ddd;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-color: #f9f9f9;
+        }
+
+        .preview-pane h4 {
+            margin: 0;
+            padding: 8px 12px;
+            background-color: #efefef;
+            border-bottom: 1px solid #ddd;
+            font-size: 0.9rem;
+            text-align: center;
+            flex-shrink: 0; /* Prevent title from shrinking */
+        }
+
+        .preview-pane iframe, .preview-pane pre {
+            width: 100%;
+            flex-grow: 1;
+            border: none;
+            overflow: auto;
+            background-color: #fff;
+        }
+        .preview-pane pre {
+            padding: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-family: monospace;
         }
 
         #printFrame {
@@ -162,7 +230,7 @@
             color: #1a531d;
         }
 
-        #fileDropArea.input-error, input.input-error, select.input-error { /* Extended to input/select */
+        #fileDropArea.input-error, input.input-error, select.input-error {
             border-color: #d32f2f !important;
         }
 
@@ -174,6 +242,34 @@
         @media (max-width: 768px) {
             .form-grid {
                 grid-template-columns: 1fr;
+            }
+             #previewContainer {
+                flex-direction: column;
+                height: auto;
+             }
+            .modal-content {
+                height: 95vh;
+            }
+            .preview-pane {
+                min-height: 300px;
+            }
+            #previewTitleBar {
+                flex-wrap: wrap; /* Allow wrapping for smaller screens */
+            }
+            .preview-view-mode-buttons {
+                margin-left: 0;
+                margin-top: 0.5rem; /* Space when wrapped */
+                width: 100%; /* Take full width when wrapped */
+                justify-content: center;
+            }
+            #closeModalBtnInTitle {
+                order: -1; /* Move close button to top left on wrap if needed, or adjust layout */
+                margin-left: auto; /* Keep it to the right */
+            }
+            #previewModalTitle {
+                 width: 100%; /* Allow title to take width if buttons wrap below */
+                 text-align: center;
+                 margin-bottom: 0.5rem; /* Space if buttons wrap */
             }
         }
     </style>
@@ -291,18 +387,39 @@
     <h4 style="margin-top: 1.5rem;">运行日志</h4>
     <div class="log-area" id="logArea"></div>
 </main>
+
+<!-- MODIFIED MODAL STRUCTURE -->
 <div id="previewModal" class="modal">
     <div class="modal-content">
-        <span id="closeModalBtn" style="cursor:pointer; float:right; font-size: 1.5rem; line-height: 1;">×</span>
-        <h3>HTML 预览</h3>
-        <iframe id="previewFrame"></iframe>
-        <div class="button-group">
-            <button id="printFromPreview" class="primary">打印/保存为PDF</button>
-            <button id="closePreviewBtn" class="outline">关闭</button>
+        <div id="previewTitleBar">
+            <h3 id="previewModalTitle">双语预览</h3>
+            <div class="preview-view-mode-buttons button-group" style="margin-top:0;"> <!-- Pico .button-group applied -->
+                <button id="setBilingualViewBtn" role="button" class="primary">双语</button>
+                <button id="setTranslatedOnlyViewBtn" role="button" class="outline">译文</button>
+            </div>
+            <span id="closeModalBtnInTitle">×</span>
+        </div>
+
+        <div id="previewContainer">
+            <div class="preview-pane" id="originalPreviewPane">
+                <h4>原文</h4>
+                <!-- Content will be an iframe or pre, added by JS -->
+            </div>
+            <div class="preview-pane" id="translatedPreviewPane">
+                <h4>译文</h4>
+                <iframe id="translatedPreviewFrame"></iframe>
+            </div>
+        </div>
+
+        <div class="button-group" style="margin-top: 15px; flex-shrink:0;"> <!-- flex-shrink:0 to prevent shrinking -->
+            <button id="printFromPreview" class="primary">打印/保存为PDF (译文)</button>
+            <button id="closePreviewModalBtn" class="outline">关闭</button> <!-- Renamed to avoid conflict -->
         </div>
     </div>
 </div>
+
 <iframe id="printFrame" style="display:none;"></iframe>
+
 <script>
     const platformSelect = document.getElementById('platform_select');
     const apiHref = document.getElementById('api_href')
@@ -329,11 +446,19 @@
     const previewHtmlBtn = document.getElementById('previewHtml');
     const downloadPdfBtn = document.getElementById('downloadPdf');
     const printFrameEl = document.getElementById('printFrame');
+
+    // Modal and preview elements
     const modal = document.getElementById('previewModal');
-    const previewFrame = document.getElementById('previewFrame');
-    const closeModalButton = document.getElementById('closeModalBtn');
-    const closePreviewBtn = document.getElementById('closePreviewBtn');
+    const previewModalTitle = document.getElementById('previewModalTitle');
+    const closeModalBtnInTitle = document.getElementById('closeModalBtnInTitle');
+    const closePreviewModalBtn = document.getElementById('closePreviewModalBtn'); // Bottom close button
     const printFromPreview = document.getElementById('printFromPreview');
+
+    const originalPreviewPane = document.getElementById('originalPreviewPane');
+    const translatedPreviewFrame = document.getElementById('translatedPreviewFrame');
+
+    const setBilingualViewBtn = document.getElementById('setBilingualViewBtn');
+    const setTranslatedOnlyViewBtn = document.getElementById('setTranslatedOnlyViewBtn');
 
     const fileInput = document.getElementById('file');
     const fileDropArea = document.getElementById('fileDropArea');
@@ -361,7 +486,6 @@
         }
     }
 
-    //api访问地址到获取地址的映射
     const apiHrefMap = {
         "https://openrouter.ai/api/v1": "https://openrouter.ai/settings/keys",
         "https://api.openai.com/v1": "https://platform.openai.com/api-keys",
@@ -387,9 +511,12 @@
             baseUrlInput.required = false;
             baseUrlInput.value = selectedPlatformValue;
             apiHref.classList.remove('hidden')
-            apiHref.href = apiHrefMap[baseUrlInput.value]
+            if (apiHrefMap[baseUrlInput.value]) { // Check if key exists
+                 apiHref.href = apiHrefMap[baseUrlInput.value];
+            } else {
+                 apiHref.classList.add('hidden'); // Hide if no link defined
+            }
         }
-
         saveToStorage('translator_last_platform', selectedPlatformValue);
     }
 
@@ -402,27 +529,22 @@
         } else {
             mineruTokenGroup.classList.add('hidden');
             mineruTokenInput.required = false;
-            // Optionally clear if not needed: mineruTokenInput.value = '';
         }
         saveToStorage('translator_convert_engin', selectedEngin);
     }
 
-
     function loadSettings() {
         platformSelect.value = getFromStorage('translator_last_platform', 'custom');
         updatePlatformUI();
-
         convertEnginSelect.value = getFromStorage('translator_convert_engin', 'mineru');
-
-        updateConvertEnginUI(); // Must be after setting convertEnginSelect.value
-
+        updateConvertEnginUI();
         toLangSelect.value = getFromStorage('translator_to_lang', '中文');
         formulaCheckbox.checked = getFromStorage('translator_formula_ocr') === 'true';
         codeCheckbox.checked = getFromStorage('translator_code_ocr') === 'true';
         refineCheckbox.checked = getFromStorage('translator_refine_markdown') === 'true';
     }
 
-    loadSettings(); // Initial load
+    loadSettings();
 
     platformSelect.addEventListener('change', updatePlatformUI);
     apikeyInput.addEventListener('input', (e) => saveToStorage(`translator_platform_${platformSelect.value}_apikey`, e.target.value));
@@ -430,31 +552,62 @@
     baseUrlInput.addEventListener('input', (e) => {
         if (platformSelect.value === 'custom') saveToStorage('translator_platform_custom_base_url', e.target.value);
     });
-
     convertEnginSelect.addEventListener('change', updateConvertEnginUI);
     mineruTokenInput.addEventListener('input', (e) => saveToStorage('translator_mineru_token', e.target.value));
-
     toLangSelect.addEventListener('change', e => saveToStorage('translator_to_lang', e.target.value));
     formulaCheckbox.addEventListener('change', e => saveToStorage('translator_formula_ocr', e.target.checked.toString()));
     codeCheckbox.addEventListener('change', e => saveToStorage('translator_code_ocr', e.target.checked.toString()));
     refineCheckbox.addEventListener('change', e => saveToStorage('translator_refine_markdown', e.target.checked.toString()));
 
-    [closeModalButton, closePreviewBtn].forEach(elem => elem.addEventListener('click', () => modal.style.display = 'none'));
+    function closePreviewModal() {
+        modal.style.display = 'none';
+        const existingOriginalFrame = originalPreviewPane.querySelector('iframe, pre, p');
+        if (existingOriginalFrame) existingOriginalFrame.remove();
+        translatedPreviewFrame.src = 'about:blank';
+    }
+
+    [closeModalBtnInTitle, closePreviewModalBtn].forEach(elem => elem.addEventListener('click', closePreviewModal));
+
     window.addEventListener('click', (event) => {
-        if (event.target === modal) modal.style.display = 'none';
+        if (event.target === modal) {
+            closePreviewModal();
+        }
     });
+
     printFromPreview.addEventListener('click', () => {
         try {
-            previewFrame.contentWindow.focus();
-            previewFrame.contentWindow.print();
+            translatedPreviewFrame.contentWindow.focus();
+            translatedPreviewFrame.contentWindow.print();
         } catch (err) {
             console.error('打印预览内容失败:', err);
             alert('打印失败，请尝试使用浏览器的打印功能 (Ctrl+P 或 ⌘+P)。');
         }
     });
 
-    fileDropArea.addEventListener('click', () => fileInput.click());
+    // Function to set the preview display mode
+    function setPreviewDisplayMode(mode) {
+        if (mode === 'bilingual') {
+            originalPreviewPane.style.display = 'flex'; // 'flex' because it's a flex container
+            previewModalTitle.textContent = '双语预览';
+            setBilingualViewBtn.classList.add('primary');
+            setBilingualViewBtn.classList.remove('outline');
+            setTranslatedOnlyViewBtn.classList.add('outline');
+            setTranslatedOnlyViewBtn.classList.remove('primary');
+        } else if (mode === 'translationOnly') {
+            originalPreviewPane.style.display = 'none';
+            previewModalTitle.textContent = '译文预览';
+            setTranslatedOnlyViewBtn.classList.add('primary');
+            setTranslatedOnlyViewBtn.classList.remove('outline');
+            setBilingualViewBtn.classList.add('outline');
+            setBilingualViewBtn.classList.remove('primary');
+        }
+    }
 
+    setBilingualViewBtn.addEventListener('click', () => setPreviewDisplayMode('bilingual'));
+    setTranslatedOnlyViewBtn.addEventListener('click', () => setPreviewDisplayMode('translationOnly'));
+
+
+    fileDropArea.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', () => {
         if (fileInput.files.length > 0) {
             fileNameDisplay.textContent = `已选择: ${fileInput.files[0].name}`;
@@ -476,12 +629,10 @@
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         fileDropArea.addEventListener(eventName, preventDefaults, false);
     });
-
     function preventDefaults(e) {
         e.preventDefault();
         e.stopPropagation();
     }
-
     ['dragenter', 'dragover'].forEach(eventName => {
         fileDropArea.addEventListener(eventName, () => {
             if (!fileDropArea.classList.contains('file-selected')) {
@@ -489,13 +640,11 @@
             }
         }, false);
     });
-
     ['dragleave', 'drop'].forEach(eventName => {
         fileDropArea.addEventListener(eventName, () => {
             fileDropArea.classList.remove('drag-over');
         }, false);
     });
-
     fileDropArea.addEventListener('drop', (e) => {
         const dt = e.dataTransfer;
         const files = dt.files;
@@ -506,7 +655,6 @@
         }
     }, false);
 
-    //获取可使用的engine并进行处理
     (async () => {
         try {
             const response = await fetch('/get-engin-list')
@@ -516,22 +664,35 @@
             }
             const enginList = await response.json();
             statusMsg.textContent = '正在初始化';
-            let options = convertEnginSelect.querySelectors(`option[value="${engin}"]`);
+            let options = convertEnginSelect.querySelectorAll(`option`);
+            let currentEngineDisabled = false;
             options.forEach((option) => {
                 if (!enginList.includes(option.value)) {
                     option.disabled = true;
-                    option.textContent += "(不可用)"
+                    option.textContent += " (不可用)";
+                    if (option.value === convertEnginSelect.value) {
+                        currentEngineDisabled = true;
+                    }
                 }
-            })
-            if (status.includes(convertEnginSelect.value)) {
-                convertEnginSelect.value = "mineru";
-                updateConvertEnginUI()
-                statusMsg.textContent = '初始化完成';
+            });
+            if (currentEngineDisabled) {
+                 const mineruOption = convertEnginSelect.querySelector('option[value="mineru"]');
+                 if (mineruOption && !mineruOption.disabled) {
+                    convertEnginSelect.value = "mineru";
+                 } else {
+                    const firstAvailable = convertEnginSelect.querySelector('option:not([disabled])');
+                    if (firstAvailable) convertEnginSelect.value = firstAvailable.value;
+                 }
+                 updateConvertEnginUI();
             }
+            statusMsg.textContent = '初始化完成';
         } catch (error) {
             console.warn("Error get engin-list", error);
+            statusMsg.textContent = '引擎列表初始化失败';
+            statusMsg.className = 'error-message';
         }
-    })()
+    })();
+
 
     async function pollLogs() {
         try {
@@ -586,29 +747,69 @@
                     previewHtmlBtn.onclick = function () {
                         const currentHtmlUrl = htmlUrl;
                         const currentFileName = fileName;
+                        const originalFile = fileInput.files[0];
+
+                        const existingOriginalContent = originalPreviewPane.querySelector('iframe, pre, p');
+                        if (existingOriginalContent) existingOriginalContent.remove();
+
+                        if (originalFile) {
+                            const fileType = originalFile.type;
+                            const reader = new FileReader();
+                            const fileExtension = originalFile.name.split('.').pop().toLowerCase();
+
+                            if (fileType.startsWith('text/') || ['md', 'json', 'xml', 'log', 'py', 'js', 'css', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'rb', 'php', 'swift', 'kt', 'go', 'rs', 'ts'].includes(fileExtension)) {
+                                const pre = document.createElement('pre');
+                                reader.onload = (e) => { pre.textContent = e.target.result; originalPreviewPane.appendChild(pre); };
+                                reader.onerror = () => { pre.textContent = '无法读取原文文件内容。'; originalPreviewPane.appendChild(pre); };
+                                reader.readAsText(originalFile);
+                            } else if (fileType === 'application/pdf' || fileType === 'text/html' || fileExtension === 'html' || fileExtension === 'htm') {
+                                const iframe = document.createElement('iframe');
+                                const objectUrl = URL.createObjectURL(originalFile);
+                                iframe.src = objectUrl;
+                                iframe.onload = () => URL.revokeObjectURL(objectUrl);
+                                originalPreviewPane.appendChild(iframe);
+                            } else {
+                                const p = document.createElement('p');
+                                p.style.padding = '10px';
+                                p.textContent = `无法直接预览此文件类型 (${fileType || '未知类型: ' + fileExtension}). 文件名: ${originalFile.name}.`;
+                                originalPreviewPane.appendChild(p);
+                            }
+                        } else {
+                            const p = document.createElement('p');
+                            p.style.padding = '10px';
+                            p.textContent = '未选择原文文件。';
+                            originalPreviewPane.appendChild(p);
+                        }
+
                         fetch(currentHtmlUrl)
                             .then(resp => {
                                 if (!resp.ok) throw new Error(`HTTP error ${resp.status}`);
                                 return resp.text();
                             })
                             .then(html => {
-                                const blob = new Blob([html], {type: 'text/html'});
+                                let finalHtml = html;
+                                if (!html.toLowerCase().includes('/static/pico.css')) {
+                                     finalHtml = `<link rel="stylesheet" href="/static/pico.css">\n<style>body{padding:1em;}</style>\n${html}`;
+                                }
+                                const blob = new Blob([finalHtml], {type: 'text/html'});
                                 const blobUrl = URL.createObjectURL(blob);
-                                previewFrame.src = blobUrl;
-                                previewFrame.onload = function () {
+                                translatedPreviewFrame.src = blobUrl;
+                                translatedPreviewFrame.onload = function () {
                                     try {
-                                        previewFrame.contentWindow.document.title = currentFileName + '_translated';
+                                        translatedPreviewFrame.contentWindow.document.title = currentFileName + '_translated';
                                         URL.revokeObjectURL(blobUrl);
-                                    } catch (e) {
-                                        console.warn('无法设置iframe标题或释放Blob URL', e);
-                                    }
+                                    } catch (e) { console.warn('无法设置译文iframe标题或释放Blob URL', e); }
                                 };
+                                setPreviewDisplayMode('bilingual'); // Default to bilingual view
                                 modal.style.display = 'block';
                             })
                             .catch(err => {
-                                console.error('预览: 获取HTML内容失败:', err);
-                                statusMsg.textContent = '获取HTML内容失败，无法预览。';
+                                console.error('预览: 获取译文HTML内容失败:', err);
+                                statusMsg.textContent = '获取译文HTML内容失败，无法预览。';
                                 statusMsg.className = 'error-message';
+                                translatedPreviewFrame.srcdoc = `<h3>加载译文失败</h3><p>${err.message}</p>`;
+                                setPreviewDisplayMode('bilingual'); // Default to bilingual view even on error
+                                modal.style.display = 'block';
                             });
                     };
 
@@ -625,6 +826,10 @@
                                 return resp.text();
                             })
                             .then(htmlContent => {
+                                let finalHtml = htmlContent;
+                                if (!htmlContent.toLowerCase().includes('/static/pico.css')) {
+                                     finalHtml = `<link rel="stylesheet" href="/static/pico.css">\n<style>body{padding:1em; break-inside: avoid;}</style>\n${htmlContent}`;
+                                }
                                 iframe.onload = () => {
                                     iframe.onload = null;
                                     setTimeout(() => {
@@ -646,7 +851,7 @@
                                         }
                                     }, 500)
                                 };
-                                iframe.srcdoc = htmlContent;
+                                iframe.srcdoc = finalHtml;
                             })
                             .catch(err => {
                                 console.error('PDF生成: 获取HTML内容失败:', err);
@@ -663,7 +868,7 @@
             } else {
                 submitButton.textContent = '取消翻译';
                 submitButton.classList.remove('primary');
-                submitButton.classList.add('secondary', 'contrast'); // Using contrast for cancel
+                submitButton.classList.add('secondary', 'contrast');
                 isTranslating = true;
                 submitButton.disabled = false;
                 submitButton.removeAttribute('aria-busy');
@@ -690,7 +895,7 @@
         if (statusPollIntervalId) clearInterval(statusPollIntervalId);
         logPollIntervalId = null;
         statusPollIntervalId = null;
-        setTimeout(pollLogs, 500); // One last poll for logs
+        setTimeout(pollLogs, 500);
     }
 
     async function cancelTranslation() {
@@ -703,11 +908,10 @@
             const result = await response.json();
             if (response.ok && result.cancelled) {
                 statusMsg.textContent = result.message || '取消请求已发送。';
-                statusMsg.className = ''; // Clear error class
+                statusMsg.className = '';
             } else {
                 statusMsg.textContent = result.message || '取消失败。';
                 statusMsg.className = 'error-message';
-                // Re-enable button if cancellation failed to register server-side
                 submitButton.disabled = false;
                 submitButton.textContent = '取消翻译';
                 submitButton.removeAttribute('aria-busy');
@@ -720,7 +924,6 @@
             submitButton.textContent = '取消翻译';
             submitButton.removeAttribute('aria-busy');
         }
-        // Status poller will eventually update the button state correctly
     }
 
     form.addEventListener('submit', async function (event) {
@@ -731,32 +934,53 @@
             return;
         }
 
-        // Clear previous input errors
-        [fileDropArea, mineruTokenInput].forEach(el => el.classList.remove('input-error'));
+        [fileDropArea, mineruTokenInput, apikeyInput, modelInput, baseUrlInput].forEach(el => el.classList.remove('input-error'));
         fileNameDisplay.classList.remove('input-error-text');
+        let firstErrorElement = null;
+        let currentStatusMsg = '';
 
         if (fileInput.files.length === 0) {
-            statusMsg.textContent = '请选择一个文件进行翻译。';
-            statusMsg.className = 'error-message';
+            currentStatusMsg += '请选择一个文件进行翻译。';
             fileNameDisplay.textContent = '请选择文件！';
             fileNameDisplay.classList.add('input-error-text');
             fileDropArea.classList.add('input-error');
             fileDropPrompt.classList.remove('hidden');
-            setTimeout(() => {
-                fileDropArea.classList.remove('input-error');
-                fileNameDisplay.classList.remove('input-error-text');
-                if (fileNameDisplay.textContent === '请选择文件！') fileNameDisplay.textContent = '未选择文件';
-                if (fileInput.files.length === 0) fileDropPrompt.classList.remove('hidden');
-            }, 3000);
-            return;
+            if(!firstErrorElement) firstErrorElement = fileDropArea;
         }
 
         if (convertEnginSelect.value === 'mineru' && !mineruTokenInput.value.trim()) {
-            statusMsg.textContent = '使用 Mineru 引擎时，必须填写 Mineru Token。';
-            statusMsg.className = 'error-message';
+            currentStatusMsg += (currentStatusMsg ? ' ' : '') + '使用 Mineru 引擎时，必须填写 Mineru Token。';
             mineruTokenInput.classList.add('input-error');
-            mineruTokenInput.focus();
-            setTimeout(() => mineruTokenInput.classList.remove('input-error'), 3000);
+             if(!firstErrorElement) firstErrorElement = mineruTokenInput;
+        }
+        if (!apikeyInput.value.trim()) {
+            currentStatusMsg += (currentStatusMsg ? ' ' : '') + 'API 密钥不能为空。';
+            apikeyInput.classList.add('input-error');
+            if(!firstErrorElement) firstErrorElement = apikeyInput;
+        }
+        if (!modelInput.value.trim()) {
+            currentStatusMsg += (currentStatusMsg ? ' ' : '') + '模型 ID 不能为空。';
+            modelInput.classList.add('input-error');
+            if(!firstErrorElement) firstErrorElement = modelInput;
+        }
+        if (platformSelect.value === 'custom' && !baseUrlInput.value.trim()) {
+            currentStatusMsg += (currentStatusMsg ? ' ' : '') + '自定义接口时，API 地址不能为空。';
+            baseUrlInput.classList.add('input-error');
+            if(!firstErrorElement) firstErrorElement = baseUrlInput;
+        }
+
+        if(firstErrorElement){
+            statusMsg.textContent = currentStatusMsg;
+            statusMsg.className = 'error-message';
+            firstErrorElement.focus();
+            setTimeout(() => {
+                [fileDropArea, mineruTokenInput, apikeyInput, modelInput, baseUrlInput].forEach(el => el.classList.remove('input-error'));
+                fileNameDisplay.classList.remove('input-error-text');
+                if (fileNameDisplay.textContent === '请选择文件！' && fileInput.files.length === 0) {
+                    fileNameDisplay.textContent = '未选择文件';
+                    fileDropPrompt.classList.remove('hidden');
+                }
+            }, 3000);
             return;
         }
 
@@ -770,7 +994,6 @@
         downloadBtns.style.display = 'none';
 
         const formData = new FormData(form);
-        // FormData automatically includes convert_engin and mineru_token due to 'name' attributes
 
         try {
             const response = await fetch('/translate', {method: 'POST', body: formData});
@@ -782,7 +1005,7 @@
                 submitButton.classList.remove('primary');
                 submitButton.classList.add('secondary', 'contrast');
                 isTranslating = true;
-                submitButton.disabled = false; // Enable cancel button
+                submitButton.disabled = false;
                 submitButton.removeAttribute('aria-busy');
                 startPolling();
             } else {
