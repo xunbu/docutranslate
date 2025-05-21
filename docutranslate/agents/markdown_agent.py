@@ -50,7 +50,7 @@ class MDTranslateAgent(Agent):
 目标语言{to_lang}
 # 要求
 翻译要有专业性和高质量
-不要任何解释，不要任何注释。
+没有任何解释和注释。
 引用的参考文献和其作者不要翻译 
 形如<ph-abc123>的占位符不要改变
 code、latex和HTML只翻译说明文字，其余保持原文
@@ -62,8 +62,10 @@ code、latex和HTML只翻译说明文字，其余保持原文
 ## 英文翻译为中文
 输入：
 hello<ph-aaaaaa>, what's your nam*@e?
+![photo title](<ph-abcde>)
 输出：
 你好<ph-aaaaaa>，你叫什么名字？
+![图像标题](<ph-abcde>)
 ## 公式要为合法latex（行内公式应正确包裹）
 输入：
 The equation is E=mc 2. This is famous.
