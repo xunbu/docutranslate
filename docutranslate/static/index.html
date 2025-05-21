@@ -225,7 +225,7 @@
                 <label for="convert_engin">转换引擎</label>
                 <select id="convert_engin" name="convert_engin">
                     <option value="mineru" selected>Mineru</option>
-                    <option value="docling">Docling</option>
+                    <option value="docling" id="docling">Docling</option>
                 </select>
             </div>
             <div class="form-group hidden" id="mineruTokenGroup">
@@ -306,6 +306,7 @@
     const refineCheckbox = document.getElementById('refine_markdown');
 
     const convertEnginSelect = document.getElementById('convert_engin');
+    const doclingOption = document.getElementById('docling')
     const mineruTokenGroup = document.getElementById('mineruTokenGroup');
     const mineruTokenInput = document.getElementById('mineru_token');
 
@@ -381,11 +382,13 @@
         saveToStorage('translator_convert_engin', selectedEngin);
     }
 
+
     function loadSettings() {
         platformSelect.value = getFromStorage('translator_last_platform', 'custom');
         updatePlatformUI();
 
         convertEnginSelect.value = getFromStorage('translator_convert_engin', 'mineru');
+
         updateConvertEnginUI(); // Must be after setting convertEnginSelect.value
 
         toLangSelect.value = getFromStorage('translator_to_lang', '中文');
@@ -478,6 +481,31 @@
         }
     }, false);
 
+    //获取可使用的engine并进行处理
+    (async () => {
+        try {
+            const response = await fetch('/get-engin-list')
+            if (!response.ok) {
+                console.warn(`get engine list failed: ${response.status}`);
+                return;
+            }
+            const status = await response.json();
+            statusMsg.textContent = '正在初始化';
+            if (!status.includes("docling")) {
+                // docling不存在时禁用docling
+                doclingOption.disabled = true;
+                doclingOption.textContent = "docling（未检测到）"
+                if (convertEnginSelect.value === "docling") {
+                    convertEnginSelect.value = "mineru";
+                    updateConvertEnginUI()
+                    statusMsg.textContent = '初始化完成';
+                }
+            }
+        } catch (error) {
+            console.warn("Error get engin-list", error);
+        }
+    })()
+
     async function pollLogs() {
         try {
             const response = await fetch('/get-logs');
@@ -510,7 +538,6 @@
             const status = await response.json();
             statusMsg.textContent = status.status_message || '正在获取状态...';
             statusMsg.className = status.error_flag ? 'error-message' : 'success-message';
-
             if (!status.is_processing) {
                 stopPolling();
                 submitButton.disabled = false;

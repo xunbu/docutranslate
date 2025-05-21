@@ -4,17 +4,20 @@ from typing import Literal
 import markdown2
 from docutranslate.agents import Agent, AgentArgs
 from docutranslate.agents import MDRefineAgent, MDTranslateAgent
-from docutranslate.converter import Document, ConverterDocling, ConverterMineru
+from docutranslate.converter import Document, ConverterMineru
 from docutranslate.utils.markdown_splitter import split_markdown_text, join_markdown_texts
 from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
 from docutranslate.logger import translater_logger
-
+from docutranslate.global_values import available_packages
+DOCLING_FLAG=True if available_packages.get("docling") else False
+if DOCLING_FLAG:
+    from docutranslate.converter import ConverterDocling
 
 class FileTranslater:
     def __init__(self, file_path: Path | str | None = None, chunksize: int = 2000,
                  base_url="", key=None, model_id="", temperature=0.7,
                  max_concurrent=20, timeout=2000,
-                 convert_engin: Literal["docling", "mineru"] = "docling",
+                 convert_engin: Literal["docling", "mineru"] = "mineru",
                  docling_artifact: Path | str | None = None,
                  mineru_token: str = None,
                  tips=True):

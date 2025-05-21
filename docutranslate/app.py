@@ -9,12 +9,13 @@ from urllib.parse import quote
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse,FileResponse
-from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from docutranslate import FileTranslater # Assuming FileTranslater is in docutranslate module
 from docutranslate.logger import translater_logger
 from docutranslate.utils.resource_utils import resource_path
+from docutranslate.global_values import available_packages
 
+DOCLING_EXIST=True if available_packages.get("docling") else False
 app = FastAPI()
 
 STATIC_DIR=resource_path("static")
@@ -35,7 +36,6 @@ current_state: Dict[str, Any] = {
     "task_end_time": 0,
     "current_task_ref": None,
 }
-templates = Jinja2Templates(directory=".") # Not strictly used if index.html is served as FileResponse
 MAX_LOG_HISTORY = 200
 log_history: List[str] = []
 
@@ -324,6 +324,13 @@ async def cancel_translate_task():
 
     return JSONResponse(content={"cancelled": True, "message": "取消请求已发送。请等待状态更新。"})
 
+
+@app.get("/get-engin-list")
+async def get_engin_list():
+    engin_list=["mineru"]
+    if DOCLING_EXIST:
+        engin_list.append("docling")
+    return JSONResponse(content=engin_list)
 
 @app.get("/get-status")
 async def get_status():

@@ -19,11 +19,17 @@
 # 安装
 
 使用pip  
-`pip install docutranslate`
+`pip install docutranslate`  
+`pip install docling`#如果使用docling进行文档解析
 
 使用uv  
 `uv init`  
-`uv add docutranslate`
+`uv add docutranslate`  
+`uv add docling`#如果使用docling进行文档解析
+
+使用git
+`git clone https://github.com/xunbu/docutranslate.git`
+`uv sync`
 
 # 支持的文件格式
 
@@ -112,9 +118,9 @@ from docutranslate.translater import FileTranslater
 translater = FileTranslater(base_url="<baseurl>",
                             key="<key>",
                             model_id="<model-id>",
-                            convert_engin="docling"  # 默认使用docling
-                            # convert_engin="mineru",# 使用mineru
-                            # mineru_token="<申请的mineru_token>"#使用mineru时必填
+                            convert_engin="mineru",# 使用mineru解析文档
+                            mineru_token="<申请的mineru_token>"#使用mineru时必填
+                            # convert_engin="docling"  # 使用docling解析文档
                             )
 
 # 不开启公式、代码识别（默认输出为markdown文件）
@@ -173,13 +179,13 @@ translater = FileTranslater(base_url="<baseurl>",  # 默认的模型baseurl
                             max_concurrent=20,  # 并发数，受到ai平台并发量限制，如果文章很长建议适当加大到20以上
                             timeout=2000,  # 调用api的超时时间
                             docling_artifact=None,  # 使用提前下载好的docling模型
-                            convert_engin="mineru",  # 可选docling或minerU
+                            convert_engin="mineru",  # 可选minerU或docling
                             mineru_token="<mineru-token>",  # minerU的token，使用minerU时必填
                             tips=True  # 开场提示
                             )
 
 ```
-
+> 使用docling需要先`pip install docling`或`uv add docling`
 ### 翻译文件
 
 ```python

@@ -5,10 +5,10 @@ description = "文件翻译工具"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "docling>=2.31.0",
     "httpx",
     "markdown2",
-    "fastapi[standard]>=0.115.12"
+    "fastapi[standard]>=0.115.12",
+    "docling>=2.33.0",
 ]
 [project.scripts]
 docutranslate = "docutranslate.cli:main"
