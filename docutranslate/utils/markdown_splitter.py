@@ -11,10 +11,12 @@ class MarkdownBlockSplitter:
             max_block_size: 每个块的最大字符数
         """
         self.max_block_size = max_block_size
+
     @staticmethod
-    def _get_bytes(text:str)->int:
+    def _get_bytes(text: str) -> int:
         return len(text.encode('utf-8'))
 
+    #TODO: 修复分块有时候会有空白块的问题
     def split_markdown(self, markdown_text: str) -> List[str]:
         """
         将Markdown文本分割成指定大小的块
@@ -230,18 +232,22 @@ def split_markdown_text(markdown_text, max_block_size=5000):
         可以通过''.join(chunks)重建的Markdown块列表
     """
     splitter = MarkdownBlockSplitter(max_block_size=max_block_size)
-    return splitter.split_markdown(markdown_text)
+    chunks = splitter.split_markdown(markdown_text)
+    #过滤空白块
+    chunks=[chunk for chunk in chunks if chunk.strip()]
+    return chunks
 
 
-def join_markdown_texts(markdown_texts:list[str])->str:
-    result=""
+def join_markdown_texts(markdown_texts: list[str]) -> str:
+    result = ""
     for text in markdown_texts:
-        #只有表格会收到多余空行的影响
+        # 只有表格会收到多余空行的影响
         if text.lstrip().startswith("|"):
-            result=result+"\n"+text
+            result = result + "\n" + text
         else:
-            result+="\n\n"+text
+            result += "\n\n" + text
     return result
+
 
 if __name__ == '__main__':
     pass

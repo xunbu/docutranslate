@@ -84,6 +84,7 @@ class Agent:
             result = response.json()["choices"][0]["message"]["content"]
             return result
         except httpx.HTTPStatusError as e:
+            print(f"prompt：{prompt}\nsystem_prompt:{system_prompt}")
             raise Exception(f"AI请求错误 (async): {e.response.status_code} - {e.response.text}") from e
         except httpx.RequestError as e:
             raise Exception(f"AI请求连接错误 (async): {e}") from e

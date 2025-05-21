@@ -600,22 +600,24 @@
                             .then(htmlContent => {
                                 iframe.onload = () => {
                                     iframe.onload = null;
-                                    try {
-                                        const iframeWindow = iframe.contentWindow;
-                                        if (!iframeWindow) throw new Error("无法访问打印框架。");
-                                        iframeWindow.document.title = currentFileName + '_translated.pdf';
-                                        iframeWindow.focus();
-                                        iframeWindow.print();
-                                    } catch (err) {
-                                        console.error('打印PDF出错:', err);
-                                        statusMsg.textContent = '无法直接生成PDF。请预览HTML后，使用浏览器的打印功能 (Ctrl+P) 保存。';
-                                        statusMsg.className = 'error-message';
-                                    } finally {
-                                        setTimeout(() => {
-                                            downloadPdfBtn.disabled = false;
-                                            downloadPdfBtn.textContent = '下载 PDF';
-                                        }, 2000);
-                                    }
+                                    setTimeout(() => {
+                                        try {
+                                            const iframeWindow = iframe.contentWindow;
+                                            if (!iframeWindow) throw new Error("无法访问打印框架。");
+                                            iframeWindow.document.title = currentFileName + '_translated.pdf';
+                                            iframeWindow.focus();
+                                            iframeWindow.print();
+                                        } catch (err) {
+                                            console.error('打印PDF出错:', err);
+                                            statusMsg.textContent = '无法直接生成PDF。请预览HTML后，使用浏览器的打印功能 (Ctrl+P) 保存。';
+                                            statusMsg.className = 'error-message';
+                                        } finally {
+                                            setTimeout(() => {
+                                                downloadPdfBtn.disabled = false;
+                                                downloadPdfBtn.textContent = '下载 PDF';
+                                            }, 2000);
+                                        }
+                                    }, 500)
                                 };
                                 iframe.srcdoc = htmlContent;
                             })
