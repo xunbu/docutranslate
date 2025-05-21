@@ -122,9 +122,9 @@ docutranslate -i
 ```python
 from docutranslate.translater import FileTranslater
 
-translater = FileTranslater(base_url="<baseurl>",
-                            key="<key>",
-                            model_id="<model-id>",
+translater = FileTranslater(base_url="<baseurl>",#大模型的baseurl
+                            key="<api-key>",#大模型的api-key
+                            model_id="<model-id>",#大模型的model-id
                             convert_engin="mineru",  # 使用mineru解析文档
                             mineru_token="<申请的mineru_token>"  # 使用mineru时必填
                             # convert_engin="docling"  # 使用docling解析文档
