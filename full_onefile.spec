@@ -1,6 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
-
 datas = [('./.venv/Lib/site-packages/docling_parse/pdf_resources_v2', 'docling_parse/pdf_resources_v2'),
 ('./docutranslate/static', 'docutranslate/static')]
 binaries = []
@@ -10,7 +9,7 @@ for i in ['easyocr','docling']:
     datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 a = Analysis(
-    ['./docutranslate/app.py'],
+    ['docutranslate\\app.py'],
     pathex=[],
     binaries=binaries,
     datas=datas,
@@ -27,13 +26,16 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.datas,
     [],
-    exclude_binaries=True,
-    name='DocuTranslate',
+    name='DocuTranslate_full',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
+    upx_exclude=[],
+    runtime_tmpdir=None,
     console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -41,13 +43,4 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=['DocuTranslate.ico'],
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    name='DocuTranslate',
 )

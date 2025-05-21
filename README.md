@@ -19,18 +19,18 @@
 # 安装
 
 使用pip  
-`pip install docutranslate`  
-`pip install docling`#如果使用docling进行文档解析
+1. `pip install docutranslate`  
+2. `pip install docling`#如果使用docling进行文档解析
 
 使用uv  
-`uv init`  
-`uv add docutranslate`  
-`uv add docling`#如果使用docling进行文档解析
+1. `uv init`  
+2. `uv add docutranslate`  
+3. `uv add docling`#如果使用docling进行文档解析
 
 使用git
-`git clone https://github.com/xunbu/docutranslate.git`
-`uv sync`
-
+1. `git clone https://github.com/xunbu/docutranslate.git`
+2. `uv sync`
+3. `uv pip install -U -e .`
 # 支持的文件格式
 
 | 输入格式           | 输出格式         |

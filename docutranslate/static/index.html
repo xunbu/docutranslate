@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DocuTranslate</title>
+    <link rel="icon" href="/static/DocuTranslate.ico" type="image/x-icon">
     <link rel="stylesheet" href="/static/pico.css">
     <style>
         body {
@@ -134,9 +135,10 @@
             margin-left: 1.5rem; /* Space from title */
             /* Pico styles will apply display:flex, gap */
         }
+
         .preview-view-mode-buttons button {
-             font-size: 0.85rem; /* Smaller buttons for toggle */
-             padding: 0.4rem 0.8rem;
+            font-size: 0.85rem; /* Smaller buttons for toggle */
+            padding: 0.4rem 0.8rem;
         }
 
 
@@ -184,6 +186,7 @@
             overflow: auto;
             background-color: #fff;
         }
+
         .preview-pane pre {
             padding: 10px;
             white-space: pre-wrap;
@@ -243,33 +246,40 @@
             .form-grid {
                 grid-template-columns: 1fr;
             }
-             #previewContainer {
+
+            #previewContainer {
                 flex-direction: column;
                 height: auto;
-             }
+            }
+
             .modal-content {
                 height: 95vh;
             }
+
             .preview-pane {
                 min-height: 300px;
             }
+
             #previewTitleBar {
                 flex-wrap: wrap; /* Allow wrapping for smaller screens */
             }
+
             .preview-view-mode-buttons {
                 margin-left: 0;
                 margin-top: 0.5rem; /* Space when wrapped */
                 width: 100%; /* Take full width when wrapped */
                 justify-content: center;
             }
+
             #closeModalBtnInTitle {
                 order: -1; /* Move close button to top left on wrap if needed, or adjust layout */
                 margin-left: auto; /* Keep it to the right */
             }
+
             #previewModalTitle {
-                 width: 100%; /* Allow title to take width if buttons wrap below */
-                 text-align: center;
-                 margin-bottom: 0.5rem; /* Space if buttons wrap */
+                width: 100%; /* Allow title to take width if buttons wrap below */
+                text-align: center;
+                margin-bottom: 0.5rem; /* Space if buttons wrap */
             }
         }
     </style>
@@ -321,9 +331,9 @@
             </div>
         </div>
         <details>
-            <summary>文档转换引擎配置</summary>
+            <summary>文档解析引擎配置</summary>
             <div class="form-group">
-                <label for="convert_engin">转换引擎</label>
+                <label for="convert_engin">解析引擎</label>
                 <select id="convert_engin" name="convert_engin">
                     <option value="mineru" selected>minerU</option>
                     <option value="docling" id="docling">Docling</option>
@@ -342,9 +352,7 @@
             <summary>翻译API配置</summary>
             <div class="form-grid">
                 <div class="form-group">
-                    <label for="platform_select">AI 平台 <a id="api_href" class="no-style" href="/"
-                                                            target="_blank"
-                                                            title="获取API-KEY">🔗</a></label>
+                    <label for="platform_select">AI 平台 </label>
                     <select id="platform_select" name="platform_select_ui">
                         <option value="custom">自定义接口</option>
                         <option value="https://api.openai.com/v1">OpenAI</option>
@@ -363,7 +371,9 @@
                 </div>
             </div>
             <div class="form-group">
-                <label for="apikey">API 密钥</label>
+                <label for="apikey">API 密钥<a id="api_href" class="no-style" href="/"
+                                                            target="_blank"
+                                                            title="获取API-KEY">🔗</a></label>
                 <input type="password" id="apikey" name="apikey" placeholder="平台对应的API Key" required>
             </div>
             <div class="form-group">
@@ -393,7 +403,8 @@
     <div class="modal-content">
         <div id="previewTitleBar">
             <h3 id="previewModalTitle">双语预览</h3>
-            <div class="preview-view-mode-buttons button-group" style="margin-top:0;"> <!-- Pico .button-group applied -->
+            <div class="preview-view-mode-buttons button-group" style="margin-top:0;">
+                <!-- Pico .button-group applied -->
                 <button id="setBilingualViewBtn" role="button" class="primary">双语</button>
                 <button id="setTranslatedOnlyViewBtn" role="button" class="outline">译文</button>
             </div>
@@ -512,9 +523,9 @@
             baseUrlInput.value = selectedPlatformValue;
             apiHref.classList.remove('hidden')
             if (apiHrefMap[baseUrlInput.value]) { // Check if key exists
-                 apiHref.href = apiHrefMap[baseUrlInput.value];
+                apiHref.href = apiHrefMap[baseUrlInput.value];
             } else {
-                 apiHref.classList.add('hidden'); // Hide if no link defined
+                apiHref.classList.add('hidden'); // Hide if no link defined
             }
         }
         saveToStorage('translator_last_platform', selectedPlatformValue);
@@ -629,10 +640,12 @@
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         fileDropArea.addEventListener(eventName, preventDefaults, false);
     });
+
     function preventDefaults(e) {
         e.preventDefault();
         e.stopPropagation();
     }
+
     ['dragenter', 'dragover'].forEach(eventName => {
         fileDropArea.addEventListener(eventName, () => {
             if (!fileDropArea.classList.contains('file-selected')) {
@@ -676,14 +689,14 @@
                 }
             });
             if (currentEngineDisabled) {
-                 const mineruOption = convertEnginSelect.querySelector('option[value="mineru"]');
-                 if (mineruOption && !mineruOption.disabled) {
+                const mineruOption = convertEnginSelect.querySelector('option[value="mineru"]');
+                if (mineruOption && !mineruOption.disabled) {
                     convertEnginSelect.value = "mineru";
-                 } else {
+                } else {
                     const firstAvailable = convertEnginSelect.querySelector('option:not([disabled])');
                     if (firstAvailable) convertEnginSelect.value = firstAvailable.value;
-                 }
-                 updateConvertEnginUI();
+                }
+                updateConvertEnginUI();
             }
             statusMsg.textContent = '初始化完成';
         } catch (error) {
@@ -759,8 +772,14 @@
 
                             if (fileType.startsWith('text/') || ['md', 'json', 'xml', 'log', 'py', 'js', 'css', 'java', 'c', 'cpp', 'h', 'hpp', 'cs', 'rb', 'php', 'swift', 'kt', 'go', 'rs', 'ts'].includes(fileExtension)) {
                                 const pre = document.createElement('pre');
-                                reader.onload = (e) => { pre.textContent = e.target.result; originalPreviewPane.appendChild(pre); };
-                                reader.onerror = () => { pre.textContent = '无法读取原文文件内容。'; originalPreviewPane.appendChild(pre); };
+                                reader.onload = (e) => {
+                                    pre.textContent = e.target.result;
+                                    originalPreviewPane.appendChild(pre);
+                                };
+                                reader.onerror = () => {
+                                    pre.textContent = '无法读取原文文件内容。';
+                                    originalPreviewPane.appendChild(pre);
+                                };
                                 reader.readAsText(originalFile);
                             } else if (fileType === 'application/pdf' || fileType === 'text/html' || fileExtension === 'html' || fileExtension === 'htm') {
                                 const iframe = document.createElement('iframe');
@@ -789,7 +808,7 @@
                             .then(html => {
                                 let finalHtml = html;
                                 if (!html.toLowerCase().includes('/static/pico.css')) {
-                                     finalHtml = `<link rel="stylesheet" href="/static/pico.css">\n<style>body{padding:1em;}</style>\n${html}`;
+                                    finalHtml = `<link rel="stylesheet" href="/static/pico.css">\n<style>body{padding:1em;}</style>\n${html}`;
                                 }
                                 const blob = new Blob([finalHtml], {type: 'text/html'});
                                 const blobUrl = URL.createObjectURL(blob);
@@ -798,7 +817,9 @@
                                     try {
                                         translatedPreviewFrame.contentWindow.document.title = currentFileName + '_translated';
                                         URL.revokeObjectURL(blobUrl);
-                                    } catch (e) { console.warn('无法设置译文iframe标题或释放Blob URL', e); }
+                                    } catch (e) {
+                                        console.warn('无法设置译文iframe标题或释放Blob URL', e);
+                                    }
                                 };
                                 setPreviewDisplayMode('bilingual'); // Default to bilingual view
                                 modal.style.display = 'block';
@@ -828,7 +849,7 @@
                             .then(htmlContent => {
                                 let finalHtml = htmlContent;
                                 if (!htmlContent.toLowerCase().includes('/static/pico.css')) {
-                                     finalHtml = `<link rel="stylesheet" href="/static/pico.css">\n<style>body{padding:1em; break-inside: avoid;}</style>\n${htmlContent}`;
+                                    finalHtml = `<link rel="stylesheet" href="/static/pico.css">\n<style>body{padding:1em; break-inside: avoid;}</style>\n${htmlContent}`;
                                 }
                                 iframe.onload = () => {
                                     iframe.onload = null;
@@ -945,31 +966,31 @@
             fileNameDisplay.classList.add('input-error-text');
             fileDropArea.classList.add('input-error');
             fileDropPrompt.classList.remove('hidden');
-            if(!firstErrorElement) firstErrorElement = fileDropArea;
+            if (!firstErrorElement) firstErrorElement = fileDropArea;
         }
 
         if (convertEnginSelect.value === 'mineru' && !mineruTokenInput.value.trim()) {
             currentStatusMsg += (currentStatusMsg ? ' ' : '') + '使用 Mineru 引擎时，必须填写 Mineru Token。';
             mineruTokenInput.classList.add('input-error');
-             if(!firstErrorElement) firstErrorElement = mineruTokenInput;
+            if (!firstErrorElement) firstErrorElement = mineruTokenInput;
         }
         if (!apikeyInput.value.trim()) {
             currentStatusMsg += (currentStatusMsg ? ' ' : '') + 'API 密钥不能为空。';
             apikeyInput.classList.add('input-error');
-            if(!firstErrorElement) firstErrorElement = apikeyInput;
+            if (!firstErrorElement) firstErrorElement = apikeyInput;
         }
         if (!modelInput.value.trim()) {
             currentStatusMsg += (currentStatusMsg ? ' ' : '') + '模型 ID 不能为空。';
             modelInput.classList.add('input-error');
-            if(!firstErrorElement) firstErrorElement = modelInput;
+            if (!firstErrorElement) firstErrorElement = modelInput;
         }
         if (platformSelect.value === 'custom' && !baseUrlInput.value.trim()) {
             currentStatusMsg += (currentStatusMsg ? ' ' : '') + '自定义接口时，API 地址不能为空。';
             baseUrlInput.classList.add('input-error');
-            if(!firstErrorElement) firstErrorElement = baseUrlInput;
+            if (!firstErrorElement) firstErrorElement = baseUrlInput;
         }
 
-        if(firstErrorElement){
+        if (firstErrorElement) {
             statusMsg.textContent = currentStatusMsg;
             statusMsg.className = 'error-message';
             firstErrorElement.focus();

@@ -2,6 +2,7 @@ import asyncio
 import io
 import logging
 import time
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from urllib.parse import quote
@@ -10,17 +11,12 @@ import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse,FileResponse
 from fastapi.staticfiles import StaticFiles
-from docutranslate import FileTranslater # Assuming FileTranslater is in docutranslate module
+from docutranslate import FileTranslater
 from docutranslate.logger import translater_logger
 from docutranslate.utils.resource_utils import resource_path
 from docutranslate.global_values import available_packages
-
 DOCLING_EXIST=True if available_packages.get("docling") else False
-app = FastAPI()
 
-STATIC_DIR=resource_path("static")
-
-app.mount("/static",StaticFiles(directory=STATIC_DIR), name="static")
 
 # --- 全局配置 ---
 log_queue: Optional[asyncio.Queue] = None
@@ -69,8 +65,8 @@ class QueueAndHistoryHandler(logging.Handler):
 
 
 # --- 应用生命周期事件 ---
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     global log_queue
     app.state.main_event_loop = asyncio.get_running_loop()
     log_queue = asyncio.Queue()
@@ -94,7 +90,13 @@ async def startup_event():
             break
 
     translater_logger.info("应用启动完成，日志队列/历史处理器已正确配置。")
+    yield
 
+app = FastAPI(lifespan=lifespan)
+
+STATIC_DIR=resource_path("static")
+
+app.mount("/static",StaticFiles(directory=STATIC_DIR), name="static")
 
 # --- Background Task Logic ---
 async def _perform_translation(params: Dict[str, Any], file_contents: bytes, original_filename: str):
@@ -403,7 +405,7 @@ async def download_html(filename_with_ext: str):
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(actual_filename, safe='', encoding='utf-8')}"}
     )
 
-
+#TODO:端口被占用时使用其他端口
 def run_app():
     print("正在启动 DocuTranslate WebUI")
     print("请访问 http://127.0.0.1:8010 （ctrl+点击链接即可打开）")
