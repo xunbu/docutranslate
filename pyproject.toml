@@ -8,17 +8,21 @@ dependencies = [
     "httpx>=0.28.1",
     "markdown2>=2.5.3",
     "fastapi[standard]>=0.115.12",
-    "transformers==4.51.3",
+
 ]
 
 
 [project.optional-dependencies]
 docling = [
+    "opencv-python",
+    "transformers==4.51.3",
     "docling"
 ]
 
 [dependency-groups]
 dev = [
+    "opencv-python",
+    "transformers==4.51.3",
     "docling",
     "pyinstaller",
 ]

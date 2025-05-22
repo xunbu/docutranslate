@@ -75,6 +75,11 @@ class ConverterDocling(Converter):
             document
         )
 
+    def set_config(self,cofig:dict):
+        pass
+
+    def get_config_list(self) ->list[str]|None:
+        pass
 
 if __name__ == '__main__':
     pass
