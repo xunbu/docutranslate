@@ -1,9 +1,4 @@
 import asyncio
-import base64
-import io
-import mimetypes
-import os
-import re
 import time
 import zipfile
 import httpx
@@ -41,7 +36,7 @@ class ConverterMineru(Converter):
 
     def upload(self, document: Document):
         # 获取上传链接
-        response = client.post(URL, headers=self._get_header(), json=self._get_upload_data(document))
+        response = client.post(URL, headers=self._get_header(), json=self._get_upload_data(document),timeout=120)
         response.raise_for_status()
         result = response.json()
         # print('response success. result:{}'.format(result))
@@ -50,7 +45,7 @@ class ConverterMineru(Converter):
             urls = result["data"]["file_urls"]
             # print('batch_id:{},urls:{}'.format(batch_id, urls))
             # 获取
-            res_upload = client.put(urls[0], content=document.filebytes)
+            res_upload = client.put(urls[0], content=document.filebytes,timeout=120)
             res_upload.raise_for_status()
             # print(f"{urls[0]} upload success")
             return batch_id
@@ -114,7 +109,7 @@ def get_md_from_zip_url_with_inline_images(
     """
     try:
         print(f"正在从 {zip_url} 下载ZIP文件 (使用 httpx.get)...")
-        response = client.get(zip_url, timeout=60.0)  # 增加超时
+        response = client.get(zip_url, timeout=120.0)  # 增加超时
         response.raise_for_status()
         print("ZIP文件下载完成。")
         return embed_inline_image_from_zip(response.content, filename_in_zip=filename_in_zip, encoding=encoding)
