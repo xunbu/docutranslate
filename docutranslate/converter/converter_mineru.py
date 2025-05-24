@@ -8,14 +8,22 @@ from docutranslate.utils.markdown_utils import embed_inline_image_from_zip
 
 URL = 'https://mineru.net/api/v4/file-urls/batch'
 
-client = httpx.Client(trust_env=False)
+timeout = httpx.Timeout(
+    connect=5.0,      # 连接超时 (建立连接的最长时间)
+    read=120.0,        # 读取超时 (等待服务器响应的最长时间)
+    write=120.0,       # 写入超时 (发送数据的最长时间)
+    pool=1.0          # 从连接池获取连接的超时时间
+)
+
+
+client = httpx.Client(trust_env=False,timeout=timeout)
 
 
 # TODO: 提供更详细的logger
 class ConverterMineru(Converter):
     def __init__(self, token: str, formula=True):
         self.mineru_token = token.strip()
-        self.client_async = httpx.AsyncClient()
+        self.client_async = httpx.AsyncClient(timeout=timeout)
         self.formula = formula
 
     def _get_header(self):
@@ -36,7 +44,7 @@ class ConverterMineru(Converter):
 
     def upload(self, document: Document):
         # 获取上传链接
-        response = client.post(URL, headers=self._get_header(), json=self._get_upload_data(document),timeout=120)
+        response = client.post(URL, headers=self._get_header(), json=self._get_upload_data(document))
         response.raise_for_status()
         result = response.json()
         # print('response success. result:{}'.format(result))
@@ -45,7 +53,7 @@ class ConverterMineru(Converter):
             urls = result["data"]["file_urls"]
             # print('batch_id:{},urls:{}'.format(batch_id, urls))
             # 获取
-            res_upload = client.put(urls[0], content=document.filebytes,timeout=120)
+            res_upload = client.put(urls[0], content=document.filebytes)
             res_upload.raise_for_status()
             # print(f"{urls[0]} upload success")
             return batch_id
@@ -109,7 +117,7 @@ def get_md_from_zip_url_with_inline_images(
     """
     try:
         print(f"正在从 {zip_url} 下载ZIP文件 (使用 httpx.get)...")
-        response = client.get(zip_url, timeout=120.0)  # 增加超时
+        response = client.get(zip_url)  # 增加超时
         response.raise_for_status()
         print("ZIP文件下载完成。")
         return embed_inline_image_from_zip(response.content, filename_in_zip=filename_in_zip, encoding=encoding)
