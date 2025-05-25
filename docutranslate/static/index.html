@@ -18,7 +18,7 @@
         }
 
         summary {
-            border-bottom: 1px dashed  #ccc;
+            border-bottom: 1px dashed #ccc;
             padding-bottom: 0.5rem;
         }
 
@@ -564,6 +564,7 @@
     }
 
     loadSettings();
+    startPolling();
 
     platformSelect.addEventListener('change', updatePlatformUI);
     apikeyInput.addEventListener('input', (e) => saveToStorage(`translator_platform_${platformSelect.value}_apikey`, e.target.value));
