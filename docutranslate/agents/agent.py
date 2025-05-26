@@ -32,7 +32,7 @@ class PromptsCount:
         self.lock.release()
 
 
-TIMEOUT = 500
+TIMEOUT = 600
 
 
 class Agent:

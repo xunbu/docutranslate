@@ -1,6 +1,5 @@
 [project]
 name = "docutranslate"
-version = "0.2.24"
 description = "文件翻译工具"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -9,7 +8,7 @@ dependencies = [
     "markdown2>=2.5.3",
     "fastapi[standard]>=0.115.12",
 ]
-
+dynamic=["version"]
 
 [project.optional-dependencies]
 docling = [
@@ -35,5 +34,8 @@ backend-path = ["."]
 [tool.setuptools]
 packages = ["docutranslate"]
 [tool.setuptools.package-data]
-docutranslate = ["static/**"]
+docutranslate = ["static/**", "template/**"]
+
+[tool.setuptools.dynamic]
+version = { attr = "docutranslate.__version__" }
 

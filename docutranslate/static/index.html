@@ -34,6 +34,15 @@
             margin-top: 1rem;
         }
 
+        .meta {
+            margin-top: 2rem;
+            font-size: 0.8rem;
+        }
+
+        .meta * {
+            font-size: inherit;
+        }
+
         .error-message {
             color: #d32f2f;
         }
@@ -404,6 +413,13 @@
     </div>
     <h4 style="margin-top: 1.5rem;">运行日志</h4>
     <div class="log-area" id="logArea"></div>
+    <ul class="meta">
+        <li id="versionDisplay"></li>
+        <li>QQ交流群：1047781902</li>
+        <li><a class="no-style"
+               target="_blank"
+               href="https://github.com/xunbu/docutranslate">项目主页：github.com/xunbu/docutranslate</a></li>
+    </ul>
 </main>
 
 <!-- MODIFIED MODAL STRUCTURE -->
@@ -438,7 +454,6 @@
 </div>
 
 <iframe id="printFrame" style="display:none;"></iframe>
-
 <script>
     const platformSelect = document.getElementById('platform_select');
     const apiHref = document.getElementById('api_href')
@@ -483,6 +498,8 @@
     const fileDropArea = document.getElementById('fileDropArea');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
     const fileDropPrompt = document.getElementById('fileDropPrompt');
+
+    const versionDisplay = document.getElementById("versionDisplay")
 
     let logPollIntervalId = null;
     let statusPollIntervalId = null;
@@ -677,7 +694,16 @@
         }
     }, false);
 
+    // 初始化调用
     (async () => {
+        try {
+            const response = await fetch("/meta")
+            let meta = await response.json();
+            console.log(meta)
+            versionDisplay.textContent = `版本号${meta.version}`;
+        } catch (error) {
+            console.warn("获取版本号失败", error);
+        }
         try {
             const response = await fetch('/get-engin-list')
             if (!response.ok) {

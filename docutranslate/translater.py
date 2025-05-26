@@ -2,6 +2,7 @@ import asyncio
 from pathlib import Path
 from typing import Literal
 import markdown2
+import jinja2
 from docutranslate.agents import Agent, AgentArgs
 from docutranslate.agents import MDRefineAgent, MDTranslateAgent
 from docutranslate.converter import Document, ConverterMineru
@@ -9,9 +10,11 @@ from docutranslate.utils.markdown_splitter import split_markdown_text, join_mark
 from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
 from docutranslate.logger import translater_logger
 from docutranslate.global_values import available_packages
-DOCLING_FLAG=True if available_packages.get("docling") else False
+
+DOCLING_FLAG = True if available_packages.get("docling") else False
 if DOCLING_FLAG:
     from docutranslate.converter import ConverterDocling
+
 
 class FileTranslater:
     def __init__(self, file_path: Path | str | None = None, chunksize: int = 2000,
@@ -304,57 +307,18 @@ class FileTranslater:
         markdowner = markdown2.Markdown(extras=['tables', 'fenced-code-blocks', 'mermaid', "code-friendly"])
         # TODO:实现完全本地化css和js
         # language=html
-        html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>{title}</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@latest/css/pico.min.css">
-        <style>
-        html {{
-            padding:2vh 10vw;
-            font-size: 15px;
-        }}
-    </style>
-    <script type="text/x-mathjax-config">
-      MathJax.Hub.Config({{
-        messageStyle: "none",
-        tex2jax: {{
-          inlineMath: [ ['$','$'], ["\\\\(","\\\\)"] ],
-          processEscapes: true
-        }}
-      }});
-    </script>
-        
-    <script type="text/javascript"
-            src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
-    </script>
-</head>
-<body>
-{markdowner.convert(self.markdown.replace("\\", "\\\\"))}
-</body>
-<script type="module" defer>
-  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@9/dist/mermaid.esm.min.mjs';
-  mermaid.initialize({{
-    securityLevel: 'loose',
-    startOnLoad: true
-  }});
-  let observer = new MutationObserver(mutations => {{
-    for(let mutation of mutations) {{
-      mutation.target.style.visibility = "visible";
-    }}
-  }});
-  document.querySelectorAll("pre.mermaid-pre div.mermaid").forEach(item => {{
-    observer.observe(item, {{ 
-      attributes: true, 
-      attributeFilter: ['data-processed'] 
-    }});
-  }});
-</script>
-
-</html>
-"""
-        return html
+        pico=Path(__file__).parent / "static" / "pico.css"
+        html = Path(__file__).parent / "template" / "markdown.html"
+        MathJax=Path(__file__).parent / "static" / "MathJax.js"
+        mermaid=Path(__file__).parent / "static" / "mermaid.js"
+        render = jinja2.Template(html.read_text()).render(
+            title=title,
+            pico=f"<style>{pico.read_text()}</style>",
+            markdown=markdowner.convert(self.markdown.replace("\\", "\\\\")),
+            MathJax=f"<script>{MathJax.read_text()}</script>",
+            mermaid=f"<script>{mermaid.read_text()}</script>",
+        )
+        return render
 
     def translate_file(self, file_path: Path | str | None = None, to_lang="中文", output_dir="./output",
                        formula=True,

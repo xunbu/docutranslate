@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{title}}</title>
+    {{pico}}
+    <style>
+        html {
+            padding: 2vh 10vw;
+            font-size: 15px;
+        }
+    </style>
+    <script type="text/x-mathjax-config">
+        MathJax.Hub.Config({
+          messageStyle: "none",
+          tex2jax: {
+            inlineMath: [ ['$','$'], ["\\\\(","\\\\)"] ],
+            processEscapes: true
+          }
+        });
+    </script>
+    {{MathJax}}
+</head>
+<body>
+{{markdown}}
+</body>
+{{mermaid}}
+<script>
+    mermaid.initialize({
+        securityLevel: 'loose',
+        startOnLoad: true
+    });
+    let observer = new MutationObserver(mutations => {
+        for (let mutation of mutations) {
+            mutation.target.style.visibility = "visible";
+        }
+    });
+    document.querySelectorAll("pre.mermaid-pre div.mermaid").forEach(item => {
+        observer.observe(item, {
+            attributes: true,
+            attributeFilter: ['data-processed']
+        });
+    });
+</script>
+
+</html>

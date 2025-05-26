@@ -10,13 +10,12 @@ from urllib.parse import quote
 
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Request, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse,FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from docutranslate import FileTranslater
+from docutranslate import FileTranslater, __version__
 from docutranslate.logger import translater_logger
 from docutranslate.utils.resource_utils import resource_path
 from docutranslate.global_values import available_packages
-
 
 # --- 全局配置 ---
 log_queue: Optional[asyncio.Queue] = None
@@ -46,7 +45,7 @@ class QueueAndHistoryHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord):
         log_entry = self.format(record)
-        print(log_entry) # Keep console log for server visibility
+        print(log_entry)  # Keep console log for server visibility
         self.history_list.append(log_entry)
         if len(self.history_list) > self.max_history:
             del self.history_list[:len(self.history_list) - self.max_history]
@@ -92,11 +91,13 @@ async def lifespan(app: FastAPI):
     translater_logger.info("应用启动完成，日志队列/历史处理器已正确配置。")
     yield
 
+
 app = FastAPI(lifespan=lifespan)
 
-STATIC_DIR=resource_path("static")
+STATIC_DIR = resource_path("static")
 
-app.mount("/static",StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
 
 # --- Background Task Logic ---
 async def _perform_translation(params: Dict[str, Any], file_contents: bytes, original_filename: str):
@@ -179,23 +180,23 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
 # --- API Endpoints ---
 @app.get("/", response_class=HTMLResponse)
 async def main_page(request: Request):
-    index_path = Path("index.html") # Adjust if index.html is elsewhere
+    index_path = Path("index.html")  # Adjust if index.html is elsewhere
     if not index_path.exists():
-         # Fallback to static dir if not in root
+        # Fallback to static dir if not in root
         index_path = STATIC_DIR / "index.html"
         if not index_path.exists():
             raise HTTPException(status_code=404, detail="index.html not found")
     no_cache_headers = {
         "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
         "Pragma": "no-cache",  # 兼容 HTTP/1.0
-        "Expires": "0",        # 兼容旧版代理/缓存
+        "Expires": "0",  # 兼容旧版代理/缓存
     }
-    return FileResponse(index_path,headers=no_cache_headers)
+    return FileResponse(index_path, headers=no_cache_headers)
 
 
 @app.post("/translate")
 async def handle_translate(
-        request: Request, # Added request for potential future use, not strictly needed now
+        request: Request,  # Added request for potential future use, not strictly needed now
         base_url: str = Form(...),
         apikey: str = Form(...),
         model_id: str = Form(...),
@@ -203,8 +204,8 @@ async def handle_translate(
         formula_ocr: bool = Form(False),
         code_ocr: bool = Form(False),
         refine_markdown: bool = Form(False),
-        convert_engin: str = Form(...), # New parameter
-        mineru_token: Optional[str] = Form(None), # New parameter
+        convert_engin: str = Form(...),  # New parameter
+        mineru_token: Optional[str] = Form(None),  # New parameter
         file: UploadFile = File(...)
 ):
     global current_state, log_queue, log_history
@@ -270,8 +271,8 @@ async def handle_translate(
             "base_url": base_url, "apikey": apikey, "model_id": model_id,
             "to_lang": to_lang, "formula_ocr": formula_ocr,
             "code_ocr": code_ocr, "refine_markdown": refine_markdown,
-            "convert_engin": convert_engin, # Pass to task
-            "mineru_token": mineru_token,   # Pass to task
+            "convert_engin": convert_engin,  # Pass to task
+            "mineru_token": mineru_token,  # Pass to task
         }
 
         loop = asyncio.get_running_loop()
@@ -327,10 +328,11 @@ async def cancel_translate_task():
 
 @app.get("/get-engin-list")
 async def get_engin_list():
-    engin_list=["mineru"]
+    engin_list = ["mineru"]
     if available_packages.get("docling"):
         engin_list.append("docling")
     return JSONResponse(content=engin_list)
+
 
 @app.get("/get-status")
 async def get_status():
@@ -384,7 +386,8 @@ async def download_markdown(filename_with_ext: str):
     return StreamingResponse(
         io.StringIO(current_state["markdown_content"]),
         media_type="text/markdown",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(actual_filename, safe='', encoding='utf-8')}"}
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(actual_filename, safe='', encoding='utf-8')}"}
     )
 
 
@@ -402,8 +405,14 @@ async def download_html(filename_with_ext: str):
     return HTMLResponse(
         content=current_state["html_content"],
         media_type="text/html",
-        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{quote(actual_filename, safe='', encoding='utf-8')}"}
+        headers={
+            "Content-Disposition": f"attachment; filename*=UTF-8''{quote(actual_filename, safe='', encoding='utf-8')}"}
     )
+
+
+@app.get("/meta")
+async def get_app_version():
+    return JSONResponse(content={"version": __version__})
 
 
 def find_free_port(start_port):
@@ -414,6 +423,8 @@ def find_free_port(start_port):
             if sock.connect_ex(('127.0.0.1', port)) != 0:  # 端口可用
                 return port
             port += 1  # 端口被占用，尝试下一个端口
+
+
 def run_app():
     initial_port = 8010
     try:
@@ -429,5 +440,4 @@ def run_app():
 
 
 if __name__ == "__main__":
-
     run_app()
