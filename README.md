@@ -188,7 +188,6 @@ translater = FileTranslater(base_url="<baseurl>",  # 默认的模型baseurl
                             docling_artifact=None,  # 使用提前下载好的docling模型
                             convert_engin="mineru",  # 可选minerU或docling
                             mineru_token="<mineru-token>",  # minerU的token，使用minerU时必填
-                            tips=True  # 开场提示
                             )
 
 ```

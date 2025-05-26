@@ -699,7 +699,6 @@
         try {
             const response = await fetch("/meta")
             let meta = await response.json();
-            console.log(meta)
             versionDisplay.textContent = `版本号${meta.version}`;
         } catch (error) {
             console.warn("获取版本号失败", error);

@@ -10,14 +10,24 @@
             font-size: 15px;
         }
     </style>
-    <script type="text/x-mathjax-config">
-        MathJax.Hub.Config({
-          messageStyle: "none",
-          tex2jax: {
-            inlineMath: [ ['$','$'], ["\\\\(","\\\\)"] ],
-            processEscapes: true
-          }
-        });
+    <script>
+        MathJax = {
+            loader: {load: ['[tex]/ams']},
+            tex: {
+                inlineMath: [['$', '$'], ['\\(', '\\)']],
+                displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                processEscapes: true,
+                formatError: (error) => {
+                }, // 空函数，不显示任何错误
+                packages: {'[+]': ['ams']},  // 启用AMS宏包
+                autoload: {color: [], colorv2: ['color']}  // 颜色支持
+            },
+            options: {
+                renderActions: {
+                    addMenu: [0, '', '']
+                }
+            },
+        };
     </script>
     {{MathJax}}
 </head>

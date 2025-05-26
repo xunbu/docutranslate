@@ -22,8 +22,7 @@ class FileTranslater:
                  max_concurrent=20, timeout=2000,
                  convert_engin: Literal["docling", "mineru"] = "mineru",
                  docling_artifact: Path | str | None = None,
-                 mineru_token: str = None,
-                 tips=True):
+                 mineru_token: str = None):
         self.convert_engin = convert_engin
         self.mineru_token = mineru_token.strip() if mineru_token is not None else None
         if isinstance(file_path, str):
@@ -46,15 +45,6 @@ class FileTranslater:
                 translater_logger.info("检测到docling_artifact文件夹")
                 self.docling_artifact = artifact_path
         self.timeout = timeout
-        if tips:
-            print("""
-=======
-[docutranslate](https://github.com/xunbu/docutranslate)
->以下操作会自动从[huggingface](https://huggingface.co)下载模型，windows需要使用**管理员模式**打开IDE运行脚本，并按需换源
-- 第一次使用该库读取、翻译非markdown文本
-- 第一次使用该库的公式识别或代码识别功能
-=======
-""")
 
     def _markdown_format(self):
         # 该方法还需要改进
@@ -305,18 +295,20 @@ class FileTranslater:
 
     def export_to_html(self, title="title") -> str:
         markdowner = markdown2.Markdown(extras=['tables', 'fenced-code-blocks', 'mermaid', "code-friendly"])
-        # TODO:实现完全本地化css和js
         # language=html
         pico=Path(__file__).parent / "static" / "pico.css"
         html = Path(__file__).parent / "template" / "markdown.html"
         MathJax=Path(__file__).parent / "static" / "MathJax.js"
         mermaid=Path(__file__).parent / "static" / "mermaid.js"
+        #TODO:实现MathJax本地化
         render = jinja2.Template(html.read_text()).render(
             title=title,
-            pico=f"<style>{pico.read_text()}</style>",
+            pico=f"<style>\n{pico.read_text()}\n</style>",
+            # markdown=markdowner.convert(self.markdown),
             markdown=markdowner.convert(self.markdown.replace("\\", "\\\\")),
-            MathJax=f"<script>{MathJax.read_text()}</script>",
-            mermaid=f"<script>{mermaid.read_text()}</script>",
+            MathJax=r'<script src=" https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.min.js "></script>',
+            # MathJax=f'<script>\n{MathJax.read_text()}\n</script>',
+            mermaid=f"<script>\n{mermaid.read_text()}\n</script>",
         )
         return render
 
