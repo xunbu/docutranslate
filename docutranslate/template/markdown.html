@@ -4,36 +4,37 @@
     <meta charset="UTF-8">
     <title>{{title}}</title>
     {{pico}}
+    {{katexCss}}
+    {{katexJs}}
+    {{autoRender}}
     <style>
         html {
             padding: 2vh 10vw;
             font-size: 15px;
         }
-        mjx-merror { display: none !important; }
     </style>
-    <script>
-        MathJax = {
-            loader: {load: ['[tex]/ams']},
-            tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                displayMath: [['$$', '$$'], ['\\[', '\\]']],
-                processEscapes: true,
-                packages: {'[+]': ['ams']},  // 启用AMS宏包
-                autoload: {color: [], colorv2: ['color']}  // 颜色支持
-            },
-            options: {
-                renderActions: {
-                    addMenu: [0, '', ''],
-                }
-            },
-        };
-    </script>
-    {{MathJax}}
 </head>
 <body>
+
 {{markdown}}
 </body>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},  // 块级公式
+                {left: '\\[', right: '\\]', display: true}, // 块级公式
+                {left: '$', right: '$', display: false},   // 行内公式
+                {left: '\\(', right: '\\)', display: false}  // 行内公式 (常用)
+            ],
+            // • rendering keys, e.g.:
+            throwOnError: false
+        });
+    });
+</script>
 {{mermaid}}
+
 <script>
     mermaid.initialize({
         securityLevel: 'loose',

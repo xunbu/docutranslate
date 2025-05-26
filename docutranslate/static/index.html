@@ -699,7 +699,7 @@
         try {
             const response = await fetch("/meta")
             let meta = await response.json();
-            versionDisplay.textContent = `版本号${meta.version}`;
+            versionDisplay.textContent = `版本号：${meta.version}`;
         } catch (error) {
             console.warn("获取版本号失败", error);
         }
@@ -840,11 +840,7 @@
                                 return resp.text();
                             })
                             .then(html => {
-                                let finalHtml = html;
-                                if (!html.toLowerCase().includes('/static/pico.css')) {
-                                    finalHtml = `<link rel="stylesheet" href="/static/pico.css">\n<style>body{padding:1em;}</style>\n${html}`;
-                                }
-                                const blob = new Blob([finalHtml], {type: 'text/html'});
+                                const blob = new Blob([html], {type: 'text/html'});
                                 const blobUrl = URL.createObjectURL(blob);
                                 translatedPreviewFrame.src = blobUrl;
                                 translatedPreviewFrame.onload = function () {
@@ -882,9 +878,6 @@
                             })
                             .then(htmlContent => {
                                 let finalHtml = htmlContent;
-                                if (!htmlContent.toLowerCase().includes('/static/pico.css')) {
-                                    finalHtml = `<link rel="stylesheet" href="/static/pico.css">\n<style>body{padding:1em; break-inside: avoid;}</style>\n${htmlContent}`;
-                                }
                                 iframe.onload = () => {
                                     iframe.onload = null;
                                     setTimeout(() => {

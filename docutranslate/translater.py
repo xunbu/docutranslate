@@ -294,22 +294,24 @@ class FileTranslater:
         translater_logger.info(f"文件已写入{full_name.resolve()}")
         return self
 
-    def export_to_html(self, title="title") -> str:
+    def export_to_html(self, title="title", cdn=True) -> str:
         markdowner = markdown2.Markdown(extras=['tables', 'fenced-code-blocks', 'mermaid', "code-friendly"])
         # language=html
-        pico=resource_path("static/pico.css")
-        html = resource_path("template/markdown.html")
-        MathJax=resource_path( "static/MathJax.js")
-        mermaid=resource_path( "static/mermaid.js")
-        #TODO:实现MathJax本地化
-        render = jinja2.Template(html.read_text()).render(
+        pico = f"<style>{resource_path("static/pico.css").read_text(encoding='utf-8')}</style>"
+        html = resource_path("template/markdown.html").read_text(encoding='utf-8')
+        katex_css = f"<style>{resource_path("static/katex.css").read_text(encoding='utf-8')}</style>" if not cdn else r"""<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" integrity="sha384-5TcZemv2l/9On385z///+d7MSYlvIEw9FuZTIdZ14vJLqWphw7e7ZPuOiCHJcFCP" crossorigin="anonymous">"""
+        katex_js = f"<script>{resource_path("static/katex.js").read_text(encoding='utf-8')}</script>" if not cdn else r"""<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" integrity="sha384-cMkvdD8LoxVzGF/RPUKAcvmm49FQ0oxwDF3BGKtDXcEc+T1b2N+teh/OJfpU0jr6" crossorigin="anonymous"></script>"""
+        auto_render = f'<script>{resource_path("static/autoRender.js").read_text(encoding='utf-8')}</script>' if not cdn else r"""<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous"></script>"""
+        mermaid = f'<script>{resource_path("static/mermaid.js").read_text(encoding='utf-8')}</script>'
+        # TODO:实现MathJax本地化
+        render = jinja2.Template(html).render(
             title=title,
-            pico=f"<style>\n{pico.read_text()}\n</style>",
-            # markdown=markdowner.convert(self.markdown),
+            pico=pico,
+            katexCss=katex_css,
+            katexJs=katex_js,
+            autoRender=auto_render,
             markdown=markdowner.convert(self.markdown.replace("\\", "\\\\")),
-            MathJax=r'<script src=" https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.min.js "></script>',
-            # MathJax=f'<script>\n{MathJax.read_text()}\n</script>',
-            mermaid=f"<script>\n{mermaid.read_text()}\n</script>",
+            mermaid=mermaid,
         )
         return render
 

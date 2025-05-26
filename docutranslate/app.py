@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from urllib.parse import quote
 
+import httpx
 import uvicorn
 from fastapi import FastAPI, File, Form, UploadFile, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, FileResponse
@@ -131,7 +132,12 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
         )
 
         md_content = ft.export_to_markdown()
-        html_content = ft.export_to_html(title=current_state["original_filename_stem"])
+        try:
+            httpx.head("https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js",timeout=1)
+            html_content = ft.export_to_html(title=current_state["original_filename_stem"], cdn=True)
+        except TimeoutError:
+            translater_logger.info("无法连接cdn，使用本地js进行pdf渲染")
+            html_content = ft.export_to_html(title=current_state["original_filename_stem"], cdn=False)
         end_time = time.time()
         duration = end_time - current_state["task_start_time"]
 
