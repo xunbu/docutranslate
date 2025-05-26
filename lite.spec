@@ -4,7 +4,7 @@ a = Analysis(
     ['docutranslate\\app.py'],
     pathex=[],
     binaries=[],
-    datas=[('./docutranslate/static', 'docutranslate/static')],
+    datas=[('./docutranslate/static', 'docutranslate/static'),('./docutranslate/template', 'docutranslate/template')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

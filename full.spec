@@ -1,7 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 datas = [('./.venv/Lib/site-packages/docling_parse/pdf_resources_v2', 'docling_parse/pdf_resources_v2'),
-('./docutranslate/static', 'docutranslate/static')]
+('./docutranslate/static', 'docutranslate/static'),('./docutranslate/template', 'docutranslate/template')]
 binaries = []
 hiddenimports=[]
 for i in ['easyocr','docling']:
