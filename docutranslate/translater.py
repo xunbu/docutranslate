@@ -10,6 +10,7 @@ from docutranslate.utils.markdown_splitter import split_markdown_text, join_mark
 from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
 from docutranslate.logger import translater_logger
 from docutranslate.global_values import available_packages
+from docutranslate.utils.resource_utils import resource_path
 
 DOCLING_FLAG = True if available_packages.get("docling") else False
 if DOCLING_FLAG:
@@ -296,10 +297,10 @@ class FileTranslater:
     def export_to_html(self, title="title") -> str:
         markdowner = markdown2.Markdown(extras=['tables', 'fenced-code-blocks', 'mermaid', "code-friendly"])
         # language=html
-        pico=Path(__file__).parent / "static" / "pico.css"
-        html = Path(__file__).parent / "template" / "markdown.html"
-        MathJax=Path(__file__).parent / "static" / "MathJax.js"
-        mermaid=Path(__file__).parent / "static" / "mermaid.js"
+        pico=resource_path("static/pico.css")
+        html = resource_path("template/markdown.html")
+        MathJax=resource_path( "static/MathJax.js")
+        mermaid=resource_path( "static/mermaid.js")
         #TODO:实现MathJax本地化
         render = jinja2.Template(html.read_text()).render(
             title=title,
