@@ -58,7 +58,7 @@ class ConverterMineru(Converter):
             # print(f"{urls[0]} upload success")
             return batch_id
         else:
-            raise Exception('apply upload url failed,reason:{}'.format(result.msg))
+            raise Exception('apply upload url failed,reason:{}'.format(result))
 
     def get_file_url(self, batch_id: str) -> str:
         while True:
