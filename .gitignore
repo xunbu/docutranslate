@@ -10,3 +10,5 @@ tests/
 docutranslate/output/
 # Virtual environments
 .venv
+#idea
+.idea/
