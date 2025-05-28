@@ -310,7 +310,7 @@ class FileTranslater:
         auto_render = f'<script>{resource_path("static/autoRender.js").read_text(encoding='utf-8')}</script>' if not cdn else r"""<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous"></script>"""
         mermaid = f'<script>{resource_path("static/mermaid.js").read_text(encoding='utf-8')}</script>'
         if self.file_suffix == ".txt":
-            content = html.escape(self.markdown).replace("\n", "<br/>")
+            content = html.escape(self.markdown).replace("\n", "<br>")
         else:
             content = markdowner.convert(self.markdown.replace("\\", "\\\\"))
         # TODO:实现MathJax本地化
