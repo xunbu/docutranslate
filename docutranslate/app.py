@@ -279,7 +279,7 @@ async def handle_translate(
             "code_ocr": code_ocr, "refine_markdown": refine_markdown,
             "convert_engin": convert_engin,
             "mineru_token": mineru_token,
-            "custom_prompt_translate":custom_prompt_translate,
+            "custom_prompt_translate": custom_prompt_translate,
         }
 
         loop = asyncio.get_running_loop()
@@ -386,9 +386,7 @@ async def download_markdown(filename_with_ext: str):
         print("Markdown 内容尚未准备好或不可用。")
         raise HTTPException(status_code=404, detail="Markdown 内容尚未准备好或不可用。")
 
-    requested_stem = Path(filename_with_ext).stem.replace("_translated", "")
-    if requested_stem != current_state["original_filename_stem"]:
-        print("请求的文件名与当前结果不符。")
+    if Path(filename_with_ext).stem != f"{current_state['original_filename_stem']}_translated":
         raise HTTPException(status_code=404, detail="请求的文件名与当前结果不符。")
 
     actual_filename = f"{current_state['original_filename_stem']}_translated.md"
@@ -406,8 +404,7 @@ async def download_html(filename_with_ext: str):
         "original_filename_stem"]:
         raise HTTPException(status_code=404, detail="HTML 内容尚未准备好或不可用。")
 
-    requested_stem = Path(filename_with_ext).stem.replace("_translated", "")
-    if requested_stem != current_state["original_filename_stem"]:
+    if Path(filename_with_ext).stem != f"{current_state['original_filename_stem']}_translated":
         raise HTTPException(status_code=404, detail="请求的文件名与当前结果不符。")
 
     actual_filename = f"{current_state['original_filename_stem']}_translated.html"
