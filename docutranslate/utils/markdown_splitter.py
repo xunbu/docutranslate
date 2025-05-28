@@ -239,9 +239,10 @@ def split_markdown_text(markdown_text, max_block_size=5000):
 
 
 def join_markdown_texts(markdown_texts: list[str]) -> str:
-    result = ""
-    pre = ""
-    for text in markdown_texts:
+    if len(markdown_texts) == 0: return ""
+    result = markdown_texts[0]
+    pre = markdown_texts[0]
+    for text in markdown_texts[1:]:
         # 只有表格会收到多余空行的影响
         if text.lstrip().startswith("|") and pre.rstrip().endswith("|"):
             result = result + "\n" + text

@@ -411,7 +411,7 @@
             <div class="form-group">
                 <label for="custom_prompt_translate"></label>
                 <textarea class="prompt-area" type="text" id="custom_prompt_translate"
-                                                                       name="custom_prompt_translate" placeholder="翻译提示"></textarea>
+                          name="custom_prompt_translate" placeholder="翻译提示"></textarea>
             </div>
         </details>
         <button type="submit" id="submitButton" class="primary">开始翻译</button>
@@ -990,9 +990,9 @@
         }
     }
 
-    form.addEventListener('submit', async function (event) {
+    submitButton.addEventListener('click', async function (event) {
         event.preventDefault();
-
+        console.log(fileInput)
         if (isTranslating) {
             await cancelTranslation();
             return;
@@ -1000,52 +1000,41 @@
 
         [fileDropArea, mineruTokenInput, apikeyInput, modelInput, baseUrlInput].forEach(el => el.classList.remove('input-error'));
         fileNameDisplay.classList.remove('input-error-text');
-        let firstErrorElement = null;
-        let currentStatusMsg = '';
 
-        if (fileInput.files.length === 0) {
-            currentStatusMsg += '请选择一个文件进行翻译。';
+        if (fileInput.files.length !== 1) {
+            statusMsg.textContent = '请选择一个文件进行翻译。';
+            statusMsg.className = 'error-message';
             fileNameDisplay.textContent = '请选择文件！';
             fileNameDisplay.classList.add('input-error-text');
             fileDropArea.classList.add('input-error');
             fileDropPrompt.classList.remove('hidden');
-            if (!firstErrorElement) firstErrorElement = fileDropArea;
+            return
+        }
+        console.log(convertEnginSelect.value === 'mineru' && (!mineruTokenInput.value.trim()) && (!["md", "txt"].includes(fileInput.files[0].name.split('.').pop())))
+        if (convertEnginSelect.value === 'mineru' && !mineruTokenInput.value.trim() && (!["md", "txt"].includes(fileInput.files[0].name.split('.').pop()))) {
+            statusMsg.textContent = '使用 Mineru 引擎时，必须填写 Mineru Token。';
+            statusMsg.className = 'error-message';
+            mineruTokenInput.classList.add('input-error');
+            return
         }
 
-        if (convertEnginSelect.value === 'mineru' && !mineruTokenInput.value.trim()) {
-            currentStatusMsg += (currentStatusMsg ? ' ' : '') + '使用 Mineru 引擎时，必须填写 Mineru Token。';
-            mineruTokenInput.classList.add('input-error');
-            if (!firstErrorElement) firstErrorElement = mineruTokenInput;
-        }
         if (!apikeyInput.value.trim()) {
-            currentStatusMsg += (currentStatusMsg ? ' ' : '') + 'API 密钥不能为空。';
+            statusMsg.textContent = 'API 密钥不能为空。';
+            statusMsg.className = 'error-message';
             apikeyInput.classList.add('input-error');
-            if (!firstErrorElement) firstErrorElement = apikeyInput;
+            return
         }
         if (!modelInput.value.trim()) {
-            currentStatusMsg += (currentStatusMsg ? ' ' : '') + '模型 ID 不能为空。';
+            statusMsg.textContent = '模型 ID 不能为空。';
+            statusMsg.className = 'error-message';
             modelInput.classList.add('input-error');
-            if (!firstErrorElement) firstErrorElement = modelInput;
+            return
         }
         if (platformSelect.value === 'custom' && !baseUrlInput.value.trim()) {
-            currentStatusMsg += (currentStatusMsg ? ' ' : '') + '自定义接口时，API 地址不能为空。';
-            baseUrlInput.classList.add('input-error');
-            if (!firstErrorElement) firstErrorElement = baseUrlInput;
-        }
-
-        if (firstErrorElement) {
-            statusMsg.textContent = currentStatusMsg;
+            statusMsg.textContent = '自定义接口时，API 地址不能为空。';
             statusMsg.className = 'error-message';
-            firstErrorElement.focus();
-            setTimeout(() => {
-                [fileDropArea, mineruTokenInput, apikeyInput, modelInput, baseUrlInput].forEach(el => el.classList.remove('input-error'));
-                fileNameDisplay.classList.remove('input-error-text');
-                if (fileNameDisplay.textContent === '请选择文件！' && fileInput.files.length === 0) {
-                    fileNameDisplay.textContent = '未选择文件';
-                    fileDropPrompt.classList.remove('hidden');
-                }
-            }, 3000);
-            return;
+            baseUrlInput.classList.add('input-error');
+            return
         }
 
         stopPolling();

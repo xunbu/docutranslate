@@ -223,17 +223,19 @@ async def handle_translate(
             content={"task_started": False, "message": "另一个翻译任务正在进行中，请稍后再试。"}
         )
 
-    if not file or not file.filename:
-        return JSONResponse(
-            status_code=400,
-            content={"task_started": False, "message": "没有选择文件或文件无效。"}
-        )
-
-    if convert_engin == "mineru" and (not mineru_token or not mineru_token.strip()):
-        return JSONResponse(
-            status_code=400,
-            content={"task_started": False, "message": "使用 Mineru 引擎时必须提供有效的 Mineru Token。"}
-        )
+    #可选的格式认证，这部分交给前端来写了
+    # if not file or not file.filename:
+    #     return JSONResponse(
+    #         status_code=400,
+    #         content={"task_started": False, "message": "没有选择文件或文件无效。"}
+    #     )
+    # if not file.filename.split(".")[-1]  in ["md","txt"]:
+    #     #需要填写 Mineru 引擎
+    #     if convert_engin == "mineru" and (not mineru_token or not mineru_token.strip()) :
+    #         return JSONResponse(
+    #             status_code=400,
+    #             content={"task_started": False, "message": "使用 Mineru 引擎时必须提供有效的 Mineru Token。"}
+    #         )
 
     current_state["is_processing"] = True
     original_filename_for_init = file.filename or "uploaded_file"
