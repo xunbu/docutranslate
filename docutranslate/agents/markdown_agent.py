@@ -38,7 +38,7 @@ code、latex和HTML保持结构
 一道题目<ph-12asd2>:$c_0+1=2$，$c_0$等于几
 {$c_0$,$c_1$,$c^2$}是一个集合"""
         if custom_prompt:
-            self.system_prompt += "\n#补充重要规则或背景如下(应遵守):\n" + custom_prompt + '\n'
+            self.system_prompt += "\n# 重要规则或背景【非常重要】\n" + custom_prompt + '\n'
         self.system_prompt += r'\no_think'
 
 
@@ -84,5 +84,5 @@ volume 99, pages 173–186, 1999.
 [2] M. Castro, B. Liskov, et al. Practical byzantine fault tolerance. In OSDI,
 volume 99, pages 173–186, 1999."""
         if custom_prompt:
-            self.system_prompt += "\n#补充重要规则或背景如下(应遵守):\n" + custom_prompt + '\n'
+            self.system_prompt += "\n# 重要规则或背景【非常重要】\n" + custom_prompt + '\n'
         self.system_prompt += r'\no_think'
