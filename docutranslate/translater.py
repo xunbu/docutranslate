@@ -1,6 +1,7 @@
 import asyncio
+import html
 from pathlib import Path
-from typing import Literal
+from typing import Literal, ParamSpec, TypedDict
 import markdown2
 import jinja2
 from docutranslate.agents import Agent, AgentArgs
@@ -46,6 +47,7 @@ class FileTranslater:
                 translater_logger.info("检测到docling_artifact文件夹")
                 self.docling_artifact = artifact_path
         self.timeout = timeout
+        self.file_suffix: str | None = None  # 现在处理的文件后缀如".md"、".txt"
 
     def _markdown_format(self):
         # 该方法还需要改进
@@ -83,7 +85,9 @@ class FileTranslater:
         return MDTranslateAgent(custom_prompt=custom_prompt, to_lang=to_lang, **self._default_agent_params())
 
     def _convert2markdown(self, document: Document, formula: bool, code: bool, artifact: Path = None) -> str:
-        translater_logger.info(f"正在使用{self.convert_engin}转换文件为markdown")
+        if document.suffix in [".md", ".txt"]:
+            return document.filebytes.decode("utf-8")
+        translater_logger.info("正在转化为markdown")
         if self.convert_engin == "docling":
             if artifact is None:
                 artifact = self.docling_artifact
@@ -100,6 +104,9 @@ class FileTranslater:
 
     async def _convert2markdown_async(self, document: Document, formula: bool, code: bool,
                                       artifact: Path = None) -> str:
+        if document.suffix in [".md", ".txt"]:
+            return document.filebytes.decode("utf-8")
+        translater_logger.info("正在转化为markdown")
         if self.convert_engin == "docling":
             if artifact is None:
                 artifact = self.docling_artifact
@@ -114,43 +121,49 @@ class FileTranslater:
             result = await mdconverter.convert_async(document)
         return result
 
-    def read_bytes(self, name: str, file: bytes, formula=True, code=True, save=False,
-                   save_format: Literal["markdown", "html"] = "markdown", refine=False,
-                   refine_agent: Agent | None = None):
-        document = Document(filename=name, filebytes=file)
-        file_path = Path(name)
-        # 如果是markdown，直接读取
-        if file_path.suffix in [".md", ".txt"]:
-            self.markdown = file.decode()
-        else:
-            self.markdown = self._convert2markdown(document, formula=formula, code=code, artifact=self.docling_artifact)
+    def read_document(self, document: Document, formula: bool, code: bool, save: bool,
+                      save_format: Literal["markdown", "html"], refine: bool,
+                      refine_agent: Agent | None):
+        self.file_suffix = document.suffix
+        self.markdown = self._convert2markdown(document, formula=formula, code=code, artifact=self.docling_artifact)
         if refine:
             self.refine_markdown_by_agent(refine_agent)
         if save:
             if save_format == "html":
-                self.save_as_html(filename=f"{file_path.stem}.html")
+                self.save_as_html(filename=f"{document.stem}.html")
             else:
-                self.save_as_markdown(filename=f"{file_path.stem}.md")
+                self.save_as_markdown(filename=f"{document.stem}.md")
+        return self
+
+    async def read_document_async(self, document: Document, formula: bool, code: bool, save: bool,
+                                  save_format: Literal["markdown", "html"], refine: bool,
+                                  refine_agent: Agent | None):
+        self.file_suffix = document.suffix
+        self.markdown = await self._convert2markdown_async(document, formula=formula, code=code,
+                                                           artifact=self.docling_artifact)
+        if refine:
+            await self.refine_markdown_by_agent_async(refine_agent)
+        if save:
+            if save_format == "html":
+                self.save_as_html(filename=f"{document.stem}.html")
+            else:
+                self.save_as_markdown(filename=f"{document.stem}.md")
+        return self
+
+    def read_bytes(self, name: str, file: bytes, formula=True, code=True, save=False,
+                   save_format: Literal["markdown", "html"] = "markdown", refine=False,
+                   refine_agent: Agent | None = None):
+        document = Document(filename=name, filebytes=file)
+        self.read_document(document, formula=formula, code=code, save=save, save_format=save_format,
+                           refine=refine, refine_agent=refine_agent)
         return self
 
     async def read_bytes_async(self, name: str, file: bytes, formula=True, code=True, save=False,
                                save_format: Literal["markdown", "html"] = "markdown", refine=False,
                                refine_agent: Agent | None = None):
         document = Document(filename=name, filebytes=file)
-        file_path = Path(name)
-        # 如果是markdown，直接读取
-        if file_path.suffix in [".md", ".txt"]:
-            self.markdown = file.decode()
-        else:
-            self.markdown = await self._convert2markdown_async(document, formula=formula, code=code,
-                                                               artifact=self.docling_artifact)
-        if refine:
-            await self.refine_markdown_by_agent_async(refine_agent)
-        if save:
-            if save_format == "html":
-                self.save_as_html(filename=f"{file_path.stem}.html")
-            else:
-                self.save_as_markdown(filename=f"{file_path.stem}.md")
+        await self.read_document_async(document, formula=formula, code=code, save=save, save_format=save_format,
+                                       refine=refine, refine_agent=refine_agent)
         return self
 
     def read_file(self, file_path: Path | str | None = None, formula=True, code=True, save=False,
@@ -161,23 +174,10 @@ class FileTranslater:
                 translater_logger.debug("未设置文件路径")
                 raise Exception("未设置文件路径")
             file_path = self.file_path
-        if isinstance(file_path, str):
-            file_path = Path(file_path)
-        translater_logger.info(f"读取文件：{file_path.name}")
-        # 如果是markdown，直接读取
-        if file_path.suffix in [".md", ".txt"]:
-            with open(file_path, "r") as f:
-                self.markdown = f.read()
-        else:
-            document = Document(file_path)
-            self.markdown = self._convert2markdown(document, formula=formula, code=code, artifact=self.docling_artifact)
-        if refine:
-            self.refine_markdown_by_agent(refine_agent)
-        if save:
-            if save_format == "html":
-                self.save_as_html(filename=f"{file_path.stem}.html")
-            else:
-                self.save_as_markdown(filename=f"{file_path.stem}.md")
+        document = Document(path=file_path)
+        translater_logger.info(f"读取文件：{document.filename}")
+        self.read_document(document, formula=formula, code=code, save=save, save_format=save_format, refine=refine,
+                           refine_agent=refine_agent)
         return self
 
     async def read_file_async(self, file_path: Path | str | None = None, formula=True, code=True, save=False,
@@ -188,24 +188,11 @@ class FileTranslater:
                 translater_logger.debug("未设置文件路径")
                 raise Exception("未设置文件路径")
             file_path = self.file_path
-        if isinstance(file_path, str):
-            file_path = Path(file_path)
-        translater_logger.info(f"读取文件：{file_path.name}")
+        document = Document(file_path)
+        translater_logger.info(f"读取文件：{document.filename}")
         # 如果是markdown，直接读取
-        if file_path.suffix in [".md", ".txt"]:
-            with open(file_path, "r") as f:
-                self.markdown = f.read()
-        else:
-            document = Document(file_path)
-            self.markdown = await self._convert2markdown_async(document, formula=formula, code=code,
-                                                               artifact=self.docling_artifact)
-        if refine:
-            await self.refine_markdown_by_agent_async(refine_agent)
-        if save:
-            if save_format == "html":
-                self.save_as_html(filename=f"{file_path.stem}.html")
-            else:
-                self.save_as_markdown(filename=f"{file_path.stem}.md")
+        await self.read_document_async(document, formula=formula, code=code, save=save, save_format=save_format,
+                                       refine=refine, refine_agent=refine_agent)
         return self
 
     def refine_markdown_by_agent(self, refine_agent: Agent | None = None, custom_prompt=None) -> str:
@@ -215,7 +202,10 @@ class FileTranslater:
         if refine_agent is None:
             refine_agent = self.default_refine_agent(custom_prompt)
         result: list[str] = refine_agent.send_prompts(chuncks)
-        self.markdown = join_markdown_texts(result)
+        if self.file_suffix == ".txt":
+            self.markdown = "\n".join(result)
+        else:
+            self.markdown = join_markdown_texts(result)
         self._unmask_uris_in_markdown()
         translater_logger.info("markdown已修正")
         return self.markdown
@@ -227,7 +217,10 @@ class FileTranslater:
         if translate_agent is None:
             translate_agent = self.default_translate_agent(custom_prompt=custom_prompt, to_lang=to_lang)
         result: list[str] = translate_agent.send_prompts(chuncks)
-        self.markdown = join_markdown_texts(result)
+        if self.file_suffix == ".txt":
+            self.markdown = "\n".join(result)
+        else:
+            self.markdown = join_markdown_texts(result)
         self._unmask_uris_in_markdown()
         translater_logger.info("翻译完成")
         return self.markdown
@@ -239,7 +232,10 @@ class FileTranslater:
         if refine_agent is None:
             refine_agent = self.default_refine_agent(custom_prompt=custom_prompt)
         result: list[str] = await refine_agent.send_prompts_async(chuncks)
-        self.markdown = join_markdown_texts(result)
+        if self.file_suffix == ".txt":
+            self.markdown = "\n".join(result)
+        else:
+            self.markdown = join_markdown_texts(result)
         self._unmask_uris_in_markdown()
         translater_logger.info("markdown已修正")
         return self.markdown
@@ -252,7 +248,10 @@ class FileTranslater:
         if translate_agent is None:
             translate_agent = self.default_translate_agent(to_lang=to_lang, custom_prompt=custom_prompt)
         result: list[str] = await translate_agent.send_prompts_async(chuncks)
-        self.markdown = join_markdown_texts(result)
+        if self.file_suffix == ".txt":
+            self.markdown = "\n".join(result)
+        else:
+            self.markdown = join_markdown_texts(result)
         self._unmask_uris_in_markdown()
         translater_logger.info("翻译完成")
         return self.markdown
@@ -305,19 +304,23 @@ class FileTranslater:
         markdowner = markdown2.Markdown(extras=['tables', 'fenced-code-blocks', 'mermaid', "code-friendly"])
         # language=html
         pico = f"<style>{resource_path("static/pico.css").read_text(encoding='utf-8')}</style>"
-        html = resource_path("template/markdown.html").read_text(encoding='utf-8')
+        html_template = resource_path("template/markdown.html").read_text(encoding='utf-8')
         katex_css = f"<style>{resource_path("static/katex.css").read_text(encoding='utf-8')}</style>" if not cdn else r"""<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css" integrity="sha384-5TcZemv2l/9On385z///+d7MSYlvIEw9FuZTIdZ14vJLqWphw7e7ZPuOiCHJcFCP" crossorigin="anonymous">"""
         katex_js = f"<script>{resource_path("static/katex.js").read_text(encoding='utf-8')}</script>" if not cdn else r"""<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js" integrity="sha384-cMkvdD8LoxVzGF/RPUKAcvmm49FQ0oxwDF3BGKtDXcEc+T1b2N+teh/OJfpU0jr6" crossorigin="anonymous"></script>"""
         auto_render = f'<script>{resource_path("static/autoRender.js").read_text(encoding='utf-8')}</script>' if not cdn else r"""<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous"></script>"""
         mermaid = f'<script>{resource_path("static/mermaid.js").read_text(encoding='utf-8')}</script>'
+        if self.file_suffix == ".txt":
+            content = html.escape(self.markdown).replace("\n", "<br/>")
+        else:
+            content = markdowner.convert(self.markdown.replace("\\", "\\\\"))
         # TODO:实现MathJax本地化
-        render = jinja2.Template(html).render(
+        render = jinja2.Template(html_template).render(
             title=title,
             pico=pico,
             katexCss=katex_css,
             katexJs=katex_js,
             autoRender=auto_render,
-            markdown=markdowner.convert(self.markdown.replace("\\", "\\\\")),
+            markdown=content,
             mermaid=mermaid,
         )
         return render

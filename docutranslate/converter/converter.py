@@ -15,6 +15,8 @@ class Document:
             self.path=path
             self.filename=path.name
             self.filebytes=path.read_bytes()
+        self.suffix=Path(self.filename).suffix
+        self.stem=Path(self.filename).stem
 
 class Converter(Protocol):
     #转换为markdown
