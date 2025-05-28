@@ -22,6 +22,14 @@
             padding-bottom: 0.5rem;
         }
 
+        .prompt-area {
+            resize: vertical;
+            width: 100%;
+            min-height: 200px;
+            font-size: 0.9em;
+            box-sizing: border-box;
+            display: block;
+        }
 
         .log-area {
             background-color: #f5f5f5;
@@ -396,6 +404,14 @@
             <div class="form-group">
                 <label for="model_id">模型 ID</label>
                 <input type="text" id="model_id" name="model_id" placeholder="模型id" required>
+            </div>
+        </details>
+        <details>
+            <summary>系统提示（可选）</summary>
+            <div class="form-group">
+                <label for="custom_prompt_translate"></label>
+                <textarea class="prompt-area" type="text" id="custom_prompt_translate"
+                                                                       name="custom_prompt_translate" placeholder="翻译提示"></textarea>
             </div>
         </details>
         <button type="submit" id="submitButton" class="primary">开始翻译</button>

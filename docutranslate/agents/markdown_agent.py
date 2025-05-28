@@ -2,10 +2,11 @@ from typing import Unpack
 
 from .agent import (Agent, AgentArgs)
 
+
 class MDRefineAgent(Agent):
-    def __init__(self,**kwargs:Unpack[AgentArgs]):
+    def __init__(self, custom_prompt=None, **kwargs: Unpack[AgentArgs]):
         super().__init__(**kwargs)
-        self.system_prompt=r"""
+        self.system_prompt = r"""
 # 角色
 你是一个修正markdown文本的专家
 # 工作
@@ -35,14 +36,16 @@ code、latex和HTML保持结构
 {c_0,c_1,c^2}是一个集合
 输出:
 一道题目<ph-12asd2>:$c_0+1=2$，$c_0$等于几
-{$c_0$,$c_1$,$c^2$}是一个集合
-\no_think"""
+{$c_0$,$c_1$,$c^2$}是一个集合"""
+        if custom_prompt:
+            self.system_prompt += "\n#其余要求（可能为背景或指令）\n" + custom_prompt
+        self.system_prompt+=r'\no_think'
 
 
 class MDTranslateAgent(Agent):
-    def __init__(self,to_lang="中文",**kwargs:Unpack[AgentArgs]):
+    def __init__(self, custom_prompt=None, to_lang="中文", **kwargs: Unpack[AgentArgs]):
         super().__init__(**kwargs)
-        self.system_prompt=f"""
+        self.system_prompt = f"""
 # 角色
 你是一个专业的机器翻译引擎
 # 工作
@@ -79,5 +82,7 @@ The equation is E=mc 2. This is famous.
 volume 99, pages 173–186, 1999.
 输出：【文献引用保持源语言】
 [2] M. Castro, B. Liskov, et al. Practical byzantine fault tolerance. In OSDI,
-volume 99, pages 173–186, 1999.
-\\no_think"""
+volume 99, pages 173–186, 1999."""
+        if custom_prompt:
+            self.system_prompt += "\n#其余要求（可能为背景或指令）\n" + custom_prompt
+        self.system_prompt+=r'\no_think'

@@ -127,13 +127,14 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
             to_lang=params['to_lang'],
             formula=params['formula_ocr'],
             code=params['code_ocr'],
+            custom_prompt_translate=params['custom_prompt_translate'],
             refine=params['refine_markdown'],
             save=False
         )
 
         md_content = ft.export_to_markdown()
         try:
-            httpx.head("https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js",timeout=1)
+            httpx.head("https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js", timeout=1)
             html_content = ft.export_to_html(title=current_state["original_filename_stem"], cdn=True)
         except TimeoutError:
             translater_logger.info("无法连接cdn，使用本地js进行pdf渲染")
@@ -201,7 +202,6 @@ async def main_page(request: Request):
 
 @app.post("/translate")
 async def handle_translate(
-        request: Request,  # Added request for potential future use, not strictly needed now
         base_url: str = Form(...),
         apikey: str = Form(...),
         model_id: str = Form(...),
@@ -209,8 +209,9 @@ async def handle_translate(
         formula_ocr: bool = Form(False),
         code_ocr: bool = Form(False),
         refine_markdown: bool = Form(False),
-        convert_engin: str = Form(...),  # New parameter
-        mineru_token: Optional[str] = Form(None),  # New parameter
+        convert_engin: str = Form(...),
+        mineru_token: Optional[str] = Form(None),
+        custom_prompt_translate: Optional[str] = Form(None),
         file: UploadFile = File(...)
 ):
     global current_state, log_queue, log_history
@@ -276,8 +277,9 @@ async def handle_translate(
             "base_url": base_url, "apikey": apikey, "model_id": model_id,
             "to_lang": to_lang, "formula_ocr": formula_ocr,
             "code_ocr": code_ocr, "refine_markdown": refine_markdown,
-            "convert_engin": convert_engin,  # Pass to task
-            "mineru_token": mineru_token,  # Pass to task
+            "convert_engin": convert_engin,
+            "mineru_token": mineru_token,
+            "custom_prompt_translate":custom_prompt_translate,
         }
 
         loop = asyncio.get_running_loop()
