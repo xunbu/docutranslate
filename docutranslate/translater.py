@@ -120,7 +120,7 @@ class FileTranslater:
         document = Document(filename=name, filebytes=file)
         file_path = Path(name)
         # 如果是markdown，直接读取
-        if file_path.suffix == ".md":
+        if file_path.suffix in [".md", ".txt"]:
             self.markdown = file.decode()
         else:
             self.markdown = self._convert2markdown(document, formula=formula, code=code, artifact=self.docling_artifact)
@@ -139,7 +139,7 @@ class FileTranslater:
         document = Document(filename=name, filebytes=file)
         file_path = Path(name)
         # 如果是markdown，直接读取
-        if file_path.suffix == ".md":
+        if file_path.suffix in [".md", ".txt"]:
             self.markdown = file.decode()
         else:
             self.markdown = await self._convert2markdown_async(document, formula=formula, code=code,
@@ -165,7 +165,7 @@ class FileTranslater:
             file_path = Path(file_path)
         translater_logger.info(f"读取文件：{file_path.name}")
         # 如果是markdown，直接读取
-        if file_path.suffix == ".md":
+        if file_path.suffix in [".md", ".txt"]:
             with open(file_path, "r") as f:
                 self.markdown = f.read()
         else:
@@ -192,7 +192,7 @@ class FileTranslater:
             file_path = Path(file_path)
         translater_logger.info(f"读取文件：{file_path.name}")
         # 如果是markdown，直接读取
-        if file_path.suffix == ".md":
+        if file_path.suffix in [".md", ".txt"]:
             with open(file_path, "r") as f:
                 self.markdown = f.read()
         else:
