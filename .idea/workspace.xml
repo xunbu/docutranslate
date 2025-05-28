@@ -6,12 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="6b18b44a-df57-4212-a857-9e291ebe5dd2" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docutranslate/agents/agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/agents/agent.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/docutranslate/agents/markdown_agent.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/agents/markdown_agent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/static/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/static/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/docutranslate/translater.py" beforeDir="false" afterPath="$PROJECT_DIR$/docutranslate/translater.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -87,7 +83,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager": "true",
     "RunOnceActivity.git.unshallow": "true",
-    "git-widget-placeholder": "dev",
+    "git-widget-placeholder": "main",
     "last_opened_file_path": "C:/Users/jxgm/Desktop/translate/docutranslate",
     "list.type.of.created.stylesheet": "CSS",
     "node.js.detected.package.eslint": "true",
@@ -617,7 +613,7 @@
     </option>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/filetranslate$app_test__1_.coverage" NAME="app_test (1) 覆盖结果" MODIFIED="1748398439791" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
+    <SUITE FILE_PATH="coverage/filetranslate$app_test__1_.coverage" NAME="app_test (1) 覆盖结果" MODIFIED="1748401114236" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
     <SUITE FILE_PATH="coverage/filetranslate$test.coverage" NAME="test 覆盖结果" MODIFIED="1747472297913" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
     <SUITE FILE_PATH="coverage/filetranslate$convert.coverage" NAME="convert 覆盖结果" MODIFIED="1746963490689" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/docutranslate/utils" />
     <SUITE FILE_PATH="coverage/PDFtranslate$PDFtranslater__1_.coverage" NAME="PDFtranslater (1) 覆盖结果" MODIFIED="1746633258205" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/pdftranslate_packages" />

@@ -96,7 +96,7 @@ class Agent:
             system_prompt: str | None = None,
             max_concurrent: int | None = None  # 新增参数，默认并发数为5
     ) -> list[str]:
-        print(f"system_prompt:{self.system_prompt}")
+        # print(f"system_prompt:{self.system_prompt}")
         max_concurrent = self.max_concurrent if max_concurrent is None else max_concurrent
         total = len(prompts)
         count = 0

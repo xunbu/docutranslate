@@ -17,7 +17,7 @@ class MDRefineAgent(Agent):
 如果修正不必要，则返回原文。
 不要解释，不要注释。
 不要修改标题的级别（如一级标题不要修改为二级标题）
-形如<ph-abc123>的占位符不要改变
+形如<ph-ads231>的占位符不要改变【非常重要】
 code、latex和HTML保持结构
 所有公式（包括短公式）都应该是latex公式
 修复不正确的latex公式，行内公式要用$正确包裹以构造合法latex表达式
@@ -38,8 +38,8 @@ code、latex和HTML保持结构
 一道题目<ph-12asd2>:$c_0+1=2$，$c_0$等于几
 {$c_0$,$c_1$,$c^2$}是一个集合"""
         if custom_prompt:
-            self.system_prompt += "\n#其余要求（可能为背景或指令）\n" + custom_prompt
-        self.system_prompt+=r'\no_think'
+            self.system_prompt += "\n#补充重要规则或背景如下(应遵守):\n" + custom_prompt + '\n'
+        self.system_prompt += r'\no_think'
 
 
 class MDTranslateAgent(Agent):
@@ -55,20 +55,20 @@ class MDTranslateAgent(Agent):
 翻译要有专业性和高质量
 没有任何解释和注释。
 引用的参考文献名和其作者名保持原文不翻译 
-形如<ph-abc123>的占位符不要改变
+形如<ph-ads231>的占位符不要改变【非常重要】
 code、latex和HTML只翻译说明文字，其余保持原文
 公式必须表示为合法的latex公式,行内公式需被$正确包裹
-删除明显异常的无意义字符
+删除明显异常的字符
 # 输出
 翻译后的markdown译文纯文本（不是markdown代码块，无任何多余文字）
 # 示例
 ## 英文翻译为中文
 输入：
-hello<ph-aaaaaa>, what's your nam*@e?
-![photo title](<ph-abcde>)
+hello<ph-12asd2>, what's your nam*@e?
+![photo title](<ph-abcdde>)
 输出：
-你好<ph-aaaaaa>，你叫什么名字？
-![图像标题](<ph-abcde>)
+你好<ph-12asd2>，你叫什么名字？
+![图像标题](<ph-abcdde>)
 ## 公式要为合法latex（行内公式应正确包裹）
 输入：
 The equation is E=mc 2. This is famous.
@@ -84,5 +84,5 @@ volume 99, pages 173–186, 1999.
 [2] M. Castro, B. Liskov, et al. Practical byzantine fault tolerance. In OSDI,
 volume 99, pages 173–186, 1999."""
         if custom_prompt:
-            self.system_prompt += "\n#其余要求（可能为背景或指令）\n" + custom_prompt
-        self.system_prompt+=r'\no_think'
+            self.system_prompt += "\n#补充重要规则或背景如下(应遵守):\n" + custom_prompt + '\n'
+        self.system_prompt += r'\no_think'
