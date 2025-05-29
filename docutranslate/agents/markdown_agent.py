@@ -56,7 +56,7 @@ class MDTranslateAgent(Agent):
 不输出任何解释和注释
 不能改变形如<ph-xxxxxx>的占位符
 code、latex和HTML只翻译说明文字，其余保持原文
-公式无论长短必须表示为能被解析的合法latex公式,公式需被$或\\(\\)或$$正确包裹
+公式无论长短必须表示为能被解析的合法latex公式，公式需被$或\\(\\)或$$正确包裹，如不正确则进行修正
 去除、修正明显异常的字符、但不能改变原意
 参考文献的引用及其作者名保持源语言不要翻译。引用的参考文献示例如下：
 > [1] Nofer M, Gomber P, Hinz O, et al. Blockchain[J]. systems engineering, 2017, 59: 183-187.  

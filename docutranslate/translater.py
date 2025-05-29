@@ -6,6 +6,7 @@ import markdown2
 import jinja2
 from docutranslate.agents import Agent, AgentArgs
 from docutranslate.agents import MDRefineAgent, MDTranslateAgent
+from docutranslate.cache import document_cacher_global
 from docutranslate.converter import Document, ConverterMineru
 from docutranslate.utils.markdown_splitter import split_markdown_text, join_markdown_texts
 from docutranslate.utils.markdown_utils import uris2placeholder, placeholder2_uris, MaskDict
@@ -24,7 +25,7 @@ class FileTranslater:
                  max_concurrent=20, timeout=2000,
                  convert_engin: Literal["docling", "mineru"] = "mineru",
                  docling_artifact: Path | str | None = None,
-                 mineru_token: str = None):
+                 mineru_token: str = None, cache=True):
         self.convert_engin = convert_engin
         self.mineru_token = mineru_token.strip() if mineru_token is not None else None
         if isinstance(file_path, str):
@@ -48,11 +49,13 @@ class FileTranslater:
                 self.docling_artifact = artifact_path
         self.timeout = timeout
         self.file_suffix: str | None = None  # 现在处理的文件后缀如".md"、".txt"
+        self.cache = cache
+        self.cacher=document_cacher_global
 
     def _markdown_format(self):
         # 该方法还需要改进
         # self.markdown=mdformat.text(self.markdown)
-        self.markdown=self.markdown.replace(r'\（',r'\(')
+        self.markdown = self.markdown.replace(r'\（', r'\(')
         self.markdown = self.markdown.replace(r'\）', r'\)')
         pass
 
@@ -86,7 +89,13 @@ class FileTranslater:
     def default_translate_agent(self, custom_prompt=None, to_lang="中文") -> MDTranslateAgent:
         return MDTranslateAgent(custom_prompt=custom_prompt, to_lang=to_lang, **self._default_agent_params())
 
+
+
     def _convert2markdown(self, document: Document, formula: bool, code: bool, artifact: Path = None) -> str:
+        cached_result = self.cacher.get_cached_result(document, formula, code, convert_engin=self.convert_engin)
+        if cached_result:
+            translater_logger.info("正在获取缓存结果")
+            return cached_result
         if document.suffix in [".md", ".txt"]:
             return document.filebytes.decode("utf-8")
         translater_logger.info("正在转化为markdown")
@@ -102,10 +111,14 @@ class FileTranslater:
                 translater_logger.info("mineru暂不支持code识别")
             mdconverter = ConverterMineru(token=self.mineru_token, formula=formula)
             result = mdconverter.convert(document)
-        return result
+        return self.cacher.cache_result(result, document, formula, code, convert_engin=self.convert_engin)
 
     async def _convert2markdown_async(self, document: Document, formula: bool, code: bool,
                                       artifact: Path = None) -> str:
+        cached_result = self.cacher.get_cached_result(document, formula, code, convert_engin=self.convert_engin)
+        if cached_result:
+            translater_logger.info("解析结果已缓存，获取缓存结果")
+            return cached_result
         if document.suffix in [".md", ".txt"]:
             return document.filebytes.decode("utf-8")
         translater_logger.info("正在转化为markdown")
@@ -121,7 +134,7 @@ class FileTranslater:
                 translater_logger.info("mineru暂不支持code识别")
             mdconverter = ConverterMineru(token=self.mineru_token, formula=formula)
             result = await mdconverter.convert_async(document)
-        return result
+        return self.cacher.cache_result(result, document, formula, code, convert_engin=self.convert_engin)
 
     def read_document(self, document: Document, formula: bool, code: bool, save: bool,
                       save_format: Literal["markdown", "html"], refine: bool,
@@ -296,9 +309,9 @@ class FileTranslater:
         # 确保输出目录存在
         output_dir.mkdir(parents=True, exist_ok=True)
         full_name = output_dir / filename
-        html = self.export_to_html(str(filename.resolve().stem))
+        html_content = self.export_to_html(str(filename.resolve().stem))
         with open(full_name, "w") as file:
-            file.write(html)
+            file.write(html_content)
         translater_logger.info(f"文件已写入{full_name.resolve()}")
         return self
 
