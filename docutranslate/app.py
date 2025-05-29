@@ -18,6 +18,7 @@ from docutranslate.logger import translater_logger
 from docutranslate.utils.resource_utils import resource_path
 from docutranslate.global_values import available_packages
 
+httpx_client = httpx.AsyncClient()
 # --- 全局配置 ---
 log_queue: Optional[asyncio.Queue] = None
 current_state: Dict[str, Any] = {
@@ -134,10 +135,11 @@ async def _perform_translation(params: Dict[str, Any], file_contents: bytes, ori
 
         md_content = ft.export_to_markdown()
         try:
-            httpx.head("https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js", timeout=1)
+            await httpx_client.head("https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js", timeout=3)
             html_content = ft.export_to_html(title=current_state["original_filename_stem"], cdn=True)
-        except TimeoutError:
-            translater_logger.info("无法连接cdn，使用本地js进行pdf渲染")
+        except (httpx.TimeoutException, httpx.RequestError) as e:
+            print(f"连接cdn.jsdelivr.net失败，错误信息：{e}")
+            translater_logger.info("无法连接cdn.jsdelivr.net，使用本地js进行pdf渲染")
             html_content = ft.export_to_html(title=current_state["original_filename_stem"], cdn=False)
         end_time = time.time()
         duration = end_time - current_state["task_start_time"]
@@ -223,7 +225,7 @@ async def handle_translate(
             content={"task_started": False, "message": "另一个翻译任务正在进行中，请稍后再试。"}
         )
 
-    #可选的格式认证，这部分交给前端来写了
+    # 可选的格式认证，这部分交给前端来写了
     # if not file or not file.filename:
     #     return JSONResponse(
     #         status_code=400,
