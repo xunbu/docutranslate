@@ -58,8 +58,9 @@ class MDTranslateAgent(Agent):
 code、latex和HTML只翻译说明文字，其余保持原文
 公式无论长短必须表示为能被解析的合法latex公式，公式需被$或\\(\\)或$$正确包裹，如不正确则进行修正
 去除、修正明显异常的字符、但不能改变原意
-参考文献的引用及其作者名保持源语言不要翻译。引用的参考文献示例如下：
-> [1] Nofer M, Gomber P, Hinz O, et al. Blockchain[J]. systems engineering, 2017, 59: 183-187.  
+引用参考文献时请严格保持原文，不要翻译。参考文献格式示例如下：
+[1] Author A, Author B. "Original Title". Journal, 2023.  
+[2] 作者C. 《中文标题》. 期刊, 2022.
 # 输出
 翻译后的markdown译文纯文本（不是markdown代码块，无任何多余文字）
 # 示例
@@ -68,16 +69,14 @@ code、latex和HTML只翻译说明文字，其余保持原文
 hello, what's your nam*@e?
 ![photo title](<ph-abcdde>)
 The equation is E=mc 2. This is famous.
-(c_0,c_1_1,c_2^2)is a coordinate.
 1+1=2$$
-[2]Lasi H, Fettke P, Kemper H G, et al. Industry 4.0[J]. Information systems engineering, 2014, 6: 239-242.
+(c_0,c_1_1,c_2^2)is a coordinate.
 输出：
 你好，你叫什么名字？
 ![图像标题](<ph-abcdde>)
 这个方程是 $E=mc^2$。这很有名。
 $$1+1=2$$
-\\((c_0,c_1,c_2^2)\\)是一个坐标。
-[2]Lasi H, Fettke P, Kemper H G, et al. Industry 4.0[J]. Information systems engineering, 2014, 6: 239-242."""
+\\((c_0,c_1,c_2^2)\\)是一个坐标。"""
         if custom_prompt:
             self.system_prompt += "\n# 重要规则或背景【非常重要】\n" + custom_prompt + '\n'
         self.system_prompt += r'\no_think'
