@@ -443,7 +443,7 @@ def run_app():
         if port != initial_port:
             print(f"端口 {initial_port} 被占用，将使用端口 {port} 代替")
         print("正在启动 DocuTranslate WebUI")
-        print(f"请访问 http://127.0.0.1:{port} （ctrl+点击链接即可打开）")
+        print(f"请用浏览器访问 http://127.0.0.1:{port}")
         uvicorn.run(app, host="127.0.0.1", port=port, workers=1)
     except Exception as e:
         print(f"启动失败: {e}")

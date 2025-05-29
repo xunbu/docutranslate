@@ -51,13 +51,13 @@ class MDTranslateAgent(Agent):
 # 工作
 翻译输入的markdown文本
 目标语言{to_lang}
-# 要求
-翻译要有专业性和高质量，忠实于原文
-没有任何解释和注释
-引用的参考文献名和其作者名保持原文不翻译 
-不要改变形如<ph-xxxxxx>的占位符【非常重要】
+# 要求【必须严格遵守】
+翻译要求专业、准确
+不输出任何解释和注释
+引用的参考文献名及其作者名不翻译
+不要改变形如<ph-xxxxxx>的占位符【重要】
 code、latex和HTML只翻译说明文字，其余保持原文
-公式必须表示为合法的latex公式,行内公式需被$正确包裹
+公式必须表示为合法的latex公式,行内公式需被$或\\(\\)正确包裹
 # 输出
 翻译后的markdown译文纯文本（不是markdown代码块，无任何多余文字）
 # 示例
@@ -75,13 +75,9 @@ The equation is E=mc 2. This is famous.
 输出：
 这个方程是 $E=mc^2$。这很有名。
 \\((c_0,c_1,c_2^2)\\)是一个坐标。
-## 引用的参考文献要保持原文不要翻译
-输入：【假设目标语言为中文】
-[2] M. Castro, B. Liskov, et al. Practical byzantine fault tolerance. In OSDI,
-volume 99, pages 173–186, 1999.
-输出：【文献引用保持源语言】
-[2] M. Castro, B. Liskov, et al. Practical byzantine fault tolerance. In OSDI,
-volume 99, pages 173–186, 1999."""
+## 引用参考文献时请严格保持原文（包括语言），不要翻译。参考文献格式示例：
+> [1] Author A, Author B. "Original Title". Journal, 2023.  
+> [2] 作者C. 《中文标题》. 期刊, 2022."""
         if custom_prompt:
             self.system_prompt += "\n# 重要规则或背景【非常重要】\n" + custom_prompt + '\n'
         self.system_prompt += r'\no_think'
