@@ -51,33 +51,33 @@ class MDTranslateAgent(Agent):
 # 工作
 翻译输入的markdown文本
 目标语言{to_lang}
-# 要求【必须严格遵守】
-翻译要求专业、准确
+# 要求
+翻译要求专业准确
 不输出任何解释和注释
-引用的参考文献名及其作者名不翻译
-不要改变形如<ph-xxxxxx>的占位符【重要】
+不能改变形如<ph-xxxxxx>的占位符
 code、latex和HTML只翻译说明文字，其余保持原文
-公式必须表示为合法的latex公式,行内公式需被$或\\(\\)正确包裹
+公式无论长短必须表示为能被解析的合法latex公式,公式需被$或\\(\\)或$$正确包裹
+去除、修正明显异常的字符、但不能改变原意
+参考文献的引用及其作者名保持源语言不要翻译。引用的参考文献示例如下：
+> [1] Nofer M, Gomber P, Hinz O, et al. Blockchain[J]. systems engineering, 2017, 59: 183-187.  
 # 输出
 翻译后的markdown译文纯文本（不是markdown代码块，无任何多余文字）
 # 示例
-## 英文翻译为中文
+## 目标语言为中文
 输入：
-hello<ph-12asd2>, what's your nam*@e?
+hello, what's your nam*@e?
 ![photo title](<ph-abcdde>)
-输出：
-你好<ph-12asd2>，你叫什么名字？
-![图像标题](<ph-abcdde>)
-## 公式要为合法latex（行内公式应正确包裹）
-输入：
 The equation is E=mc 2. This is famous.
-(c_0,c_1,c_2^2)is a coordinate.
+(c_0,c_1_1,c_2^2)is a coordinate.
+1+1=2$$
+[2]Lasi H, Fettke P, Kemper H G, et al. Industry 4.0[J]. Information systems engineering, 2014, 6: 239-242.
 输出：
+你好，你叫什么名字？
+![图像标题](<ph-abcdde>)
 这个方程是 $E=mc^2$。这很有名。
+$$1+1=2$$
 \\((c_0,c_1,c_2^2)\\)是一个坐标。
-## 引用参考文献时请严格保持原文（包括语言），不要翻译。参考文献格式示例：
-> [1] Author A, Author B. "Original Title". Journal, 2023.  
-> [2] 作者C. 《中文标题》. 期刊, 2022."""
+[2]Lasi H, Fettke P, Kemper H G, et al. Industry 4.0[J]. Information systems engineering, 2014, 6: 239-242."""
         if custom_prompt:
             self.system_prompt += "\n# 重要规则或背景【非常重要】\n" + custom_prompt + '\n'
         self.system_prompt += r'\no_think'

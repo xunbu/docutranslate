@@ -52,6 +52,8 @@ class FileTranslater:
     def _markdown_format(self):
         # 该方法还需要改进
         # self.markdown=mdformat.text(self.markdown)
+        self.markdown=self.markdown.replace(r'\（',r'\(')
+        self.markdown = self.markdown.replace(r'\）', r'\)')
         pass
 
     def _mask_uris_in_markdown(self):
@@ -310,9 +312,9 @@ class FileTranslater:
         auto_render = f'<script>{resource_path("static/autoRender.js").read_text(encoding='utf-8')}</script>' if not cdn else r"""<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/contrib/auto-render.min.js" integrity="sha384-hCXGrW6PitJEwbkoStFjeJxv+fSOOQKOPbJxSfM6G5sWZjAyWhXiTIIAmQqnlLlh" crossorigin="anonymous"></script>"""
         mermaid = f'<script>{resource_path("static/mermaid.js").read_text(encoding='utf-8')}</script>'
         if self.file_suffix == ".txt":
-            content = html.escape(self.markdown).replace("\n", "<br>")
+            content = html.escape(self.export_to_markdown()).replace("\n", "<br>")
         else:
-            content = markdowner.convert(self.markdown.replace("\\", "\\\\"))
+            content = markdowner.convert(self.export_to_markdown().replace("\\", "\\\\"))
         # TODO:实现MathJax本地化
         render = jinja2.Template(html_template).render(
             title=title,
