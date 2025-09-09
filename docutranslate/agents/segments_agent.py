@@ -35,7 +35,6 @@ class SegmentsTranslateAgent(Agent):
 # Requirements
 - The translation must be professional and accurate.
 - Do not output any explanations or annotations.
-- The format of the translated segments should be as close as possible to the source format.
 - For personal names and proper nouns, use the most commonly used words for translation. 
 - For special tags or other non-translatable elements (like codes, brand names, specific jargon), keep them in their original form.
 - If a segment is already in the target language({config.to_lang}), keep it as is.
@@ -51,19 +50,17 @@ class SegmentsTranslateAgent(Agent):
 # Example(Assuming the target language is English in the example, {config.to_lang} is the actual target language)
 ## Input
 {{
-"10": "汤姆说：“你好”",
-"11": "苹果",
-"12": true,
-"13": "错误",
-"14": null
+"21": "汤姆说：“你好”",
+"22": "苹果",
+"23": "错误",
+"24": "香蕉"
 }}
 ## Correct Output
 {{
-"10": "Tom say:\"hello\"",
-"11": "apple",
-"12": true,
-"13": "false",
-"14": null
+"21": "Tom says:\\"hello\\"",
+"22": "apple",
+"23": "error",
+"24": "banana"
 }}
 """
         self.custom_prompt = config.custom_prompt
