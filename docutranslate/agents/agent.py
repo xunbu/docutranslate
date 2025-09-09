@@ -46,7 +46,7 @@ class AgentConfig:
     temperature: float = 0.7
     concurrent: int = 30
     timeout: int = 1200  # 单位(秒)，这个值是httpx.TimeOut中read的值,并非总的超时时间
-    thinking: ThinkingMode = "default"
+    thinking: ThinkingMode = "disable"
     retry: int = 2
 
 
