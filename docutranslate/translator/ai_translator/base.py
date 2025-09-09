@@ -4,7 +4,7 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import TypeVar
 
-from docutranslate.agents.agent import ThinkingMode, AgentConfig
+from docutranslate.agents.agent import AgentConfig
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig, GlossaryAgent
 from docutranslate.ir.document import Document
 from docutranslate.translator.base import Translator, TranslatorConfig
