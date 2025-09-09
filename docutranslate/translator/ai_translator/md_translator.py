@@ -33,7 +33,8 @@ class MDTranslator(AiTranslator):
                                                   concurrent=config.concurrent,
                                                   timeout=config.timeout,
                                                   logger=self.logger,
-                                                  glossary_dict=config.glossary_dict)
+                                                  glossary_dict=config.glossary_dict,
+                                                  retry=config.retry)
             self.translate_agent = MDTranslateAgent(agent_config)
 
     def translate(self, document: MarkdownDocument) -> Self:

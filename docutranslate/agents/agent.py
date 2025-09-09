@@ -17,7 +17,6 @@ from docutranslate.global_values import USE_PROXY
 from docutranslate.logger import global_logger
 from docutranslate.utils.utils import get_httpx_proxies
 
-MAX_RETRY_COUNT = 2
 MAX_REQUESTS_PER_ERROR = 15
 
 ThinkingMode = Literal["enable", "disable", "default"]
@@ -48,6 +47,7 @@ class AgentConfig:
     concurrent: int = 30
     timeout: int = 1200  # 单位(秒)，这个值是httpx.TimeOut中read的值,并非总的超时时间
     thinking: ThinkingMode = "default"
+    retry: int = 2
 
 
 class TotalErrorCounter:
@@ -244,6 +244,8 @@ class Agent:
         # 新增：用于统计token使用情况
         self.token_counter = TokenCounter(logger=self.logger)
 
+        self.retry = config.retry
+
     def _add_thinking_mode(self, data: dict):
         if self.domain not in self._think_factory:
             return
@@ -324,7 +326,7 @@ class Agent:
 
             if retry_count > 0:
                 self.logger.info(
-                    f"重试成功 (第 {retry_count}/{MAX_RETRY_COUNT} 次尝试)。"
+                    f"重试成功 (第 {retry_count}/{self.retry} 次尝试)。"
                 )
 
             # print(f"result:=============================================================\n{result}\n================\n")
@@ -364,7 +366,7 @@ class Agent:
         if current_partial_result:
             best_partial_result = current_partial_result
 
-        if should_retry and retry and retry_count < MAX_RETRY_COUNT:
+        if should_retry and retry and retry_count < self.retry:
             # 仅在硬错误时才增加总错误计数
             if is_hard_error:
                 if retry_count == 0:
@@ -391,7 +393,7 @@ class Agent:
                         )
                     )
 
-            self.logger.info(f"正在重试第 {retry_count + 1}/{MAX_RETRY_COUNT} 次...")
+            self.logger.info(f"正在重试第 {retry_count + 1}/{self.retry} 次...")
             await asyncio.sleep(0.5)
             return await self.send_async(
                 client,
@@ -545,7 +547,7 @@ class Agent:
 
             if retry_count > 0:
                 self.logger.info(
-                    f"重试成功 (第 {retry_count}/{MAX_RETRY_COUNT} 次尝试)。"
+                    f"重试成功 (第 {retry_count}/{self.retry} 次尝试)。"
                 )
 
             return (
@@ -582,7 +584,7 @@ class Agent:
         if current_partial_result:
             best_partial_result = current_partial_result
 
-        if should_retry and retry and retry_count < MAX_RETRY_COUNT:
+        if should_retry and retry and retry_count < self.retry:
             # 仅在硬错误时才增加总错误计数
             if is_hard_error:
                 if retry_count == 0:
@@ -609,7 +611,7 @@ class Agent:
                         )
                     )
 
-            self.logger.info(f"正在重试第 {retry_count + 1}/{MAX_RETRY_COUNT} 次...")
+            self.logger.info(f"正在重试第 {retry_count + 1}/{self.retry} 次...")
             time.sleep(0.5)
             return self.send(
                 client,

@@ -41,7 +41,8 @@ class XlsxTranslator(AiTranslator):
                 concurrent=config.concurrent,
                 timeout=config.timeout,
                 logger=self.logger,
-                glossary_dict=config.glossary_dict
+                glossary_dict=config.glossary_dict,
+                retry=config.retry
             )
             self.translate_agent = SegmentsTranslateAgent(agent_config)
         self.insert_mode = config.insert_mode

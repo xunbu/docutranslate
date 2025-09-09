@@ -54,6 +54,7 @@ class AiTranslator(Translator[T]):
                     concurrent=config.concurrent,
                     timeout=config.timeout,
                     logger=self.logger,
+                    retry=config.retry
                 )
                 self.glossary_agent = GlossaryAgent(glossary_agent_config)
 
