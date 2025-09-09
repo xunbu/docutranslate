@@ -57,7 +57,7 @@ class SegmentsTranslateAgent(Agent):
 }}
 ## Correct Output
 {{
-"21": "Tom says:\\"hello\\"",
+"21": "Tom says:\\\"hello\\\"",
 "22": "apple",
 "23": "error",
 "24": "banana"
