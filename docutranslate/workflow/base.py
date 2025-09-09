@@ -9,11 +9,12 @@ from typing import Self, Generic, TypeVar
 from docutranslate.exporter.base import Exporter
 from docutranslate.ir.attachment_manager import AttachMentManager
 from docutranslate.ir.document import Document
+from docutranslate.logger import global_logger
 
 
 @dataclass(kw_only=True)
 class WorkflowConfig:
-    logger: Logger | None = None
+    logger: Logger = global_logger
 
 
 T_Config = TypeVar("T_Config", bound=WorkflowConfig)
