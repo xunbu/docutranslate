@@ -12,3 +12,5 @@ docutranslate/output/
 .venv
 #idea
 .idea/
+#claude
+.claude/
