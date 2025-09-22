@@ -31,12 +31,11 @@ from docutranslate.global_values.conditional_import import DOCLING_EXIST
 from docutranslate.workflow.base import Workflow
 from docutranslate.workflow.docx_workflow import DocxWorkflow, DocxWorkflowConfig
 from docutranslate.workflow.epub_workflow import EpubWorkflow, EpubWorkflowConfig
-# --- HTML WORKFLOW IMPORT START ---
 from docutranslate.workflow.html_workflow import HtmlWorkflow, HtmlWorkflowConfig
-# --- HTML WORKFLOW IMPORT END ---
+from docutranslate.workflow.ass_workflow import AssWorkflow, AssWorkflowConfig
 from docutranslate.workflow.interfaces import DocxExportable, EpubExportable
 from docutranslate.workflow.interfaces import HTMLExportable, MDFormatsExportable, TXTExportable, JsonExportable, \
-    XlsxExportable, SrtExportable, CsvExportable
+    XlsxExportable, SrtExportable, CsvExportable, AssExportable
 from docutranslate.workflow.json_workflow import JsonWorkflow, JsonWorkflowConfig
 from docutranslate.workflow.md_based_workflow import MarkdownBasedWorkflow, MarkdownBasedWorkflowConfig
 from docutranslate.workflow.srt_workflow import SrtWorkflow, SrtWorkflowConfig
@@ -60,9 +59,9 @@ from docutranslate.translator.ai_translator.srt_translator import SrtTranslatorC
 from docutranslate.exporter.srt.srt2html_exporter import Srt2HTMLExporterConfig
 from docutranslate.translator.ai_translator.epub_translator import EpubTranslatorConfig
 from docutranslate.exporter.epub.epub2html_exporter import Epub2HTMLExporterConfig
-# --- HTML TRANSLATOR IMPORT START ---
 from docutranslate.translator.ai_translator.html_translator import HtmlTranslatorConfig
-# --- HTML TRANSLATOR IMPORT END ---
+from docutranslate.translator.ai_translator.ass_translator import AssTranslatorConfig
+from docutranslate.exporter.ass.ass2html_exporter import Ass2HTMLExporterConfig
 # ------------------------------------
 
 from docutranslate.logger import global_logger
@@ -86,6 +85,7 @@ WORKFLOW_DICT: Dict[str, Type[Workflow]] = {
     "srt": SrtWorkflow,
     "epub": EpubWorkflow,
     "html": HtmlWorkflow,
+    "ass": AssWorkflow,
 }
 
 # --- 媒体类型映射 ---
@@ -100,6 +100,7 @@ MEDIA_TYPES = {
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "srt": "text/plain; charset=utf-8",
     "epub": "application/epub+zip",
+    "ass": "text/plain; charset=utf-8",
 }
 
 
@@ -159,7 +160,7 @@ async def lifespan(app: FastAPI):
     global_logger.propagate = False
     global_logger.setLevel(logging.INFO)
     print("应用启动完成，多任务状态已初始化。")
-    print(f"服务接口文档: http://127.0.0.1:{app.state.port_to_use}/docs")
+    print(f"服务接口文档: http://12ent.0.0.1:{app.state.port_to_use}/docs")
     print(f"请用浏览器访问 http://127.0.0.1:{app.state.port_to_use}\n")
     yield
     # 清理任何可能残留的临时目录
@@ -391,10 +392,26 @@ class HtmlWorkflowParams(BaseWorkflowParams):
 # --- HTML WORKFLOW PARAMS END ---
 
 
+# --- ASS WORKFLOW PARAMS START ---
+class AssWorkflowParams(BaseWorkflowParams):
+    workflow_type: Literal['ass'] = Field(..., description="指定使用ASS字幕的翻译工作流。")
+    insert_mode: Literal["replace", "append", "prepend"] = Field(
+        "replace",
+        description="翻译文本的插入模式。'replace'：替换原文，'append'：附加到原文后，'prepend'：附加到原文前。"
+    )
+    separator: str = Field(
+        "\\N",
+        description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。ASS格式通常使用 \\N 作为换行符。"
+    )
+
+
+# --- ASS WORKFLOW PARAMS END ---
+
+
 # 3. 使用可辨识联合类型（Discriminated Union）将它们组合起来
 TranslatePayload = Annotated[
     Union[
-        MarkdownWorkflowParams, TextWorkflowParams, JsonWorkflowParams, XlsxWorkflowParams, DocxWorkflowParams, SrtWorkflowParams, EpubWorkflowParams, HtmlWorkflowParams],
+        MarkdownWorkflowParams, TextWorkflowParams, JsonWorkflowParams, XlsxWorkflowParams, DocxWorkflowParams, SrtWorkflowParams, EpubWorkflowParams, HtmlWorkflowParams, AssWorkflowParams],
     Field(discriminator='workflow_type')
 ]
 
@@ -403,7 +420,7 @@ TranslatePayload = Annotated[
 class TranslateServiceRequest(BaseModel):
     file_name: str = Field(..., description="上传的原始文件名，含扩展名。",
                            examples=["my_paper.pdf", "chapter1.txt", "data.xlsx", "video.srt", "my_book.epub",
-                                     "index.html"])
+                                     "index.html", "dialogue.ass"])
     file_content: str = Field(..., description="Base64编码的文件内容。", examples=["JVBERi0xLjQK..."])
     payload: TranslatePayload = Field(..., description="包含工作流类型和相应参数的载荷。")
 
@@ -575,6 +592,26 @@ class TranslateServiceRequest(BaseModel):
                         "to_lang": "中文",
                         "insert_mode": "replace",
                         "separator": " ",
+                        "chunk_size": default_params["chunk_size"],
+                        "concurrent": default_params["concurrent"],
+                        "temperature": default_params["temperature"],
+                        "timeout": default_params["timeout"],
+                        "thinking": "default",
+                        "retry": default_params["retry"],
+                    }
+                },
+                {
+                    "file_name": "dialogue.ass",
+                    "file_content": "U2NyaXB0IEluZm8NC...",
+                    "payload": {
+                        "workflow_type": "ass",
+                        "skip_translate": False,
+                        "base_url": "https://api.openai.com/v1",
+                        "api_key": "sk-your-api-key-here",
+                        "model_id": "gpt-4o",
+                        "to_lang": "中文",
+                        "insert_mode": "replace",
+                        "separator": "\\N",
                         "chunk_size": default_params["chunk_size"],
                         "concurrent": default_params["concurrent"],
                         "temperature": default_params["temperature"],
@@ -787,6 +824,27 @@ async def _perform_translation(
             workflow = HtmlWorkflow(config=workflow_config)
         # --- HTML WORKFLOW LOGIC END ---
 
+        # --- ASS WORKFLOW LOGIC START ---
+        elif isinstance(payload, AssWorkflowParams):
+            task_logger.info("构建 AssWorkflow 配置。")
+            translator_args = payload.model_dump(include={
+                'skip_translate', 'base_url', 'api_key', 'model_id', 'to_lang', 'custom_prompt',
+                'temperature', 'thinking', 'chunk_size', 'concurrent',
+                'insert_mode', 'separator', 'glossary_dict', 'timeout', 'retry'
+            }, exclude_none=True)
+            translator_args['glossary_generate_enable'] = payload.glossary_generate_enable
+            translator_args['glossary_agent_config'] = build_glossary_agent_config()
+            translator_config = AssTranslatorConfig(**translator_args)
+
+            html_exporter_config = Ass2HTMLExporterConfig(cdn=True)
+            workflow_config = AssWorkflowConfig(
+                translator_config=translator_config,
+                html_exporter_config=html_exporter_config,
+                logger=task_logger
+            )
+            workflow = AssWorkflow(config=workflow_config)
+        # --- ASS WORKFLOW LOGIC END ---
+
         else:
             raise TypeError(f"工作流类型 '{payload.workflow_type}' 的处理逻辑未实现。")
 
@@ -832,6 +890,8 @@ async def _perform_translation(
                 html_config = Srt2HTMLExporterConfig(cdn=is_cdn_available)
             elif isinstance(workflow, EpubWorkflow):
                 html_config = Epub2HTMLExporterConfig(cdn=is_cdn_available)
+            elif isinstance(workflow, AssWorkflow):
+                html_config = Ass2HTMLExporterConfig(cdn=is_cdn_available)
             export_map['html'] = (lambda: workflow.export_to_html(html_config), f"{filename_stem}_translated.html",
                                   True)
         if isinstance(workflow, MDFormatsExportable):
@@ -851,6 +911,8 @@ async def _perform_translation(
             export_map['srt'] = (workflow.export_to_srt, f"{filename_stem}_translated.srt", True)
         if isinstance(workflow, EpubExportable):
             export_map['epub'] = (workflow.export_to_epub, f"{filename_stem}_translated.epub", False)
+        if isinstance(workflow, AssExportable):
+            export_map['ass'] = (workflow.export_to_ass, f"{filename_stem}_translated.ass", True)
 
         # 循环生成文件
         for file_type, (export_func, filename, is_string_output) in export_map.items():
@@ -1013,7 +1075,7 @@ def _cancel_translation_logic(task_id: str):
     description="""
 接收一个包含文件内容（Base64编码）和工作流参数的JSON请求，启动一个后台翻译任务。
 
-- **工作流选择**: 请求体中的 `payload.workflow_type` 字段决定了本次任务的类型（如 `markdown_based`, `txt`, `json`, `xlsx`, `docx`, `srt`, `epub`, `html`）。
+- **工作流选择**: 请求体中的 `payload.workflow_type` 字段决定了本次任务的类型（如 `markdown_based`, `txt`, `json`, `xlsx`, `docx`, `srt`, `epub`, `html`, `ass`）。
 - **动态参数**: 根据所选工作流，API需要不同的参数集。请参考下面的Schema或示例。
 - **异步处理**: 此端点会立即返回任务ID，客户端需轮询状态接口获取进度。
 """,
@@ -1220,6 +1282,23 @@ async def service_release_task(task_id: str):
                             }
                         },
                         # --- HTML STATUS EXAMPLE END ---
+                        # --- ASS STATUS EXAMPLE START ---
+                        "completed_ass": {
+                            "summary": "已完成 (ASS)",
+                            "value": {
+                                "task_id": "a1b2c3d5", "is_processing": False,
+                                "status_message": "翻译成功！用时 12.34 秒。",
+                                "error_flag": False, "download_ready": True, "original_filename_stem": "dialogue",
+                                "original_filename": "dialogue.ass", "task_start_time": 1678890200.0,
+                                "task_end_time": 1678890212.34,
+                                "downloads": {
+                                    "ass": "/service/download/a1b2c3d5/ass",
+                                    "html": "/service/download/a1b2c3d5/html"
+                                },
+                                "attachment": {}
+                            }
+                        },
+                        # --- ASS STATUS EXAMPLE END ---
                         "error": {
                             "summary": "失败",
                             "value": {
@@ -1287,7 +1366,7 @@ async def service_get_logs(task_id: str):
     return JSONResponse(content={"logs": new_logs})
 
 
-FileType = Literal["markdown", "markdown_zip", "html", "txt", "json", "xlsx", "csv", "docx", "srt", "epub"]
+FileType = Literal["markdown", "markdown_zip", "html", "txt", "json", "xlsx", "csv", "docx", "srt", "epub", "ass"]
 
 
 @service_router.get(
@@ -1318,7 +1397,7 @@ FileType = Literal["markdown", "markdown_zip", "html", "txt", "json", "xlsx", "c
 async def service_download_file(
         task_id: str = FastApiPath(..., description="已完成任务的ID", examples=["b2865b93"]),
         file_type: FileType = FastApiPath(..., description="要下载的文件类型。",
-                                          examples=["html", "json", "csv", "docx", "srt", "epub"])
+                                          examples=["html", "json", "csv", "docx", "srt", "epub", "ass"])
 ):
     task_state = tasks_state.get(task_id)
     if not task_state:
@@ -1418,7 +1497,7 @@ async def service_download_attachment(
 async def service_content(
         task_id: str = FastApiPath(..., description="已完成任务的ID", examples=["b2865b93"]),
         file_type: FileType = FastApiPath(..., description="要获取内容的文件类型。",
-                                          examples=["html", "json", "csv", "docx", "srt", "epub"])
+                                          examples=["html", "json", "csv", "docx", "srt", "epub", "ass"])
 ):
     task_state = tasks_state.get(task_id)
     if not task_state:

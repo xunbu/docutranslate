@@ -18,6 +18,8 @@ dependencies = [
     "markdown>=3.8.2",
     "pymdown-extensions>=10.16.1",
     "chardet>=5.2.0",
+    "py>=1.11.0",
+    "pysubs2>=1.8.0",
 ]
 dynamic = ["version"]
 

@@ -103,3 +103,11 @@ class EpubExportable(Protocol[T_ExporterConfig]):
 
     def save_as_epub(self, name: str, output_dir: Path | str, config: T_ExporterConfig | None = None) -> Self:
         ...
+
+@runtime_checkable
+class AssExportable(Protocol[T_ExporterConfig]):
+    def export_to_ass(self, config: T_ExporterConfig | None = None) -> str:
+        ...
+
+    def save_as_ass(self, name: str, output_dir: Path | str, config: T_ExporterConfig | None = None) -> Self:
+        ...
