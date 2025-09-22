@@ -28,11 +28,11 @@ from docutranslate.agents.glossary_agent import GlossaryAgentConfig
 from docutranslate.exporter.md.types import ConvertEngineType
 # --- 核心代码 Imports ---
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
+from docutranslate.workflow.ass_workflow import AssWorkflow, AssWorkflowConfig
 from docutranslate.workflow.base import Workflow
 from docutranslate.workflow.docx_workflow import DocxWorkflow, DocxWorkflowConfig
 from docutranslate.workflow.epub_workflow import EpubWorkflow, EpubWorkflowConfig
 from docutranslate.workflow.html_workflow import HtmlWorkflow, HtmlWorkflowConfig
-from docutranslate.workflow.ass_workflow import AssWorkflow, AssWorkflowConfig
 from docutranslate.workflow.interfaces import DocxExportable, EpubExportable
 from docutranslate.workflow.interfaces import HTMLExportable, MDFormatsExportable, TXTExportable, JsonExportable, \
     XlsxExportable, SrtExportable, CsvExportable, AssExportable
@@ -218,7 +218,7 @@ DocuTranslate 后端服务 API，提供文档翻译、状态查询、结果下�
     version=__version__,
     openapi_tags=tags_metadata,
 )
-
+# mimetypes.add_type("application/wasm", ".wasm")
 service_router = APIRouter(prefix="/service", tags=["Service API"])
 STATIC_DIR = resource_path("static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")

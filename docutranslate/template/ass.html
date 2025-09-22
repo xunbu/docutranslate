@@ -2,15 +2,65 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>ass subtitle</title>
+    <title>ASS Subtitle Preview</title>
     <style>
-        html {
-            padding: 2vh 10vw;
-            font-size: 15px;
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            font-family: sans-serif;
+        }
+        #subtitle-container {
+            position: relative;
+            width: 80vw;
+            /* Using a 16:9 aspect ratio for the canvas */
+            aspect-ratio: 16 / 9;
+            margin-top: 2vh;
+            background-color: #333;
+            border: 1px solid #555;
+        }
+        #subtitle-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        #controls {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #time-slider {
+            width: 50vw;
+        }
+        #current-time {
+            min-width: 70px;
+            text-align: center;
+            font-family: monospace;
+            background: #fff;
+            padding: 5px;
+            border-radius: 3px;
+            border: 1px solid #ccc;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            background-color: #fff;
+            padding: 1em;
+            margin-top: 2vh;
+            width: 80vw;
+            border: 1px solid #ccc;
         }
     </style>
 </head>
 <body>
-<div><pre>{{ ass_data }}</pre></div>
+
+    <div><pre>{{ ass_data }}</pre></div>
+
+
 </body>
 </html>
