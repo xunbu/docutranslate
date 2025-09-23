@@ -34,7 +34,8 @@ class JsonTranslator(AiTranslator):
                 timeout=config.timeout,
                 logger=self.logger,
                 glossary_dict=config.glossary_dict,
-                retry=config.retry
+                retry=config.retry,
+                system_proxy_enable=config.system_proxy_enable
             )
             self.translate_agent = SegmentsTranslateAgent(agent_config)
         self.json_paths = config.json_paths
