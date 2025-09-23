@@ -160,7 +160,7 @@ async def lifespan(app: FastAPI):
     global_logger.propagate = False
     global_logger.setLevel(logging.INFO)
     print("应用启动完成，多任务状态已初始化。")
-    print(f"服务接口文档: http://12ent.0.0.1:{app.state.port_to_use}/docs")
+    print(f"服务接口文档: http://127.0.0.1:{app.state.port_to_use}/docs")
     print(f"请用浏览器访问 http://127.0.0.1:{app.state.port_to_use}\n")
     yield
     # 清理任何可能残留的临时目录
@@ -1506,7 +1506,7 @@ async def service_content(
     file_info = task_state.get("downloadable_files", {}).get(file_type)
     if not file_info or not os.path.exists(file_info.get("path")):
         raise HTTPException(status_code=404,
-                            detail=f"任务 '{task_id}' 不支持获取 '{file_type}' 类型の内容，或文件已丢失。")
+                            detail=f"任务 '{task_id}' 不支持获取 '{file_type}' 类型的内容，或文件已丢失。")
 
     file_path = file_info["path"]
     filename = file_info["filename"]
