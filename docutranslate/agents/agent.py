@@ -498,11 +498,14 @@ class Agent:
 
             # 新增：打印token使用统计
             token_stats = self.token_counter.get_stats()
-            self.logger.info(
-                f"Token使用统计 - 输入: {token_stats['input_tokens'] / 1000:.2f}K(含cached: {token_stats['cached_tokens'] / 1000:.2f}K), "
-                f"输出: {token_stats['output_tokens'] / 1000:.2f}K(含reasoning: {token_stats['reasoning_tokens'] / 1000:.2f}K), "
-                f"总计: {token_stats['total_tokens'] / 1000:.2f}K"
-            )
+            if token_stats['input_tokens']<0:
+                self.logger.info("Token统计失败")
+            else:
+                self.logger.info(
+                    f"Token使用统计 - 输入: {token_stats['input_tokens'] / 1000:.2f}K(含cached: {token_stats['cached_tokens'] / 1000:.2f}K), "
+                    f"输出: {token_stats['output_tokens'] / 1000:.2f}K(含reasoning: {token_stats['reasoning_tokens'] / 1000:.2f}K), "
+                    f"总计: {token_stats['total_tokens'] / 1000:.2f}K"
+                )
 
             return results
 
@@ -732,11 +735,14 @@ class Agent:
 
         # 新增：打印token使用统计
         token_stats = self.token_counter.get_stats()
-        self.logger.info(
-            f"Token使用统计 - 输入: {token_stats['input_tokens'] / 1000:.2f}K(含cached: {token_stats['cached_tokens'] / 1000:.2f}K), "
-            f"输出: {token_stats['output_tokens'] / 1000:.2f}K(含reasoning: {token_stats['reasoning_tokens'] / 1000:.2f}K), "
-            f"总计: {token_stats['total_tokens'] / 1000:.2f}K"
-        )
+        if token_stats['input_tokens'] < 0:
+            self.logger.info("Token统计失败")
+        else:
+            self.logger.info(
+                f"Token使用统计 - 输入: {token_stats['input_tokens'] / 1000:.2f}K(含cached: {token_stats['cached_tokens'] / 1000:.2f}K), "
+                f"输出: {token_stats['output_tokens'] / 1000:.2f}K(含reasoning: {token_stats['reasoning_tokens'] / 1000:.2f}K), "
+                f"总计: {token_stats['total_tokens'] / 1000:.2f}K"
+            )
 
         return output_list
 
