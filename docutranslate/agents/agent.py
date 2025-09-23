@@ -107,39 +107,41 @@ def extract_token_info(response_data: dict) -> tuple[int, int, int, int]:
     # 初始化token详细统计
     cached_tokens = 0
     reasoning_tokens = 0
+    try:
+        # 尝试从不同格式获取cached_tokens
+        # 格式1: input_tokens_details.cached_tokens
+        if (
+            "input_tokens_details" in usage
+            and "cached_tokens" in usage["input_tokens_details"]
+        ):
+            cached_tokens = usage["input_tokens_details"]["cached_tokens"]
+        # 格式2: prompt_tokens_details.cached_tokens
+        elif (
+            "prompt_tokens_details" in usage
+            and "cached_tokens" in usage["prompt_tokens_details"]
+        ):
+            cached_tokens = usage["prompt_tokens_details"]["cached_tokens"]
+        # 格式3: prompt_cache_hit_tokens (直接在usage下)
+        elif "prompt_cache_hit_tokens" in usage:
+            cached_tokens = usage["prompt_cache_hit_tokens"]
 
-    # 尝试从不同格式获取cached_tokens
-    # 格式1: input_tokens_details.cached_tokens
-    if (
-        "input_tokens_details" in usage
-        and "cached_tokens" in usage["input_tokens_details"]
-    ):
-        cached_tokens = usage["input_tokens_details"]["cached_tokens"]
-    # 格式2: prompt_tokens_details.cached_tokens
-    elif (
-        "prompt_tokens_details" in usage
-        and "cached_tokens" in usage["prompt_tokens_details"]
-    ):
-        cached_tokens = usage["prompt_tokens_details"]["cached_tokens"]
-    # 格式3: prompt_cache_hit_tokens (直接在usage下)
-    elif "prompt_cache_hit_tokens" in usage:
-        cached_tokens = usage["prompt_cache_hit_tokens"]
-
-    # 尝试从不同格式获取reasoning_tokens
-    # 格式1: output_tokens_details.reasoning_tokens
-    if (
-        "output_tokens_details" in usage
-        and "reasoning_tokens" in usage["output_tokens_details"]
-    ):
-        reasoning_tokens = usage["output_tokens_details"]["reasoning_tokens"]
-    # 格式2: completion_tokens_details.reasoning_tokens
-    elif (
-        "completion_tokens_details" in usage
-        and "reasoning_tokens" in usage["completion_tokens_details"]
-    ):
-        reasoning_tokens = usage["completion_tokens_details"]["reasoning_tokens"]
-
-    return input_tokens, cached_tokens, output_tokens, reasoning_tokens
+        # 尝试从不同格式获取reasoning_tokens
+        # 格式1: output_tokens_details.reasoning_tokens
+        if (
+            "output_tokens_details" in usage
+            and "reasoning_tokens" in usage["output_tokens_details"]
+        ):
+            reasoning_tokens = usage["output_tokens_details"]["reasoning_tokens"]
+        # 格式2: completion_tokens_details.reasoning_tokens
+        elif (
+            "completion_tokens_details" in usage
+            and "reasoning_tokens" in usage["completion_tokens_details"]
+        ):
+            reasoning_tokens = usage["completion_tokens_details"]["reasoning_tokens"]
+        return input_tokens, cached_tokens, output_tokens, reasoning_tokens
+    except TypeError as e:
+        print(f"获取token发生错误:{e.__repr__()}")
+        return -1,-1,-1,-1
 
 
 class TokenCounter:

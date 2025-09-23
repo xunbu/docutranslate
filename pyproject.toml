@@ -26,12 +26,14 @@ dynamic = ["version"]
 docling = [
     "opencv-python>=4.11.0.86",
     "docling>=2.40.0",
+    "hf-xet>=1.1.10"
 ]
 
 [dependency-groups]
 dev = [
     "opencv-python>=4.11.0.86",
     "docling>=2.40.0",
+    "hf-xet>=1.1.10"
 ]
 [project.scripts]
 docutranslate = "docutranslate.cli:main"
