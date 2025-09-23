@@ -332,7 +332,6 @@ dependencies = [
     { name = "mammoth" },
     { name = "markdown" },
     { name = "openpyxl" },
-    { name = "py" },
     { name = "pymdown-extensions" },
     { name = "pysubs2" },
     { name = "python-docx" },
@@ -366,7 +365,6 @@ requires-dist = [
     { name = "markdown", specifier = ">=3.8.2" },
     { name = "opencv-python", marker = "extra == 'docling'", specifier = ">=4.11.0.86" },
     { name = "openpyxl", specifier = ">=3.1.5" },
-    { name = "py", specifier = ">=1.11.0" },
     { name = "pymdown-extensions", specifier = ">=10.16.1" },
     { name = "pysubs2", specifier = ">=1.8.0" },
     { name = "python-docx", specifier = ">=1.2.0" },
@@ -1391,15 +1389,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/79/87/157c8e7959ec39ced1b11cc93c730c4fb7f9d408569a6c59dbd92ceb35db/psutil-7.1.0-cp37-abi3-win32.whl", hash = "sha256:09ad740870c8d219ed8daae0ad3b726d3bf9a028a198e7f3080f6a1888b99bca", size = 244812 },
     { url = "https://files.pythonhosted.org/packages/bf/e9/b44c4f697276a7a95b8e94d0e320a7bf7f3318521b23de69035540b39838/psutil-7.1.0-cp37-abi3-win_amd64.whl", hash = "sha256:57f5e987c36d3146c0dd2528cd42151cf96cd359b9d67cfff836995cc5df9a3d", size = 247965 },
     { url = "https://files.pythonhosted.org/packages/26/65/1070a6e3c036f39142c2820c4b52e9243246fcfc3f96239ac84472ba361e/psutil-7.1.0-cp37-abi3-win_arm64.whl", hash = "sha256:6937cb68133e7c97b6cc9649a570c9a18ba0efebed46d8c5dae4c07fa1b67a07", size = 244971 },
-]
-
-[[package]]
-name = "py"
-version = "1.11.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/98/ff/fec109ceb715d2a6b4c4a85a61af3b40c723a961e8828319fbcb15b868dc/py-1.11.0.tar.gz", hash = "sha256:51c75c4126074b472f746a24399ad32f6053d1b34b68d2fa41e558e6f4a98719", size = 207796 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f6/f0/10642828a8dfb741e5f3fbaac830550a518a775c7fff6f04a007259b0548/py-1.11.0-py2.py3-none-any.whl", hash = "sha256:607c53218732647dff4acdfcd50cb62615cedf612e72d1724fb1a0cc6405b378", size = 98708 },
 ]
 
 [[package]]
