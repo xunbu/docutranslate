@@ -32,11 +32,4 @@ class Ass2HTMLExporter(AssExporter):
         )
         return Document.from_bytes(content=render.encode("utf-8"), suffix=".html", stem=document.stem)
 
-if __name__ == '__main__':
-    from pathlib import Path
-    d=Document.from_path(r"C:\Users\jxgm\Desktop\testfiles\一个软件搞定文件翻译【DocuTranslate】.ass")
-    exporter=Ass2HTMLExporter()
-    d_html=exporter.export(d)
-    path=Path("./1.html")
-    path.write_text(d_html.content.decode("utf-8"))
 
