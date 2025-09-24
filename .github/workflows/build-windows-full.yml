@@ -21,6 +21,11 @@ jobs:
         with:
           python-version: '3.12'
 
+      # 新增步骤: 安装 MSVC v143 - VS 2022 C++ build tools
+      # 这会安装所有必要的运行时库
+      - name: Install Microsoft Visual C++ Redistributable
+        uses: ilammy/msvc-dev-cmd@v1
+
       # 第 3 步: 安装 uv
       - name: Install uv
         run: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
