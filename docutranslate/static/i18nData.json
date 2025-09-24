@@ -159,7 +159,8 @@
     "pdf_print_failed": "调用打印功能失败。请尝试手动右键点击预览内容并选择打印。",
     "pdf_fetch_failed": "获取预览内容失败，无法生成PDF。",
     "preview_bilingual": "双语对照预览",
-    "preview_translatedOnly": "仅译文预览"
+    "preview_translatedOnly": "仅译文预览",
+    "systemProxyLabel": "启用系统代理"
   },
   "en": {
     "pageTitle": "DocuTranslate - Interactive Document Translation",
@@ -321,6 +322,7 @@
     "pdf_print_failed": "Failed to invoke print function. Please try right-clicking the preview content and selecting 'Print'.",
     "pdf_fetch_failed": "Failed to fetch preview content, cannot generate PDF.",
     "preview_bilingual": "Bilingual Preview",
-    "preview_translatedOnly": "Translated-Only Preview"
+    "preview_translatedOnly": "Translated-Only Preview",
+    "systemProxyLabel": "Enable System Proxy"
   }
 }
