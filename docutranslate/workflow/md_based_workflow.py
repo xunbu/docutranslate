@@ -62,7 +62,7 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
         document_cached = md_based_convert_cacher.get_cached_result(self.document_original, convert_engin,
                                                                     convert_config)
         if document_cached:
-            self.attachment.add_document("md_cached",document_cached)
+            self.attachment.add_document("md_cached",document_cached.copy())
             return document_cached
 
         # 未缓存则解析文件
