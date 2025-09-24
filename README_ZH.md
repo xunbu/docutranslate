@@ -20,7 +20,7 @@
   一个基于大语言模型的轻量级本地文件翻译工具
 </p>
 
-- ✅ **支持多种格式**：能翻译 `pdf`、`docx`、`xlsx`、`md`、`txt`、`json`、`epub`、`srt` 等多种文件。
+- ✅ **支持多种格式**：能翻译 `pdf`、`docx`、`xlsx`、`md`、`txt`、`json`、`epub`、`srt` 、`ass`等多种文件。
 - ✅ **自动生成术语表**：支持自动生成术语表实现术语的对齐。
 - ✅ **PDF表格、公式、代码识别**：凭借`docling`、`mineru`pdf解析引擎实现对学术论文中经常出现的表格、公式、代码的识别与翻译
 - ✅ **json翻译**：支持通过json路径(`jsonpath-ng`语法规范)指定json中需要被翻译的值。
@@ -164,7 +164,8 @@ async def main():
         chunk_size=3000,  # 文本分块大小
         concurrent=10,  # 并发数
         # glossary_generate_enable=True, # 启用自动生成术语表
-        # glossary_dict={"Jobs":"乔布斯"} # 传入术语表
+        # glossary_dict={"Jobs":"乔布斯"}, # 传入术语表
+        # system_proxy_enable=True,# 启用系统代理
     )
 
     # 2. 构建转换器配置 (使用 minerU)
@@ -411,9 +412,7 @@ if __name__ == "__main__":
 
 翻译功能依赖于大型语言模型，您需要从相应的 AI 平台获取 `base_url`, `api_key` 和 `model_id`。
 
-> 推荐模型：火山引擎的`doubao-seed-1-6-250615`、`doubao-seed-1-6-flash-250715`、智谱的`glm-4-flash`，阿里云的 `qwen-plus`、
-`qwen-turbo`，deepseek的`
-> deepseek-chat`等。
+> 推荐模型：火山引擎的`doubao-seed-1-6-flash`、`doubao-seed-1-6`系列、智谱的`glm-4-flash`，阿里云的 `qwen-plus`、`qwen-flash`，deepseek的`deepseek-chat`等。
 
 | 平台名称       | 获取APIkey                                                                              | baseurl                                                  |
 |------------|---------------------------------------------------------------------------------------|----------------------------------------------------------|
@@ -429,6 +428,7 @@ if __name__ == "__main__":
 | 火山引擎       | [点击获取](https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey?apikey=%7B%7D) | https://ark.cn-beijing.volces.com/api/v3                 |
 | 硅基流动       | [点击获取](https://cloud.siliconflow.cn/account/ak)                                       | https://api.siliconflow.cn/v1                            |
 | DMXAPI     | [点击获取](https://www.dmxapi.cn/token)                                                   | https://www.dmxapi.cn/v1                                 |
+| 聚光AI       | [点击获取](https://ai.juguang.chat/console/token)                                                   | https://ai.juguang.chat/v1                                 |
 
 ### 2. PDF解析引擎（不需要翻译PDF的无需关心此处）
 
@@ -480,29 +480,31 @@ converter_config = ConverterDoclingConfig(
 ```
 
 ## FAQ
+**Q: 为什么翻译出来的还是原文**  
+A: 查看一下日志报了什么错，一般是AI平台欠费或网络有问题（查看是否需要开启系统代理）。
 
-**Q: 8010 端口被占用了怎么办？**
+**Q: 8010 端口被占用了怎么办？**  
 A: 使用 `-p` 参数指定一个新端口，或设置 `DOCUTRANSLATE_PORT` 环境变量。
 
-**Q: 支持PDF扫描件的翻译吗？**
+**Q: 支持PDF扫描件的翻译吗？**  
 A: 支持。请使用 `mineru` 解析引擎，它具备强大的 OCR 能力。
 
-**Q: 第一次翻译PDF为什么很慢？**
+**Q: 第一次翻译PDF为什么很慢？**  
 A: 如果您使用 `docling` 引擎，它首次运行时需要从 Hugging Face 下载模型。请参考上文的“网络问题解决方案”来加速此过程。
 
-**Q: 如何在内网（离线）环境使用？**
+**Q: 如何在内网（离线）环境使用？**  
 A: 完全可以。您需要满足以下条件：
 
 1. **本地 LLM**: 使用 [Ollama](https://ollama.com/) 或 [LM Studio](https://lmstudio.ai/) 等工具在本地部署语言模型，并在
    `TranslatorConfig` 中填入本地模型的 `base_url`。
 2. **本地PDF解析引擎**（仅解析pdf需要）: 使用 `docling` 引擎，并按照上文“离线使用”的指引提前下载模型包。
 
-**Q: PDF解析缓存机制是如何工作的？**
+**Q: PDF解析缓存机制是如何工作的？**  
 A: `MarkdownBasedWorkflow` 会自动缓存文档解析（文件到Markdown的转换）的结果，以避免重复解析消耗时间和资源。缓存默认保存在内存中，并会记录最近的10次解析。您可以通过
 `DOCUTRANSLATE_CACHE_NUM` 环境变量来修改缓存数量。
 
-**Q: 如何让软件可以经过代理**
-A: 软件默认不使用代理，可以通过设置环境变量`DOCUTRANSLATE_PROXY_ENABLED`为`true`让软件通过代理。
+**Q: 如何让软件可以经过代理**  
+A: 软件默认不使用系统代理，可以在`TranslatorConfig中令system_proxy_enable=True` 启用系统代理
 
 ## Star History
 
