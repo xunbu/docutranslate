@@ -4,5 +4,6 @@ default_params = {
     "concurrent": 30,
     "temperature": 0.7,
     "timeout": 1200,
-    "retry": 2
+    "retry": 2,
+    "system_proxy_enable": False
 }

@@ -40,7 +40,6 @@ from docutranslate import __version__
 from docutranslate.agents.agent import ThinkingMode
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig
 from docutranslate.exporter.md.types import ConvertEngineType
-from docutranslate.global_values import USE_PROXY
 
 # --- 核心代码 Imports ---
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
@@ -299,7 +298,7 @@ class GlossaryAgentConfigPayload(BaseModel):
         default=default_params["retry"], description="分块失败后的最大重试次数。"
     )
     system_proxy_enable: bool = Field(
-        default=USE_PROXY, description="是否使用系统代理", examples=[True, False]
+        default=default_params["system_proxy_enable"], description="是否使用系统代理", examples=[True, False]
     )
 
 
@@ -351,7 +350,7 @@ class BaseWorkflowParams(BaseModel):
         description="某个分块翻译失败后的最大重试次数。",
     )
     system_proxy_enable: bool = Field(
-        default=USE_PROXY, description="是否使用系统代理", examples=[True, False]
+        default=default_params["system_proxy_enable"], description="是否使用系统代理", examples=[True, False]
     )
     custom_prompt: Optional[str] = Field(
         None, description="用户自定义的翻译Prompt。", alias="custom_prompt"

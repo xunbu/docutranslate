@@ -13,7 +13,6 @@ from urllib.parse import urlparse
 
 import httpx
 
-from docutranslate.global_values import USE_PROXY
 from docutranslate.logger import global_logger
 from docutranslate.utils.utils import get_httpx_proxies
 
@@ -48,7 +47,7 @@ class AgentConfig:
     timeout: int = 1200  # 单位(秒)，这个值是httpx.TimeOut中read的值,并非总的超时时间
     thinking: ThinkingMode = "disable"
     retry: int = 2
-    system_proxy_enable: bool = USE_PROXY
+    system_proxy_enable: bool = False
 
 
 class TotalErrorCounter:
