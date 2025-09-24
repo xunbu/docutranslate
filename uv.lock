@@ -35,16 +35,16 @@ wheels = [
 
 [[package]]
 name = "anyio"
-version = "4.10.0"
+version = "4.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "idna" },
     { name = "sniffio" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f1/b4/636b3b65173d3ce9a38ef5f0522789614e590dab6a8d505340a4efe4c567/anyio-4.10.0.tar.gz", hash = "sha256:3f3fae35c96039744587aa5b8371e7e8e603c0702999535961dd336026973ba6", size = 213252 }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/78/7d432127c41b50bccba979505f272c16cbcadcc33645d5fa3a738110ae75/anyio-4.11.0.tar.gz", hash = "sha256:82a8d0b81e318cc5ce71a5f1f8b5c4e63619620b63141ef8c995fa0db95a57c4", size = 219094 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6f/12/e5e0282d673bb9746bacfb6e2dba8719989d3660cdb2ea79aee9a9651afb/anyio-4.10.0-py3-none-any.whl", hash = "sha256:60e474ac86736bbfd6f210f7a61218939c318f43f9972497381f1c5e930ed3d1", size = 107213 },
+    { url = "https://files.pythonhosted.org/packages/15/b3/9b1a8074496371342ec1e796a96f99c82c945a339cd81a8e73de28b4cf9e/anyio-4.11.0-py3-none-any.whl", hash = "sha256:0287e96f4d26d4149305414d4e3bc32f0dcd0862365a4bddea19d7a1ec38c4fc", size = 109097 },
 ]
 
 [[package]]
@@ -199,7 +199,7 @@ wheels = [
 
 [[package]]
 name = "docling"
-version = "2.53.0"
+version = "2.54.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "accelerate" },
@@ -230,14 +230,14 @@ dependencies = [
     { name = "tqdm" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/be/667bbcd949d299d54f804b4d14b912eaf6fb7be07489812ad3557f2e142f/docling-2.53.0.tar.gz", hash = "sha256:22967ecb8c5744904994504af907f35f2699941d7925bd3fd5a8873bfaa46085", size = 197174 }
+sdist = { url = "https://files.pythonhosted.org/packages/1d/4a/41daa27163b546eb3647e0641560f52ae655c52786617fcc5b7c1724e79e/docling-2.54.0.tar.gz", hash = "sha256:27326d50c33da47d89edc21a7d342af2c5235b66f780a07236196d6e1d1dd357", size = 204198 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/17/ba/a0ef0d02765491d24768729e860ae2187a99f7f12eda8e1e7ce1c8ab7c36/docling-2.53.0-py3-none-any.whl", hash = "sha256:8edcf7eac4fc5b2dfd180f707be2dacbc08d0d4bc19df128fcf578f5ee3a63c6", size = 225323 },
+    { url = "https://files.pythonhosted.org/packages/ce/57/fdb0a23bc12a03ba30a35d13dcbeb42a2291fedf0b5c2d43e81c1c2d63d0/docling-2.54.0-py3-none-any.whl", hash = "sha256:3d1248811f3d1de7fb05ba4f3704e904ca46880aca0d201fd55150b430968b81", size = 231317 },
 ]
 
 [[package]]
 name = "docling-core"
-version = "2.48.1"
+version = "2.48.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "jsonref" },
@@ -251,9 +251,9 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f9/0c/dce7f80e99e56570d143885fc40536107e8a39ef4de2888959e055b39607/docling_core-2.48.1.tar.gz", hash = "sha256:48cb77575dfd020a51413957e96b165e45f6d1027c641710fddb389dcb9b189c", size = 161311 }
+sdist = { url = "https://files.pythonhosted.org/packages/dd/e6/922de61f2a7b7d337ffc781f8e85f5581b12801fe193827066ccd6c5ba04/docling_core-2.48.2.tar.gz", hash = "sha256:01c12a1d3c9877c6658d0d6adf5cdcefd56cb814d8083860ba2d77ab882ac2d0", size = 161344 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/90/fe/1b96120c9d94c97016716ccf46ad2708a2e76157e52dfcca4101db70fc21/docling_core-2.48.1-py3-none-any.whl", hash = "sha256:a3985999ac2067e15e589ef0f11ccde264deacaea403c0f94049242f10a6189a", size = 164330 },
+    { url = "https://files.pythonhosted.org/packages/97/bc/a77739cc31d7de2be9d6682f880761083a2038355e513e813a73a041c644/docling_core-2.48.2-py3-none-any.whl", hash = "sha256:d1f2fe9be9a9f7e7a2fb6ddcc9d9fcbf437bfb02e0c6005cdec1ece1cf4aed44", size = 164376 },
 ]
 
 [package.optional-dependencies]
@@ -342,12 +342,14 @@ dependencies = [
 [package.optional-dependencies]
 docling = [
     { name = "docling" },
+    { name = "hf-xet" },
     { name = "opencv-python" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "docling" },
+    { name = "hf-xet" },
     { name = "opencv-python" },
 ]
 
@@ -357,6 +359,7 @@ requires-dist = [
     { name = "chardet", specifier = ">=5.2.0" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.40.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
+    { name = "hf-xet", marker = "extra == 'docling'", specifier = ">=1.1.10" },
     { name = "httpx", specifier = "==0.27.2" },
     { name = "json-repair", specifier = ">=0.48.0" },
     { name = "jsonpath-ng", specifier = ">=1.7.0" },
@@ -376,6 +379,7 @@ provides-extras = ["docling"]
 [package.metadata.requires-dev]
 dev = [
     { name = "docling", specifier = ">=2.40.0" },
+    { name = "hf-xet", specifier = ">=1.1.10" },
     { name = "opencv-python", specifier = ">=4.11.0.86" },
 ]
 
@@ -608,7 +612,7 @@ wheels = [
 
 [[package]]
 name = "huggingface-hub"
-version = "0.35.0"
+version = "0.35.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "filelock" },
@@ -620,9 +624,9 @@ dependencies = [
     { name = "tqdm" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/37/79/d71d40efa058e8c4a075158f8855bc2998037b5ff1c84f249f34435c1df7/huggingface_hub-0.35.0.tar.gz", hash = "sha256:ccadd2a78eef75effff184ad89401413629fabc52cefd76f6bbacb9b1c0676ac", size = 461486 }
+sdist = { url = "https://files.pythonhosted.org/packages/f6/42/0e7be334a6851cd7d51cc11717cb95e89333ebf0064431c0255c56957526/huggingface_hub-0.35.1.tar.gz", hash = "sha256:3585b88c5169c64b7e4214d0e88163d4a709de6d1a502e0cd0459e9ee2c9c572", size = 461374 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fe/85/a18508becfa01f1e4351b5e18651b06d210dbd96debccd48a452acccb901/huggingface_hub-0.35.0-py3-none-any.whl", hash = "sha256:f2e2f693bca9a26530b1c0b9bcd4c1495644dad698e6a0060f90e22e772c31e9", size = 563436 },
+    { url = "https://files.pythonhosted.org/packages/f1/60/4acf0c8a3925d9ff491dc08fe84d37e09cfca9c3b885e0db3d4dedb98cea/huggingface_hub-0.35.1-py3-none-any.whl", hash = "sha256:2f0e2709c711e3040e31d3e0418341f7092910f1462dd00350c4e97af47280a8", size = 563340 },
 ]
 
 [[package]]
@@ -2588,15 +2592,15 @@ wheels = [
 
 [[package]]
 name = "uvicorn"
-version = "0.36.0"
+version = "0.37.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "h11" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ef/5e/f0cd46063a02fd8515f0e880c37d2657845b7306c16ce6c4ffc44afd9036/uvicorn-0.36.0.tar.gz", hash = "sha256:527dc68d77819919d90a6b267be55f0e76704dca829d34aea9480be831a9b9d9", size = 80032 }
+sdist = { url = "https://files.pythonhosted.org/packages/71/57/1616c8274c3442d802621abf5deb230771c7a0fec9414cb6763900eb3868/uvicorn-0.37.0.tar.gz", hash = "sha256:4115c8add6d3fd536c8ee77f0e14a7fd2ebba939fed9b02583a97f80648f9e13", size = 80367 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/96/06/5cc0542b47c0338c1cb676b348e24a1c29acabc81000bced518231dded6f/uvicorn-0.36.0-py3-none-any.whl", hash = "sha256:6bb4ba67f16024883af8adf13aba3a9919e415358604ce46780d3f9bdc36d731", size = 67675 },
+    { url = "https://files.pythonhosted.org/packages/85/cd/584a2ceb5532af99dd09e50919e3615ba99aa127e9850eafe5f31ddfdb9a/uvicorn-0.37.0-py3-none-any.whl", hash = "sha256:913b2b88672343739927ce381ff9e2ad62541f9f8289664fa1d1d3803fa2ce6c", size = 67976 },
 ]
 
 [package.optional-dependencies]
