@@ -12,3 +12,6 @@ def get_httpx_proxies():
     if http_proxy:
         proxies["http://"] = http_proxy
     return proxies
+
+if __name__ == '__main__':
+    print(get_httpx_proxies())
