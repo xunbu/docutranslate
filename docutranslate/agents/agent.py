@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 
 import httpx
 
+from docutranslate.agents.thinking.thinking_factory import get_thinking_mode
 from docutranslate.logger import global_logger
 from docutranslate.utils.utils import get_httpx_proxies
 
@@ -197,33 +198,6 @@ ErrorResultHandlerType = Callable[[str, logging.Logger], Any]
 
 
 class Agent:
-    _think_factory = {
-        "open.bigmodel.cn": ("thinking", {"type": "enabled"}, {"type": "disabled"}),
-        "dashscope.aliyuncs.com": (
-            "extra_body",
-            {"enable_thinking": True},
-            {"enable_thinking": False},
-        ),
-        "ark.cn-beijing.volces.com": (
-            "thinking",
-            {"type": "enabled"},
-            {"type": "disabled"},
-        ),
-        "generativelanguage.googleapis.com": (
-            "extra_body",
-            {
-                "google": {
-                    "thinking_config": {"thinking_budget": -1, "include_thoughts": True}
-                }
-            },
-            {
-                "google": {
-                    "thinking_config": {"thinking_budget": 0, "include_thoughts": False}
-                }
-            },
-        ),
-        "api.siliconflow.cn": ("enable_thinking", True, False),
-    }
 
     def __init__(self, config: AgentConfig):
 
@@ -251,9 +225,10 @@ class Agent:
         self.system_proxy_enable = config.system_proxy_enable
 
     def _add_thinking_mode(self, data: dict):
-        if self.domain not in self._think_factory:
+        thinking_mode_result=get_thinking_mode(self.domain,data.get("model"))
+        if thinking_mode_result is None:
             return
-        field_thinking, val_enable, val_disable = self._think_factory[self.domain]
+        field_thinking, val_enable, val_disable = thinking_mode_result
         if self.thinking == "enable":
             data[field_thinking] = val_enable
         elif self.thinking == "disable":
@@ -313,6 +288,7 @@ class Agent:
                 headers=headers,
                 timeout=self.timeout,
             )
+            # print(f"【测试】json:\n{data}")
             response.raise_for_status()
             # print(f"【测试】resp:\n{response.json()}")
             result = response.json()["choices"][0]["message"]["content"]
