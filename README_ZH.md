@@ -414,10 +414,13 @@ if __name__ == "__main__":
 
 > 推荐模型：火山引擎的`doubao-seed-1-6-flash`、`doubao-seed-1-6`系列、智谱的`glm-4-flash`，阿里云的 `qwen-plus`、`qwen-flash`，deepseek的`deepseek-chat`等。
 
+> [302.ai](https://share.302.ai/BgRLAe)👈从该链接注册可享1美元免费额度
+
 | 平台名称       | 获取APIkey                                                                              | baseurl                                                  |
 |------------|---------------------------------------------------------------------------------------|----------------------------------------------------------|
 | ollama     |                                                                                       | http://127.0.0.1:11434/v1                                |
 | lm studio  |                                                                                       | http://127.0.0.1:1234/v1                                 |
+| 302.AI     | [点击获取](https://share.302.ai/BgRLAe)                                                   | https://api.302.ai/v1                                    |
 | openrouter | [点击获取](https://openrouter.ai/settings/keys)                                           | https://openrouter.ai/api/v1                             |
 | openai     | [点击获取](https://platform.openai.com/api-keys)                                          | https://api.openai.com/v1/                               |
 | gemini     | [点击获取](https://aistudio.google.com/u/0/apikey)                                        | https://generativelanguage.googleapis.com/v1beta/openai/ |
@@ -428,7 +431,7 @@ if __name__ == "__main__":
 | 火山引擎       | [点击获取](https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey?apikey=%7B%7D) | https://ark.cn-beijing.volces.com/api/v3                 |
 | 硅基流动       | [点击获取](https://cloud.siliconflow.cn/account/ak)                                       | https://api.siliconflow.cn/v1                            |
 | DMXAPI     | [点击获取](https://www.dmxapi.cn/token)                                                   | https://www.dmxapi.cn/v1                                 |
-| 聚光AI       | [点击获取](https://ai.juguang.chat/console/token)                                                   | https://ai.juguang.chat/v1                                 |
+| 聚光AI       | [点击获取](https://ai.juguang.chat/console/token)                                         | https://ai.juguang.chat/v1                               |
 
 ### 2. PDF解析引擎（不需要翻译PDF的无需关心此处）
 
@@ -480,6 +483,7 @@ converter_config = ConverterDoclingConfig(
 ```
 
 ## FAQ
+
 **Q: 为什么翻译出来的还是原文**  
 A: 查看一下日志报了什么错，一般是AI平台欠费或网络有问题（查看是否需要开启系统代理）。
 

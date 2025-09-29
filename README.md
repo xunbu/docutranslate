@@ -412,10 +412,13 @@ The translation feature relies on large language models. You need to obtain a `b
 
 > Recommended models: Volcengine's `doubao-seed-1-6-flash` and `doubao-seed-1-6` series, Zhipu's `glm-4-flash`, Alibaba Cloud's `qwen-plus` and `qwen-flash`, Deepseek's `deepseek-chat`, etc.
 
+> [302.ai](https://share.302.ai/BgRLAe)👈 Register through this link to enjoy a $1 free credit
+
 | Platform Name       | Get API Key                                                                              | Base URL                                                 |
 |:--------------------|:-----------------------------------------------------------------------------------------|:---------------------------------------------------------|
 | ollama              |                                                                                          | `http://127.0.0.1:11434/v1`                              |
 | lm studio           |                                                                                          | `http://127.0.0.1:1234/v1`                               |
+| 302.AI     | [Click to get](https://share.302.ai/BgRLAe)                                                   | `https://api.302.ai/v1`                                      |
 | openrouter          | [Click to get](https://openrouter.ai/settings/keys)                                      | `https://openrouter.ai/api/v1`                           |
 | openai              | [Click to get](https://platform.openai.com/api-keys)                                     | `https://api.openai.com/v1/`                             |
 | gemini              | [Click to get](https://aistudio.google.com/u/0/apikey)                                   | `https://generativelanguage.googleapis.com/v1beta/openai/` |
