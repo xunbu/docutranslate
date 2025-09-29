@@ -412,7 +412,7 @@ The translation feature relies on large language models. You need to obtain a `b
 
 > Recommended models: Volcengine's `doubao-seed-1-6-flash` and `doubao-seed-1-6` series, Zhipu's `glm-4-flash`, Alibaba Cloud's `qwen-plus` and `qwen-flash`, Deepseek's `deepseek-chat`, etc.
 
-> [302.ai](https://share.302.ai/BgRLAe)👈 Register through this link to enjoy a $1 free credit
+> [302.AI](https://share.302.ai/BgRLAe)👈 Register through this link to enjoy a $1 free credit
 
 | Platform Name       | Get API Key                                                                              | Base URL                                                 |
 |:--------------------|:-----------------------------------------------------------------------------------------|:---------------------------------------------------------|
