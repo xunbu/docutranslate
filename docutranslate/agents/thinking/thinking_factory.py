@@ -39,7 +39,7 @@ def get_thinking_mode_by_model_id(model_id: str) -> tuple[str, str | dict, str |
     model_id = model_id.strip().lower()
     if "glm-4.5" in model_id:
         return thinking_mode["bigmodel"]
-    elif "qwen/qwen3" in model_id:
+    elif "qwen3" in model_id:
         return thinking_mode["aliyun"]
     elif "seed-1-6" in model_id:
         return thinking_mode["volces"]
