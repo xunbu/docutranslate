@@ -300,6 +300,9 @@ class GlossaryAgentConfigPayload(BaseModel):
     system_proxy_enable: bool = Field(
         default=default_params["system_proxy_enable"], description="是否使用系统代理", examples=[True, False]
     )
+    custom_prompt:Optional[str]=Field(
+        default=None,description="生成术语表的用户自定义提示词"
+    )
 
 
 # 1. 定义所有工作流共享的基础参数
