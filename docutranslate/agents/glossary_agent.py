@@ -50,6 +50,7 @@ The output format should be plain JSON text in a list format
 ## Output
 {r'[{"src": "Jobs", "dst": "乔布斯"}, {"src": "Bill Gates", "dst": "比尔盖茨"}, {"src": "Shanghai", "dst": "上海"}]'}
 """
+        self.custom_prompt = config.custom_prompt
         if config.custom_prompt:
             self.system_prompt += "\n# **Important rules or background** \n" + self.custom_prompt + '\nEND\n'
 
