@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2025 QinHan
 # SPDX-License-Identifier: MPL-2.0
+import json_repair
 import json
 from dataclasses import dataclass
 from typing import Self, Any, Tuple, List
@@ -120,7 +121,7 @@ class JsonTranslator(AiTranslator):
         4. 将翻译回来的文本根据其原始位置，更新回JSON对象中。
         5. 将更新后的 content 写回 document。
         """
-        content = json.loads(document.content.decode())
+        content = json_repair.loads(document.content.decode())
 
         # 步骤 1: 提取所有需要翻译的字符串及其位置
         original_texts, update_targets = self._collect_strings_for_translation(content)
@@ -144,13 +145,12 @@ class JsonTranslator(AiTranslator):
 
         # 步骤 3: 将翻译结果写回原始JSON对象
         self._apply_translations(update_targets, translated_texts)
-
         document.content = json.dumps(content, ensure_ascii=False, indent=2).encode('utf-8')
 
         return self
 
     async def translate_async(self, document: Document) -> Self:
-        content = json.loads(document.content.decode())
+        content = json_repair.loads(document.content.decode())
 
         # 步骤 1: 提取所有需要翻译的字符串及其位置
         original_texts, update_targets = self._collect_strings_for_translation(content)
