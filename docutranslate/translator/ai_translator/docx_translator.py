@@ -63,6 +63,7 @@ class DocxTranslator(AiTranslator):
     def _pre_translate(self, document: Document) -> Tuple[DocumentObject, List[Dict[str, Any]], List[str]]:
         """
         [已重构] 预处理 .docx 文件，在 Run 级别上提取文本，以避免破坏图片。
+        此版本增加了对页眉和页脚的翻译支持。
         :param document: 包含 .docx 文件内容的 Document 对象。
         :return: 一个元组，包含：
                  - docx.Document 对象
@@ -97,16 +98,29 @@ class DocxTranslator(AiTranslator):
                 elements_to_translate.append({"type": "text_runs", "runs": current_runs})
                 original_texts.append(current_text_segment)
 
-        # 遍历所有段落
-        for para in doc.paragraphs:
-            process_paragraph(para)
+        def process_container(container):
+            """处理给定容器（如文档、页眉、单元格）中的段落和表格。"""
+            # 遍历容器中的所有段落
+            for para in container.paragraphs:
+                process_paragraph(para)
+            # 遍历容器中的所有表格
+            for table in container.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        # 单元格本身也是一个容器，我们直接处理其段落。
+                        for cell_para in cell.paragraphs:
+                            process_paragraph(cell_para)
 
-        # 遍历所有表格
-        for table in doc.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    for para in cell.paragraphs:
-                        process_paragraph(para)
+        # 1. 翻译文档主体
+        process_container(doc)
+
+        # 2. 翻译所有节的页眉和页脚
+        for section in doc.sections:
+            # 每个节可以有多达三种不同的页眉和页脚（第一页、偶数页、默认页）
+            for header in (section.header, section.first_page_header, section.even_page_header):
+                process_container(header)
+            for footer in (section.footer, section.first_page_footer, section.even_page_footer):
+                process_container(footer)
 
         return doc, elements_to_translate, original_texts
 
