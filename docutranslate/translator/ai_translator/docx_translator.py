@@ -7,6 +7,8 @@ from typing import Self, Literal, List, Dict, Any, Tuple
 
 import docx
 from docx.document import Document as DocumentObject
+from docx.oxml.ns import qn
+from docx.oxml.shared import OxmlElement
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 
@@ -34,6 +36,7 @@ class DocxTranslator(AiTranslator):
     """
     用于翻译 .docx 文件的翻译器。
     此版本经过优化，可以处理图文混排的段落而不会丢失图片。
+    新增功能：自动设置文档，使其在 Word 中打开时提示更新目录（TOC）。
     """
 
     def __init__(self, config: DocxTranslatorConfig):
@@ -124,12 +127,37 @@ class DocxTranslator(AiTranslator):
 
         return doc, elements_to_translate, original_texts
 
+    def _enable_update_fields_on_open(self, doc: DocumentObject):
+        """
+        设置 Word 文档在打开时自动更新域（如目录）。
+        这通过在文档的 settings.xml 文件中添加 <w:updateFields w:val="true"/> 实现。
+        这是更新目录（TOC）的最佳实践，因为 python-docx 无法直接重新计算页码和条目。
+        :param doc: The docx.Document object.
+        """
+        # 获取 settings.xml 的根元素
+        settings_element = doc.settings.element
+
+        # 定义 <w:updateFields> 标签的 Clark notation，用于查找
+        update_fields_tag_clark = qn('w:updateFields')
+
+        # 查找现有的 <w:updateFields> 元素
+        update_fields = settings_element.find(update_fields_tag_clark)
+
+        # 如果不存在，则创建一个新的并添加到 settings 中
+        # **【修复】** OxmlElement() 需要的是带前缀的标签名，而不是 Clark notation
+        if update_fields is None:
+            update_fields = OxmlElement('w:updateFields')
+            settings_element.append(update_fields)
+
+        # 设置 w:val="true" 属性以启用更新
+        update_fields.set(qn('w:val'), 'true')
+
     def _after_translate(self, doc: DocumentObject, elements_to_translate: List[Dict[str, Any]],
                          translated_texts: List[str], original_texts: List[str]) -> bytes:
         """
         [已重构] 将翻译后的文本写回到对应的 text runs 中，保留图片和样式。
+        同时，设置文档在打开时更新域，以便刷新目录（TOC）。
         """
-        translation_map = dict(zip(original_texts, translated_texts))
 
         for i, element_info in enumerate(elements_to_translate):
             runs = element_info["runs"]
@@ -160,6 +188,9 @@ class DocxTranslator(AiTranslator):
             for run in runs[1:]:
                 run.text = ""
             # --- 修改结束 ---
+
+        # 启用“打开时更新域”功能，以便刷新目录
+        self._enable_update_fields_on_open(doc)
 
         # 将修改后的文档保存到 BytesIO 流
         doc_output_stream = BytesIO()
