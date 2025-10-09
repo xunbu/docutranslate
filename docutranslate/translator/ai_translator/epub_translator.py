@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from io import BytesIO
 from typing import Self, Literal, List, Dict, Any
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, SegmentsTranslateAgent
 from docutranslate.ir.document import Document
@@ -24,7 +24,7 @@ class EpubTranslatorConfig(AiTranslatorConfig):
 class EpubTranslator(AiTranslator):
     """
     一个用于翻译 EPUB 文件中内容的翻译器。
-    此版本使用内置的 `zipfile` 和 `xml` 库，不依赖 `ebooklib`。
+    【高级版】此版本直接翻译HTML内容，以保留内联格式。
     """
 
     def __init__(self, config: EpubTranslatorConfig):
@@ -33,7 +33,7 @@ class EpubTranslator(AiTranslator):
         self.translate_agent = None
         if not self.skip_translate:
             agent_config = SegmentsTranslateAgentConfig(
-                custom_prompt=config.custom_prompt,
+                custom_prompt=config.custom_prompt,  # 使用优化后的prompt
                 to_lang=config.to_lang,
                 base_url=config.base_url,
                 api_key=config.api_key,
@@ -54,35 +54,25 @@ class EpubTranslator(AiTranslator):
     def _pre_translate(self, document: Document) -> tuple[
         Dict[str, bytes], List[Dict[str, Any]], List[str]
     ]:
-        """
-        预处理 EPUB 文件，提取所有需要翻译的文本。
-        """
         all_files = {}
         items_to_translate = []
-        original_texts = []
+        original_texts = []  # 现在这里存储的是HTML片段
 
-        # --- 步骤 1: 使用 zipfile 读取 EPUB 内容到内存 ---
         with zipfile.ZipFile(BytesIO(document.content), 'r') as zf:
             for filename in zf.namelist():
                 all_files[filename] = zf.read(filename)
 
-        # --- 步骤 2: 解析元数据以找到内容文件 ---
-        # 2.1: 解析 container.xml 找到 .opf 文件的路径
         container_xml = all_files.get('META-INF/container.xml')
         if not container_xml:
             raise ValueError("无效的 EPUB：找不到 META-INF/container.xml")
-
         root = ET.fromstring(container_xml)
-        # XML 命名空间，解析时必须使用
         ns = {'cn': 'urn:oasis:names:tc:opendocument:xmlns:container'}
         opf_path = root.find('cn:rootfiles/cn:rootfile', ns).get('full-path')
         opf_dir = os.path.dirname(opf_path)
 
-        # 2.2: 解析 .opf 文件找到 manifest 和 spine
         opf_xml = all_files.get(opf_path)
         if not opf_xml:
             raise ValueError(f"无效的 EPUB：找不到 {opf_path}")
-
         opf_root = ET.fromstring(opf_xml)
         ns_opf = {'opf': 'http://www.idpf.org/2007/opf'}
 
@@ -90,14 +80,11 @@ class EpubTranslator(AiTranslator):
         for item in opf_root.findall('opf:manifest/opf:item', ns_opf):
             item_id = item.get('id')
             href = item.get('href')
-            # 路径需要相对于 .opf 文件的位置
             full_href = os.path.join(opf_dir, href).replace('\\', '/')
             manifest_items[item_id] = {'href': full_href, 'media_type': item.get('media-type')}
 
-        spine_itemrefs = [item.get('idref') for item in opf_root.findall('opf:spine/opf:itemref', ns_opf)]
+        TAGS_TO_TRANSLATE = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'div']
 
-        # --- 步骤 3: 提取可翻译内容 ---
-        # 我们这里简单地翻译 manifest 中所有的 xhtml/html 文件
         for item_id, item_data in manifest_items.items():
             media_type = item_data['media_type']
             if media_type in ['application/xhtml+xml', 'text/html']:
@@ -108,20 +95,18 @@ class EpubTranslator(AiTranslator):
                     continue
 
                 soup = BeautifulSoup(content_bytes, "html.parser")
-                for text_node in soup.find_all(string=True):
-                    if (
-                            text_node.parent.name not in ['style', 'script', 'head', 'title', 'meta', '[document]']
-                            and not text_node.isspace()
-                    ):
-                        text = text_node.get_text(strip=True)
-                        if text:
-                            item_info = {
-                                "file_path": file_path,
-                                "text_node": text_node,
-                                "original_text": text,
-                            }
-                            items_to_translate.append(item_info)
-                            original_texts.append(text)
+                for tag in soup.find_all(TAGS_TO_TRANSLATE):
+                    # 获取标签内部的HTML，而不是纯文本
+                    inner_html = tag.decode_contents()
+                    # 只有在内部有实际内容（不仅仅是空白）时才翻译
+                    if inner_html and not inner_html.isspace():
+                        item_info = {
+                            "file_path": file_path,
+                            "tag": tag,
+                            "original_html": inner_html,
+                        }
+                        items_to_translate.append(item_info)
+                        original_texts.append(inner_html)
 
         return all_files, items_to_translate, original_texts
 
@@ -130,57 +115,51 @@ class EpubTranslator(AiTranslator):
             all_files: Dict[str, bytes],
             items_to_translate: List[Dict[str, Any]],
             translated_texts: List[str],
-            original_texts: List[str],
+            original_texts: List[str],  # 这里是 original_htmls
     ) -> bytes:
-        """
-        将翻译后的文本写回，并重新打包成 EPUB 文件。
-        """
-        modified_soups = {}  # 缓存每个文件的 soup 对象
+        modified_soups = {}
 
         for i, item_info in enumerate(items_to_translate):
             file_path = item_info["file_path"]
-            text_node = item_info["text_node"]
-            translated_text = translated_texts[i]
-            original_text = original_texts[i]
+            tag: Tag = item_info["tag"]
+            translated_html = translated_texts[i]
+            original_html = original_texts[i]
 
-            # 获取或创建该文件的 soup 对象
             if file_path not in modified_soups:
-                # 找到该节点所属的根 soup 对象
-                modified_soups[file_path] = text_node.find_parent('html')
+                modified_soups[file_path] = tag.find_parent('html')
 
+            # [修改] 处理 insert_mode，现在操作的是HTML片段
             if self.insert_mode == "replace":
-                new_text = translated_text
+                final_html = translated_html
             elif self.insert_mode == "append":
-                new_text = original_text + self.separator + translated_text
+                final_html = original_html + self.separator + translated_html
             elif self.insert_mode == "prepend":
-                new_text = translated_text + self.separator + original_text
+                final_html = translated_html + self.separator + original_html
             else:
-                new_text = translated_text
+                final_html = translated_html
 
-            text_node.replace_with(new_text)
+            # [修改] 清空旧内容，并追加解析后的新HTML内容
+            tag.clear()
+            # 解析AI返回的HTML字符串，'html.parser'对此有很好的容错性
+            new_content = BeautifulSoup(final_html, 'html.parser')
+            # 将解析后的所有子节点追加到原tag中
+            for child in new_content.contents:
+                tag.append(child.extract())  # extract()会从原文档树中移除节点，避免重复
 
-        # 将修改后的 soup 对象转换回字节串
         for file_path, soup in modified_soups.items():
             all_files[file_path] = str(soup).encode('utf-8')
 
-        # --- 步骤 4: 创建新的 EPUB (ZIP) 文件 ---
         output_buffer = BytesIO()
         with zipfile.ZipFile(output_buffer, 'w') as zf_out:
-            # 关键：mimetype 必须是第一个文件且不能压缩
             if 'mimetype' in all_files:
                 zf_out.writestr('mimetype', all_files['mimetype'], compress_type=zipfile.ZIP_STORED)
-
-            # 写入其他所有文件
             for filename, content in all_files.items():
                 if filename != 'mimetype':
                     zf_out.writestr(filename, content, compress_type=zipfile.ZIP_DEFLATED)
-
         return output_buffer.getvalue()
 
+    # translate 和 translate_async 方法无需修改，因为它们调用的_pre_translate和_after_translate已经被更新了
     def translate(self, document: Document) -> Self:
-        """
-        同步翻译 EPUB 文档。
-        """
         all_files, items_to_translate, original_texts = self._pre_translate(document)
         if not items_to_translate:
             self.logger.info("\n文件中没有找到需要翻译的纯文本内容。")
@@ -199,9 +178,6 @@ class EpubTranslator(AiTranslator):
         return self
 
     async def translate_async(self, document: Document) -> Self:
-        """
-        异步翻译 EPUB 文档。
-        """
         all_files, items_to_translate, original_texts = await asyncio.to_thread(
             self._pre_translate, document
         )
