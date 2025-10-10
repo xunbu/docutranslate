@@ -9,6 +9,7 @@ import docx
 from docx.document import Document as DocumentObject
 from docx.oxml.ns import qn
 from docx.oxml.shared import OxmlElement
+from docx.oxml.text.run import CT_R
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 
@@ -17,17 +18,27 @@ from docutranslate.ir.document import Document
 from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTranslator
 
 
+HEADING_STYLES = {f"Heading {i}" for i in range(1, 10)} | \
+                 {f"heading {i}" for i in range(1, 10)} | \
+                 {f"标题 {i}" for i in range(1, 10)}
+
+
 def is_image_run(run: Run) -> bool:
     """检查一个 run 是否包含图片。"""
-    # w:drawing 是嵌入式图片的标志, w:pict 是 VML 图片的标志
     return '<w:drawing' in run.element.xml or '<w:pict' in run.element.xml
+
+
+def is_formatting_only_run(run: Run) -> bool:
+    """检查一个 run 是否只包含格式（如下划线）而没有实际的、非空白的文本内容。"""
+    if run.text.strip() == "":
+        if run.underline:
+            return True
+    return False
 
 
 @dataclass
 class DocxTranslatorConfig(AiTranslatorConfig):
-    """
-    DocxTranslator 的配置类。
-    """
+    """DocxTranslator 的配置类。"""
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
     separator: str = "\n"
 
@@ -35,8 +46,7 @@ class DocxTranslatorConfig(AiTranslatorConfig):
 class DocxTranslator(AiTranslator):
     """
     用于翻译 .docx 文件的翻译器。
-    此版本经过优化，可以处理图文混排的段落而不会丢失图片。
-    新增功能：自动设置文档，使其在 Word 中打开时提示更新目录（TOC）。
+    [核心优化] 仅在检测到目录且相关标题被翻译时，才设置“更新域”标志。
     """
 
     def __init__(self, config: DocxTranslatorConfig):
@@ -63,108 +73,135 @@ class DocxTranslator(AiTranslator):
         self.insert_mode = config.insert_mode
         self.separator = config.separator
 
+        # [新增] 状态变量，用于智能判断
+        self._has_toc_field = False
+        self._translated_a_heading = False
+
+    def _check_for_toc(self, doc: DocumentObject) -> bool:
+        """[新增] 扫描文档，检查是否存在目录（TOC）域。"""
+        # 目录的指令文本通常包含 'TOC'
+        # 我们需要查找 <w:instrText> 元素
+        for instr_text in doc.element.body.iter(qn('w:instrText')):
+            if instr_text.text and 'TOC' in instr_text.text.strip():
+                self.logger.info("在文档中检测到目录（TOC）。")
+                return True
+        return False
+
     def _pre_translate(self, document: Document) -> Tuple[DocumentObject, List[Dict[str, Any]], List[str]]:
         """
-        [已重构] 预处理 .docx 文件，在 Run 级别上提取文本，以避免破坏图片。
-        此版本增加了对页眉和页脚的翻译支持。
-        :param document: 包含 .docx 文件内容的 Document 对象。
-        :return: 一个元组，包含：
-                 - docx.Document 对象
-                 - 一个包含文本块信息的列表 (每个元素代表一组连续的文本 run)
-                 - 一个包含所有待翻译原文的列表
+        预处理 .docx 文件，提取文本并检测是否需要更新域。
         """
         doc = docx.Document(BytesIO(document.content))
         elements_to_translate = []
         original_texts = []
 
-        def process_paragraph(para: Paragraph):
+        # [新增] 在开始时重置状态并进行检测
+        self._has_toc_field = self._check_for_toc(doc)
+        self._translated_a_heading = False
+
+        def get_hyperlink_text(hyperlink_element) -> str:
+            text = ""
+            for t_element in hyperlink_element.findall('.//w:t', namespaces=hyperlink_element.nsmap):
+                if t_element.text:
+                    text += t_element.text
+            return text
+
+        def process_paragraph_children(para: Paragraph):
             nonlocal elements_to_translate, original_texts
             current_text_segment = ""
             current_runs = []
 
-            for run in para.runs:
-                if is_image_run(run):
-                    # 遇到图片，将之前累积的文本作为一个翻译单元
+            # [新增] 检查当前段落是否为标题样式
+            is_heading_para = para.style.name in HEADING_STYLES
+
+            for child in para._p:
+                if isinstance(child, CT_R):
+                    run = Run(child, para)
+                    if is_image_run(run) or is_formatting_only_run(run):
+                        if current_text_segment.strip():
+                            elements_to_translate.append({"type": "text_runs", "runs": current_runs})
+                            original_texts.append(current_text_segment)
+                            # [新增] 如果这个文本块来自标题段落，则标记
+                            if is_heading_para:
+                                self._translated_a_heading = True
+                        current_text_segment = ""
+                        current_runs = []
+                    else:
+                        current_runs.append(run)
+                        current_text_segment += run.text
+
+                elif child.tag == qn('w:hyperlink'):
+                    # (省略超链接处理逻辑，与之前版本相同)
+                    # ...
                     if current_text_segment.strip():
                         elements_to_translate.append({"type": "text_runs", "runs": current_runs})
                         original_texts.append(current_text_segment)
-                    # 重置累加器
+                        if is_heading_para:
+                            self._translated_a_heading = True
                     current_text_segment = ""
                     current_runs = []
-                else:
-                    # 累积文本 run
-                    current_runs.append(run)
-                    current_text_segment += run.text
 
-            # 处理段落末尾的最后一个文本块
+                    hyperlink_text = get_hyperlink_text(child)
+                    if hyperlink_text.strip():
+                        style_run = None
+                        r_elements = child.findall(qn('w:r'))
+                        if r_elements:
+                            style_run = Run(r_elements[0], para)
+
+                        elements_to_translate.append({
+                            "type": "hyperlink",
+                            "element": child,
+                            "style_run": style_run
+                        })
+                        original_texts.append(hyperlink_text)
+                        if is_heading_para:
+                            self._translated_a_heading = True
+
             if current_text_segment.strip():
                 elements_to_translate.append({"type": "text_runs", "runs": current_runs})
                 original_texts.append(current_text_segment)
+                # [新增] 如果这个文本块来自标题段落，则标记
+                if is_heading_para:
+                    self._translated_a_heading = True
 
         def process_container(container):
-            """处理给定容器（如文档、页眉、单元格）中的段落和表格。"""
-            # 遍历容器中的所有段落
+            if not container:
+                return
             for para in container.paragraphs:
-                process_paragraph(para)
-            # 遍历容器中的所有表格
+                process_paragraph_children(para)
             for table in container.tables:
                 for row in table.rows:
                     for cell in row.cells:
-                        # 单元格本身也是一个容器，我们直接处理其段落。
-                        for cell_para in cell.paragraphs:
-                            process_paragraph(cell_para)
+                        process_container(cell)
 
-        # 1. 翻译文档主体
         process_container(doc)
-
-        # 2. 翻译所有节的页眉和页脚
         for section in doc.sections:
-            # 每个节可以有多达三种不同的页眉和页脚（第一页、偶数页、默认页）
-            for header in (section.header, section.first_page_header, section.even_page_header):
-                process_container(header)
-            for footer in (section.footer, section.first_page_footer, section.even_page_footer):
-                process_container(footer)
+            process_container(section.header)
+            process_container(section.first_page_header)
+            process_container(section.even_page_header)
+            process_container(section.footer)
+            process_container(section.first_page_footer)
+            process_container(section.even_page_footer)
 
         return doc, elements_to_translate, original_texts
 
     def _enable_update_fields_on_open(self, doc: DocumentObject):
-        """
-        设置 Word 文档在打开时自动更新域（如目录）。
-        这通过在文档的 settings.xml 文件中添加 <w:updateFields w:val="true"/> 实现。
-        这是更新目录（TOC）的最佳实践，因为 python-docx 无法直接重新计算页码和条目。
-        :param doc: The docx.Document object.
-        """
-        # 获取 settings.xml 的根元素
         settings_element = doc.settings.element
-
-        # 定义 <w:updateFields> 标签的 Clark notation，用于查找
         update_fields_tag_clark = qn('w:updateFields')
-
-        # 查找现有的 <w:updateFields> 元素
         update_fields = settings_element.find(update_fields_tag_clark)
-
-        # 如果不存在，则创建一个新的并添加到 settings 中
-        # **【修复】** OxmlElement() 需要的是带前缀的标签名，而不是 Clark notation
         if update_fields is None:
             update_fields = OxmlElement('w:updateFields')
             settings_element.append(update_fields)
-
-        # 设置 w:val="true" 属性以启用更新
         update_fields.set(qn('w:val'), 'true')
 
     def _after_translate(self, doc: DocumentObject, elements_to_translate: List[Dict[str, Any]],
                          translated_texts: List[str], original_texts: List[str]) -> bytes:
-        """
-        [已重构] 将翻译后的文本写回到对应的 text runs 中，保留图片和样式。
-        同时，设置文档在打开时更新域，以便刷新目录（TOC）。
-        """
-
+        # 回写翻译文本的逻辑保持不变...
         for i, element_info in enumerate(elements_to_translate):
-            runs = element_info["runs"]
+            # ... (此处省略与前一版本完全相同的回写代码)
             original_text = original_texts[i]
             translated_text = translated_texts[i]
 
-            # 根据插入模式确定最终文本
             if self.insert_mode == "replace":
                 final_text = translated_text
             elif self.insert_mode == "append":
@@ -175,32 +212,41 @@ class DocxTranslator(AiTranslator):
                 self.logger.error("不正确的DocxTranslatorConfig参数")
                 final_text = translated_text
 
-            if not runs:
-                continue
+            element_type = element_info["type"]
 
-            # --- 这是修改的核心部分 ---
-            # 1. 将完整的翻译文本写入第一个 run
-            first_run = runs[0]
-            first_run.text = final_text
+            if element_type == "text_runs":
+                runs = element_info["runs"]
+                if not runs: continue
+                runs[0].text = final_text
+                for run in runs[1:]: run.text = ""
 
-            # 2. 清空该文本块中其余 run 的内容，但保留 run 本身及其格式
-            #    这可以防止重复文本，同时保留文档结构
-            for run in runs[1:]:
-                run.text = ""
-            # --- 修改结束 ---
+            elif element_type == "hyperlink":
+                hyperlink_element = element_info["element"]
+                style_run = element_info["style_run"]
+                for run_element in hyperlink_element.findall(qn('w:r')):
+                    hyperlink_element.remove(run_element)
+                new_run_element = OxmlElement('w:r')
+                if style_run and style_run.element.rPr is not None:
+                    new_run_element.append(style_run.element.rPr)
+                new_text_element = OxmlElement('w:t')
+                new_text_element.text = final_text
+                new_text_element.set(qn('xml:space'), 'preserve')
+                new_run_element.append(new_text_element)
+                hyperlink_element.append(new_run_element)
 
-        # 启用“打开时更新域”功能，以便刷新目录
-        self._enable_update_fields_on_open(doc)
+        # [核心修改] 智能决策：仅在需要时才启用“打开时更新域”
+        if self._has_toc_field and self._translated_a_heading:
+            self.logger.info("检测到目录且相关标题已被翻译，设置文档在打开时更新域。")
+            self._enable_update_fields_on_open(doc)
+        else:
+            self.logger.info("未翻译标题或文档无目录，跳过设置更新域标志。")
 
-        # 将修改后的文档保存到 BytesIO 流
         doc_output_stream = BytesIO()
         doc.save(doc_output_stream)
         return doc_output_stream.getvalue()
 
+    # translate 和 translate_async 方法保持不变
     def translate(self, document: Document) -> Self:
-        """
-        同步翻译 .docx 文件。
-        """
         doc, elements_to_translate, original_texts = self._pre_translate(document)
         if not original_texts:
             print("\n文件中没有找到需要翻译的文本内容。")
@@ -214,26 +260,20 @@ class DocxTranslator(AiTranslator):
             if self.translate_agent:
                 self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
 
-        # 调用翻译 agent
         if self.translate_agent:
             translated_texts = self.translate_agent.send_segments(original_texts, self.chunk_size)
         else:
             translated_texts = original_texts
 
-        # 将翻译结果写回文档
         document.content = self._after_translate(doc, elements_to_translate, translated_texts, original_texts)
         return self
 
     async def translate_async(self, document: Document) -> Self:
-        """
-        异步翻译 .docx 文件。
-        """
         doc, elements_to_translate, original_texts = await asyncio.to_thread(self._pre_translate, document)
         if not original_texts:
             print("\n文件中没有找到需要翻译的文本内容。")
-            # 在异步环境中正确保存和返回
             output_stream = BytesIO()
-            doc.save(output_stream)
+            await asyncio.to_thread(doc.save, output_stream)
             document.content = output_stream.getvalue()
             return self
 
@@ -242,12 +282,10 @@ class DocxTranslator(AiTranslator):
             if self.translate_agent:
                 self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
 
-        # 异步调用翻译 agent
         if self.translate_agent:
             translated_texts = await self.translate_agent.send_segments_async(original_texts, self.chunk_size)
         else:
             translated_texts = original_texts
-        # 将翻译结果写回文档
         document.content = await asyncio.to_thread(self._after_translate, doc, elements_to_translate, translated_texts,
                                                    original_texts)
         return self
