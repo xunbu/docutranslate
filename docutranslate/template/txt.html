@@ -3,15 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <title>{{ title }}</title>
-    {{pico}}
     <style>
-        html {
-            padding: 2vh 10vw;
-            font-size: 15px;
+        body{
+            padding: 0;
+            margin: 0;
+        }
+        pre {
+            width: 100%;
+            height: 95%;
+            border: none;
+            margin: 0;
+            padding: 0;
+            overflow: auto;
+            background-color: var(--bs-body-bg);
+            display: block;
+            font-size: 14px;
+            line-height: 21px;
         }
     </style>
 </head>
 <body>
-{{ body }}
+<pre>{{ body }}</pre>
 </body>
 </html>
