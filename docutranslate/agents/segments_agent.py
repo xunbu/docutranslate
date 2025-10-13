@@ -52,6 +52,7 @@ class SegmentsTranslateAgent(Agent):
 "<segment ID>": "<translated text>"
 }}
 - The response must be a **valid** JSON object
+- Escape the double quotes within the JSON string.
 - (very important) The segment IDs in the output must exactly match those in the input. And all segment IDs in input must appear in the output.
 
 # Example (assuming the target language in this example is English, {config.to_lang} is the actual target language)

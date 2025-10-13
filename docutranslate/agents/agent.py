@@ -319,7 +319,7 @@ class Agent:
             should_retry = True
         # 专门捕获部分翻译错误（软错误）
         except PartialAgentResultError as e:
-            # print(f"【测试】\nprompt:\n{prompt}\nresp:\n{result}")
+            print(f"【测试】\nprompt:\n{prompt}\nresp:\n{result}")
             self.logger.error(f"收到部分返回结果，将尝试重试: {e}")
             current_partial_result = e.partial_result
             should_retry = True
