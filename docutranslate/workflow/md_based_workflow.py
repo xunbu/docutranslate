@@ -11,6 +11,7 @@ from docutranslate.global_values.conditional_import import DOCLING_EXIST
 from docutranslate.glossary.glossary import Glossary
 from docutranslate.ir.document import Document
 from docutranslate.ir.markdown_document import MarkdownDocument
+from docutranslate.utils.markdown_utils import embed_inline_image_from_zip
 
 if DOCLING_EXIST:
     from docutranslate.converter.x2md.converter_docling import ConverterDoclingConfig, ConverterDocling
@@ -38,7 +39,8 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
                             HTMLExportable[MD2HTMLExporterConfig],
                             MDFormatsExportable[ExporterConfig]):
     _converter_factory: dict[
-        ConvertEngineType, Tuple[Type[X2MarkdownConverter|ConverterIdentity], Type[X2MarkdownConverterConfig]] | None] = {
+        ConvertEngineType, Tuple[Type[X2MarkdownConverter | ConverterIdentity], Type[
+            X2MarkdownConverterConfig]] | None] = {
         "mineru": (ConverterMineru, ConverterMineruConfig),
         "identity": (ConverterIdentity, None)
     }
@@ -58,11 +60,13 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
         if self.document_original is None:
             raise RuntimeError("File has not been read yet. Call read_path or read_bytes first.")
 
+        if self.document_original.suffix.lower() == ".zip":
+            self.document_original = self._get_md_from_zip(self.document_original)
         # 获取缓存的解析后文件
         document_cached = md_based_convert_cacher.get_cached_result(self.document_original, convert_engin,
                                                                     convert_config)
         if document_cached:
-            self.attachment.add_document("md_cached",document_cached.copy())
+            self.attachment.add_document("md_cached", document_cached.copy())
             return document_cached
 
         # 未缓存则解析文件
@@ -74,8 +78,8 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
             converter = converter_class(convert_config)
         else:
             raise ValueError(f"不存在{convert_engin}解析引擎")
-        document_md :Document= converter.convert(self.document_original)
-        if hasattr(converter,"attachments"):
+        document_md: Document = converter.convert(self.document_original)
+        if hasattr(converter, "attachments"):
             for attachment in converter.attachments:
                 self.attachment.add_attachment(attachment)
         # 缓存解析后文件
@@ -83,8 +87,15 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
 
         return document_md
 
+    def _get_md_from_zip(self, document: Document) -> Document:
+        assert document.suffix.lower() == ".zip"
+        self.logger.info("传入zip文件，正在自动组合markdown文本与图片")
+        content_byte = embed_inline_image_from_zip(document.content).encode()
+        return document.from_bytes(content_byte, suffix=".md", stem=document.stem)
+
     def _pre_translate(self, document: Document):
-        convert_engine: ConvertEngineType = "identity" if document.suffix == ".md" else self.convert_engine
+        convert_engine: ConvertEngineType = "identity" if document.suffix.lower() in [".md", ".markdown",
+                                                                                      ".zip"] else self.convert_engine
         convert_config = self.config.converter_config
         translator_config = self.config.translator_config
         translator = MDTranslator(translator_config)
