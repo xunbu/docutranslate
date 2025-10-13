@@ -40,7 +40,7 @@ class SegmentsTranslateAgent(Agent):
 - Use the most common translations for personal names and proper nouns.
 - Preserve special tags or untranslatable elements (such as code, brand names, technical terms) as they are.
 - If a text segment is already in the target language ({config.to_lang}), retain the original text.
-- (Very important) The original text segments and translated segments must strictly correspond one-to-one. Translated segments do not necessarily have to be complete sentences; they should be divided according to the segment IDs and the original text. It is strictly forbidden for the IDs of the translated segments to differ from those of the original segments.
+- (Very important) The original text segments and translated segments must strictly correspond one-to-one. It is strictly forbidden for the IDs of the translated segments to differ from those of the original segments.
 
 # Input Specification
 {{
