@@ -1,7 +1,6 @@
 # SPDX-FileCopyrightText: 2025 QinHan
 # SPDX-License-Identifier: MPL-2.0
 import asyncio
-import re
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Self, Literal, List, Dict, Any, Tuple
@@ -27,10 +26,19 @@ def is_image_run(run: Run) -> bool:
 
 
 def is_formatting_only_run(run: Run) -> bool:
-    """检查一个 Run 是否仅用于格式化（例如，一个空的粗体 Run）。"""
-    text = getattr(run, 'text', None)
-    if text is None or text.strip() == "":
-        if run.underline or run.bold or run.italic:
+    """
+    检查一个 Run 是否主要用于格式化，例如：
+    - 一个空的粗体/斜体/下划线 Run。
+    - 一个只包含空格但有下划线的 Run (用于画线)。
+    """
+    text = run.text
+    # 如果文本为空或只包含空格
+    if not text.strip():
+        # 并且它带有任何一种常见的格式，就认为它是一个格式化标记
+        if run.underline or run.bold or run.italic or run.font.strike or run.font.subscript or run.font.superscript:
+            return True
+        # 特别处理：如果文本是空格且有下划线，这几乎总是为了画线
+        if text and run.underline:
             return True
     return False
 
@@ -47,6 +55,7 @@ class DocxTranslator(AiTranslator):
     """
     用于翻译 .docx 文件的高级翻译器，能够高精度保留样式、处理超链接、
     域代码（如图注），并支持翻译脚注、尾注等。
+    [v3.1 - 采纳新规则：将带格式的空文本视为分割点]
     """
 
     def __init__(self, config: DocxTranslatorConfig):
@@ -97,21 +106,24 @@ class DocxTranslator(AiTranslator):
 
     def _process_paragraph(self, para: Paragraph, elements: List[Dict[str, Any]], texts: List[str]):
         """
-        使用状态机处理段落，精确切分可翻译的文本片段。
+        使用状态机处理段落，将连续的文本Run合并为一个翻译单元，
+        同时将图片、超链接、带格式的空文本等视为分割点。
         """
         if not para.text.strip():
             return
 
-        current_text = ""
         current_runs = []
         is_inside_field = False
 
         def flush_segment():
-            nonlocal current_text, current_runs
-            if current_text.strip():
+            nonlocal current_runs
+            if not current_runs:
+                return
+            full_text = "".join(r.text for r in current_runs)
+            if full_text.strip():
                 elements.append({"type": "text_runs", "runs": current_runs})
-                texts.append(current_text)
-            current_text, current_runs = "", []
+                texts.append(full_text)
+            current_runs = []
 
         for child in para._p:
             if self._is_seq_field(child):
@@ -132,20 +144,18 @@ class DocxTranslator(AiTranslator):
 
             if isinstance(child, CT_R):
                 run = Run(child, para)
-                if is_image_run(run) or is_formatting_only_run(run) or run.element.find(qn('w:tab')) is not None:
+                # 如果是图片、制表符，或者【带格式的空文本】，则视为分割点
+                if is_image_run(run) or run.element.find(qn('w:tab')) is not None or is_formatting_only_run(run):
                     flush_segment()
+                    # 这个 run 本身被保留，不参与翻译
                 else:
+                    # 否则，它是一个普通的文本 Run，收集起来
                     current_runs.append(run)
-                    current_text += run.text or ""
             elif child.tag == qn('w:hyperlink'):
                 flush_segment()
                 hyperlink_text = self._extract_hyperlink_text(child)
                 if hyperlink_text.strip():
-                    style_run = None
-                    if r_elements := child.findall(f'.//{qn("w:r")}'):
-                        style_run = Run(r_elements[0], para)
-
-                    elements.append({"type": "hyperlink", "element": child, "style_run": style_run})
+                    elements.append({"type": "hyperlink", "element": child})
                     texts.append(hyperlink_text)
             else:
                 flush_segment()
@@ -178,7 +188,7 @@ class DocxTranslator(AiTranslator):
         # 1. 处理主文档内容
         self._process_container(doc, elements, texts)
 
-        # 2. (已修复) 处理所有类型的页眉和页脚
+        # 2. 处理所有类型的页眉和页脚
         for section in doc.sections:
             self._process_container(section.header, elements, texts)
             self._process_container(section.first_page_header, elements, texts)
@@ -191,12 +201,10 @@ class DocxTranslator(AiTranslator):
         if part := getattr(doc.part, 'footnotes_part', None): self._process_part(part, elements, texts)
         if part := getattr(doc.part, 'endnotes_part', None): self._process_part(part, elements, texts)
 
-        # (已移除) 不再处理批注
-
         return doc, elements, texts
 
     def _apply_translation(self, element_info: Dict[str, Any], final_text: str):
-        """将翻译后的文本写回对应的 OXML 元素。"""
+        """将翻译后的文本写回对应的 OXML 元素。对于多Run的文本段，写入第一个Run并清空其余。"""
         el_type = element_info["type"]
         if el_type == "text_runs":
             runs = element_info["runs"]
@@ -222,7 +230,7 @@ class DocxTranslator(AiTranslator):
     def _after_translate(self, doc: DocumentObject, elements: List[Dict[str, Any]], translated: List[str],
                          originals: List[str]) -> bytes:
         if len(elements) != len(translated):
-            self.logger.error(f"翻译数量不匹配! 原文: {len(originals)}, 译文: {len(translated)}. 将只处理公共部分。")
+            self.logger.error(f"Translation count mismatch! Originals: {len(originals)}, Translated: {len(translated)}. Processing common part only.")
             min_len = min(len(elements), len(translated), len(originals))
             elements, translated, originals = elements[:min_len], translated[:min_len], originals[:min_len]
 
@@ -237,8 +245,6 @@ class DocxTranslator(AiTranslator):
                 final_text = trans
             self._apply_translation(info, final_text)
 
-        # (已移除) 不再提示更新域
-
         doc_output_stream = BytesIO()
         doc.save(doc_output_stream)
         return doc_output_stream.getvalue()
@@ -246,7 +252,7 @@ class DocxTranslator(AiTranslator):
     def translate(self, document: Document) -> Self:
         doc, elements, originals = self._pre_translate(document)
         if not originals:
-            self.logger.info("\n在文档中没有找到需要翻译的文本内容。")
+            self.logger.info("\nNo translatable text content found in the document.")
             document.content = self._after_translate(doc, elements, [], [])
             return self
 
@@ -264,7 +270,7 @@ class DocxTranslator(AiTranslator):
     async def translate_async(self, document: Document) -> Self:
         doc, elements, originals = await asyncio.to_thread(self._pre_translate, document)
         if not originals:
-            self.logger.info("\n在文档中没有找到需要翻译的文本内容。")
+            self.logger.info("\nNo translatable text content found in the document.")
             document.content = await asyncio.to_thread(self._after_translate, doc, elements, [], [])
             return self
 
