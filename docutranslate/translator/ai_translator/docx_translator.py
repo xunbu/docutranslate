@@ -111,10 +111,12 @@ class DocxTranslator(AiTranslator):
                     state['field_depth'] = max(0, state['field_depth'] - 1)
                 continue
             if isinstance(child, CT_R):
+                # 只跳过包含域指令的 Run
                 if child.find(qn('w:instrText')) is not None:
                     continue
-                if state['field_depth'] > 0:
-                    continue
+
+                # 删除了 'if state['field_depth'] > 0: continue' 这一行
+
                 run = Run(child, None)
                 if is_image_run(run) or is_formatting_only_run(run):
                     flush_segment()
