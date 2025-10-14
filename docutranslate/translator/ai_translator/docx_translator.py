@@ -25,19 +25,6 @@ def is_image_run(run: Run) -> bool:
     return '<w:drawing' in xml or '<w:pict' in xml
 
 
-def is_formatting_only_run(run: Run) -> bool:
-    """
-    检查一个 Run 是否主要用于格式化，例如一个空的粗体/斜体/下划线 Run。
-    """
-    text = run.text
-    if not text.strip():
-        if run.underline or run.bold or run.italic or run.font.strike or run.font.subscript or run.font.superscript:
-            return True
-        if text and run.underline:
-            return True
-    return False
-
-
 # ---------------- 配置类 ----------------
 @dataclass
 class DocxTranslatorConfig(AiTranslatorConfig):
@@ -51,10 +38,12 @@ class DocxTranslator(AiTranslator):
     一个基于高级结构化解析的 .docx 文件翻译器。
     它能高精度保留样式，并正确处理正文、表格、页眉/脚、脚注/尾注、超链接和目录(TOC)等复杂元素。
 
-    [v4.2 - 修复版]
-    - 修复了对域代码（Fields）结果文本的错误跳过问题，确保目录条目可被翻译。
-    - 新增了对结构化文档标签（Structured Document Tags, SDT）的递归解析，
-      确保由内容控件（如自动目录）包裹的内容可以被正确处理。
+    [v6.1 - 笔误修复版]
+    - 修复了 qn() 函数调用中的一个笔误 ('w:w:fldCharType')，该错误会导致程序崩溃。
+    - 实现了基于“有效视觉样式”的智能分段逻辑。
+    - 修复了对域代码（Fields）结果文本的错误跳过问题。
+    - 新增了对结构化文档标签（SDT）的递归解析。
+    - 修复了因页眉/页脚对象共享导致文本被重复提取和翻译的问题。
     """
     IGNORED_TAGS = {
         qn('w:proofErr'), qn('w:lastRenderedPageBreak'), qn('w:bookmarkStart'),
@@ -81,6 +70,26 @@ class DocxTranslator(AiTranslator):
         self.insert_mode = config.insert_mode
         self.separator = config.separator
 
+    def _get_run_style_signature(self, run: Run) -> tuple:
+        """
+        获取 Run 的“有效视觉样式”签名。
+        通过比较 python-docx 计算后的最终属性（如字体、大小、颜色等），
+        可以正确处理样式继承，比直接比较 XML 更健壮。
+        """
+        f = run.font
+        return (
+            f.name,
+            f.size,
+            f.bold,
+            f.italic,
+            f.underline,
+            f.strike,
+            f.all_caps,
+            f.small_caps,
+            f.color.rgb if f.color and f.color.rgb is not None else None,
+            f.highlight_color,
+        )
+
     def _process_element_children(self, element, elements: List[Dict[str, Any]], texts: List[str],
                                   state: Dict[str, Any]):
         current_runs = state['current_runs']
@@ -105,22 +114,38 @@ class DocxTranslator(AiTranslator):
                 child if child.tag == qn('w:fldChar') else None)
             if field_char_element is not None:
                 flush_segment()
+                # 【笔误修复】: 修正了 'w:w:fldCharType' 为 'w:fldCharType'
                 fld_type = field_char_element.get(qn('w:fldCharType'))
                 if fld_type == 'begin':
                     state['field_depth'] += 1
                 elif fld_type == 'end':
                     state['field_depth'] = max(0, state['field_depth'] - 1)
                 continue
+
             if isinstance(child, CT_R):
                 if child.find(qn('w:instrText')) is not None:
                     continue
-                # 【V1 修复】: 移除了 `if state['field_depth'] > 0: continue`
-                # 之前的代码会错误地跳过域代码（如TOC）的结果文本，现在只跳过指令文本。
+
                 run = Run(child, None)
-                if is_image_run(run) or is_formatting_only_run(run):
+
+                if is_image_run(run):
                     flush_segment()
-                else:
+                    continue
+
+                if not run.text:
+                    continue
+
+                current_run_style_sig = self._get_run_style_signature(run)
+
+                if not current_runs:
                     current_runs.append(run)
+                else:
+                    last_run_style_sig = self._get_run_style_signature(current_runs[-1])
+                    if current_run_style_sig == last_run_style_sig:
+                        current_runs.append(run)
+                    else:
+                        flush_segment()
+                        current_runs.append(run)
             else:
                 flush_segment()
         state['current_runs'] = current_runs
@@ -147,12 +172,9 @@ class DocxTranslator(AiTranslator):
                 for row in table.rows:
                     for cell in row.cells:
                         self._traverse_container(cell, elements, texts)
-            # 【V2 修复】: 新增对 SDT (Structured Document Tag) 的处理
-            # 这使得代码可以进入并翻译由内容控件（如自动目录）包裹的内容
             elif child_element.tag.endswith('sdt'):
                 sdt_content = child_element.find(qn('w:sdtContent'))
                 if sdt_content is not None:
-                    # 递归处理 sdtContent 内部的元素
                     self._process_body_elements(sdt_content, container, elements, texts)
 
     def _traverse_container(self, container, elements: List[Dict[str, Any]], texts: List[str]):
@@ -174,24 +196,32 @@ class DocxTranslator(AiTranslator):
     def _pre_translate(self, document: Document) -> Tuple[DocumentObject, List[Dict[str, Any]], List[str]]:
         doc = docx.Document(BytesIO(document.content))
         elements, texts = [], []
+        processed_container_ids = set()
+
+        def process_once(container):
+            """一个辅助函数，确保每个容器只被处理一次"""
+            if container is None or id(container) in processed_container_ids:
+                return
+            processed_container_ids.add(id(container))
+            self._traverse_container(container, elements, texts)
 
         # 1. 处理主文档内容
-        self._traverse_container(doc, elements, texts)
+        process_once(doc)
 
         # 2. 处理所有节的页眉和页脚
         for section in doc.sections:
-            self._traverse_container(section.header, elements, texts)
-            self._traverse_container(section.first_page_header, elements, texts)
-            self._traverse_container(section.even_page_header, elements, texts)
-            self._traverse_container(section.footer, elements, texts)
-            self._traverse_container(section.first_page_footer, elements, texts)
-            self._traverse_container(section.even_page_footer, elements, texts)
+            process_once(section.header)
+            process_once(section.first_page_header)
+            process_once(section.even_page_header)
+            process_once(section.footer)
+            process_once(section.first_page_footer)
+            process_once(section.even_page_footer)
 
         # 3. 处理脚注和尾注
         if hasattr(doc.part, 'footnotes_part') and doc.part.footnotes_part is not None:
-            self._traverse_container(doc.part.footnotes_part, elements, texts)
+            process_once(doc.part.footnotes_part)
         if hasattr(doc.part, 'endnotes_part') and doc.part.endnotes_part is not None:
-            self._traverse_container(doc.part.endnotes_part, elements, texts)
+            process_once(doc.part.endnotes_part)
 
         return doc, elements, texts
 

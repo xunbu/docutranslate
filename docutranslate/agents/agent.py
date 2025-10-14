@@ -273,7 +273,7 @@ class Agent:
         if pre_send_handler:
             system_prompt, prompt = pre_send_handler(system_prompt, prompt)
         # print(f"system_prompt:\n{system_prompt}")
-        # print(f"【测试】prompt:\n{prompt}")
+        print(f"【测试】prompt:\n{prompt}")
         headers, data = self._prepare_request_data(prompt, system_prompt)
         should_retry = False
         is_hard_error = False  # 新增标志，用于区分是否为硬错误
