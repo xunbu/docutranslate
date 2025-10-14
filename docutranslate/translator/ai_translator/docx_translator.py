@@ -7,8 +7,10 @@ from typing import Self, Literal, List, Dict, Any, Tuple
 
 import docx
 from docx.document import Document as DocumentObject
+from docx.opc.part import Part
 from docx.oxml.ns import qn
 from docx.oxml.text.run import CT_R
+from docx.section import _Header, _Footer
 from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 from docx.table import _Cell, Table
@@ -65,6 +67,10 @@ class DocxTranslator(AiTranslator):
     - 引入了智能域处理状态机，精确识别并跳过 PAGEREF (页码) 和 SEQ (序号) 等不应翻译的动态域内容。
     - 优化了文本切分逻辑，解决了目录(TOC)和图表目录(TOF)条目被错误拆分为“标题”和“页码”两部分的问题。
     - 根除了因复杂域处理不当导致的目录项重复翻译问题，确保每个条目只被提取和翻译一次。
+
+    [v5.1 - 遍历修复版]
+    - 重构了核心遍历函数 _traverse_container，使其能稳健处理所有类型的文本容器，
+      包括页眉 (header)、页脚 (footer)、脚注 (footnote) 和尾注 (endnote)。
     """
     IGNORED_TAGS = {
         qn('w:proofErr'), qn('w:lastRenderedPageBreak'), qn('w:bookmarkStart'),
@@ -111,44 +117,35 @@ class DocxTranslator(AiTranslator):
                 continue
 
             if child.tag in self.RECURSIVE_CONTAINER_TAGS:
-                # [v5.0] 递归前刷新，确保容器前的内容已保存
                 flush_segment()
                 self._process_element_children(child, elements, texts, state)
                 continue
 
             # --- [v5.0] 智能域处理逻辑 ---
-            # 检查是否为域指令文本 (instrText)
             instr_text_element = child.find(qn('w:instrText')) if isinstance(child, CT_R) else None
             if instr_text_element is not None:
                 instr_text = instr_text_element.text.strip()
-                # 检查指令是否属于需要跳过的类型
                 if any(keyword in instr_text for keyword in self.SKIPPABLE_FIELD_INSTRUCTIONS):
                     state['is_in_skippable_field'] = True
-                continue  # 无论如何都跳过指令文本本身的处理
+                continue
 
-            # 检查是否为域字符 (fldChar)
             field_char_element = child.find(qn('w:fldChar')) if isinstance(child, CT_R) else (
                 child if child.tag == qn('w:fldChar') else None)
             if field_char_element is not None:
                 fld_type = field_char_element.get(qn('w:fldCharType'))
-
                 if fld_type == 'begin':
                     flush_segment()
-                    # 重置子域的状态
                     state['is_in_skippable_field'] = False
                     state['is_skipping_result'] = False
                 elif fld_type == 'separate':
-                    # 如果这是一个我们标记为要跳过的域，现在开始跳过其结果
                     if state.get('is_in_skippable_field'):
-                        flush_segment()  # 刷新域之前的所有文本 (如目录标题)
+                        flush_segment()
                         state['is_skipping_result'] = True
                 elif fld_type == 'end':
-                    # 域结束，恢复正常处理
                     state['is_in_skippable_field'] = False
                     state['is_skipping_result'] = False
                 continue
 
-            # 如果当前状态是跳过域结果，则忽略这个子元素
             if state.get('is_skipping_result'):
                 continue
             # --- 域处理逻辑结束 ---
@@ -162,23 +159,15 @@ class DocxTranslator(AiTranslator):
             else:
                 flush_segment()
 
-        # 在元素处理结束后，确保最后一部分也被刷新
-        # [v5.0] 此处的刷新由调用者 (_process_paragraph) 控制，以避免递归中过早刷新
-
     def _process_paragraph(self, para: Paragraph, elements: List[Dict[str, Any]], texts: List[str]):
         if not para.text.strip():
             return
-
-        # [v5.0] 为每个段落初始化独立的状态
         state = {
             'current_runs': [],
-            'is_in_skippable_field': False,  # 是否在PAGEREF等域的指令部分
-            'is_skipping_result': False  # 是否正在跳过PAGEREF等域的结果部分
+            'is_in_skippable_field': False,
+            'is_skipping_result': False
         }
-
         self._process_element_children(para._p, elements, texts, state)
-
-        # [v5.0] 处理完一个段落的所有子元素后，刷新剩余的runs
         current_runs = state['current_runs']
         if current_runs:
             full_text = "".join(r.text for r in current_runs)
@@ -202,20 +191,35 @@ class DocxTranslator(AiTranslator):
                 if sdt_content is not None:
                     self._process_body_elements(sdt_content, container, elements, texts)
 
-    def _traverse_container(self, container, elements: List[Dict[str, Any]], texts: List[str]):
+    def _traverse_container(self, container: Any, elements: List[Dict[str, Any]], texts: List[str]):
         """
-        [核心导航员] 健壮地遍历任何文本容器 (Document, _Cell, _Header, etc.)。
+        [核心导航员 v2.0 - 增强版] 健壮地遍历任何文本容器，
+        特别为具有额外嵌套层的 Part (如脚注/尾注) 提供了专门处理逻辑。
         """
         if container is None:
             return
 
         parent_element = None
-        if hasattr(container, 'element') and hasattr(container.element, 'body'):
-            parent_element = container.element.body
-        elif hasattr(container, '_element'):
+        # 首先获取包含内容的顶层 XML 元素
+        if isinstance(container, (DocumentObject, Part)):
+            # 对于 Document 和 Part 对象 (如 FootnotesPart)，使用 .element
+            parent_element = container.element.body if hasattr(container.element, 'body') else container.element
+        elif isinstance(container, (_Cell, _Header, _Footer)):
+            # 对于内部块容器，使用 ._element
             parent_element = container._element
+        else:
+            # 如果遇到未知类型，记录警告并返回
+            self.logger.warning(f"跳过未知类型的容器: {type(container)}")
+            return
 
-        if parent_element is not None:
+        # 检查是否是需要特殊处理的嵌套结构 (如脚注/尾注)
+        if parent_element is not None and parent_element.tag in [qn('w:footnotes'), qn('w:endnotes')]:
+            # 遍历每个 <w:footnote> 或 <w:endnote> 元素
+            for note_element in parent_element:
+                # 在每个注释元素内部处理其包含的段落和表格
+                self._process_body_elements(note_element, container, elements, texts)
+        elif parent_element is not None:
+            # 对于其他所有容器 (body, tc, hdr, ftr)，直接处理其子元素
             self._process_body_elements(parent_element, container, elements, texts)
 
     def _pre_translate(self, document: Document) -> Tuple[DocumentObject, List[Dict[str, Any]], List[str]]:
@@ -247,9 +251,7 @@ class DocxTranslator(AiTranslator):
             runs = element_info["runs"]
             if not runs: return
 
-            # [v5.0] 改进合并逻辑，更稳健地处理空runs
             first_real_run_index = -1
-            # 将翻译文本赋给第一个有效的run
             for i, run in enumerate(runs):
                 if run.element.getparent() is not None:
                     run.text = final_text
@@ -260,7 +262,6 @@ class DocxTranslator(AiTranslator):
                 self.logger.warning(f"无法应用翻译 '{final_text}'，因为找不到有效的run。")
                 return
 
-            # 删除其余的runs
             for i in range(first_real_run_index + 1, len(runs)):
                 run = runs[i]
                 parent_element = run.element.getparent()
@@ -268,7 +269,6 @@ class DocxTranslator(AiTranslator):
                     try:
                         parent_element.remove(run.element)
                     except ValueError:
-                        # 在某些复杂情况下，元素可能已被其父元素的其他操作移除
                         self.logger.debug(f"尝试删除一个不存在的run元素。这通常是安全的。")
                         pass
 
@@ -314,7 +314,6 @@ class DocxTranslator(AiTranslator):
 
     async def translate_async(self, document: Document) -> Self:
         doc, elements, originals = await asyncio.to_thread(self._pre_translate, document)
-        # print(f"【测试】originals\n:{originals}")  # 保持您的测试输出
         if not originals:
             self.logger.info("\n文档中未找到可翻译的文本内容。")
             document.content = await asyncio.to_thread(self._after_translate, doc, elements, [], [])
