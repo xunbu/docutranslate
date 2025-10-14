@@ -51,9 +51,10 @@ class DocxTranslator(AiTranslator):
     一个基于高级结构化解析的 .docx 文件翻译器。
     它能高精度保留样式，并正确处理正文、表格、页眉/脚、脚注/尾注、超链接和目录(TOC)等复杂元素。
 
-    [v4.1 - 稳定版重构]
-    - 移除所有对 python-docx 内部类的脆弱导入和猴子补丁。
-    - 实现了一个健壮的、基于鸭子类型的 _traverse_container 函数来统一处理所有文本容器。
+    [v4.2 - 修复版]
+    - 修复了对域代码（Fields）结果文本的错误跳过问题，确保目录条目可被翻译。
+    - 新增了对结构化文档标签（Structured Document Tags, SDT）的递归解析，
+      确保由内容控件（如自动目录）包裹的内容可以被正确处理。
     """
     IGNORED_TAGS = {
         qn('w:proofErr'), qn('w:lastRenderedPageBreak'), qn('w:bookmarkStart'),
@@ -111,12 +112,10 @@ class DocxTranslator(AiTranslator):
                     state['field_depth'] = max(0, state['field_depth'] - 1)
                 continue
             if isinstance(child, CT_R):
-                # 只跳过包含域指令的 Run
                 if child.find(qn('w:instrText')) is not None:
                     continue
-
-                # 删除了 'if state['field_depth'] > 0: continue' 这一行
-
+                # 【V1 修复】: 移除了 `if state['field_depth'] > 0: continue`
+                # 之前的代码会错误地跳过域代码（如TOC）的结果文本，现在只跳过指令文本。
                 run = Run(child, None)
                 if is_image_run(run) or is_formatting_only_run(run):
                     flush_segment()
@@ -138,25 +137,8 @@ class DocxTranslator(AiTranslator):
                 elements.append({"type": "text_runs", "runs": current_runs})
                 texts.append(full_text)
 
-    def _traverse_container(self, container, elements: List[Dict[str, Any]], texts: List[str]):
-        """
-        [核心导航员] 健壮地遍历任何文本容器 (Document, _Cell, _Header, etc.)。
-        """
-        if container is None:
-            return
-
-        # --- 关键修复 ---
-        # 通过检查属性来确定如何获取子元素，而不是依赖于对象的具体类型。
-        # 这种方法对所有类型的容器都有效。
-        parent_element = None
-        if hasattr(container, 'element') and hasattr(container.element, 'body'):
-            parent_element = container.element.body  # For Document
-        elif hasattr(container, '_element'):
-            parent_element = container._element  # For _Cell, _Header, _Footer, NotesParts
-
-        if parent_element is None:
-            return
-
+    def _process_body_elements(self, parent_element, container, elements: List[Dict[str, Any]], texts: List[str]):
+        """ 遍历一个容器内的所有顶级元素（段落、表格、内容控件等） """
         for child_element in parent_element:
             if child_element.tag.endswith('p'):
                 self._process_paragraph(Paragraph(child_element, container), elements, texts)
@@ -165,6 +147,29 @@ class DocxTranslator(AiTranslator):
                 for row in table.rows:
                     for cell in row.cells:
                         self._traverse_container(cell, elements, texts)
+            # 【V2 修复】: 新增对 SDT (Structured Document Tag) 的处理
+            # 这使得代码可以进入并翻译由内容控件（如自动目录）包裹的内容
+            elif child_element.tag.endswith('sdt'):
+                sdt_content = child_element.find(qn('w:sdtContent'))
+                if sdt_content is not None:
+                    # 递归处理 sdtContent 内部的元素
+                    self._process_body_elements(sdt_content, container, elements, texts)
+
+    def _traverse_container(self, container, elements: List[Dict[str, Any]], texts: List[str]):
+        """
+        [核心导航员] 健壮地遍历任何文本容器 (Document, _Cell, _Header, etc.)。
+        """
+        if container is None:
+            return
+
+        parent_element = None
+        if hasattr(container, 'element') and hasattr(container.element, 'body'):
+            parent_element = container.element.body
+        elif hasattr(container, '_element'):
+            parent_element = container._element
+
+        if parent_element is not None:
+            self._process_body_elements(parent_element, container, elements, texts)
 
     def _pre_translate(self, document: Document) -> Tuple[DocumentObject, List[Dict[str, Any]], List[str]]:
         doc = docx.Document(BytesIO(document.content))
