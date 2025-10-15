@@ -81,7 +81,7 @@ class DocxTranslator(AiTranslator):
         qn('w:smartTag'), qn('w:sdtContent'), qn('w:hyperlink'),
     }
     # [v5.0] 定义不应翻译其结果的域指令
-    SKIPPABLE_FIELD_INSTRUCTIONS = {'PAGEREF', 'SEQ'}
+    SKIPPABLE_FIELD_INSTRUCTIONS = {'PAGEREF', 'SEQ', 'PAGE', 'NUMPAGES', 'DATE', 'TIME', 'SECTION'}
 
     def __init__(self, config: DocxTranslatorConfig):
         super().__init__(config=config)
