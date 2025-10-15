@@ -411,13 +411,67 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+### 例 5: その他のワークフローの設定項目 (`HtmlWorkflow`、`EpubWorkflow` の使用)
+
+以下は非同期モードの使用例です。
+
+```python
+# HtmlWorkflow
+from docutranslate.translator.ai_translator.html_translator import HtmlTranslatorConfig
+from docutranslate.workflow.html_workflow import HtmlWorkflowConfig, HtmlWorkflow
+
+
+async def html():
+    # 1. 翻訳機の設定を作成
+    translator_config = HtmlTranslatorConfig(
+        base_url="https://api.openai.com/v1/",
+        api_key="YOUR_OPENAI_API_KEY",
+        model_id="gpt-4o",
+        to_lang="中国語",
+        insert_mode="replace",  # 選択肢: "replace", "append", "prepend"
+        separator="\n",  # "append", "prepend" モードで使用される区切り文字
+    )
+
+    # 2. メインワークフローの設定を作成
+    workflow_config = HtmlWorkflowConfig(
+        translator_config=translator_config,
+    )
+    workflow_html = HtmlWorkflow(config=workflow_config)
+
+
+# EpubWorkflow
+from docutranslate.exporter.epub.epub2html_exporter import Epub2HTMLExporterConfig
+from docutranslate.translator.ai_translator.epub_translator import EpubTranslatorConfig
+from docutranslate.workflow.epub_workflow import EpubWorkflowConfig, EpubWorkflow
+
+
+async def epub():
+    # 1. 翻訳機の設定を作成
+    translator_config = EpubTranslatorConfig(
+        base_url="https://api.openai.com/v1/",
+        api_key="YOUR_OPENAI_API_KEY",
+        model_id="gpt-4o",
+        to_lang="中国語",
+        insert_mode="replace",  # 選択肢: "replace", "append", "prepend"
+        separator="\n",  # "append", "prepend" モードで使用される区切り文字
+    )
+
+    # 2. メインワークフローの設定を作成
+    workflow_config = EpubWorkflowConfig(
+        translator_config=translator_config,
+        html_exporter_config=Epub2HTMLExporterConfig(cdn=True),
+    )
+    workflow_epub = EpubWorkflow(config=workflow_config)
+```
+
 ## 前提条件と設定詳細
 
 ### 1. 大規模モデルAPIキーの取得
 
 翻訳機能は大規模言語モデルに依存しているため、対応するAIプラットフォームから`base_url`、`api_key`、`model_id`を取得する必要があります。
 
-> 推奨モデル：火山引擎の`doubao-seed-1-6-flash`、`doubao-seed-1-6`シリーズ、智譜の`glm-4-flash`、阿里雲の`qwen-plus`、 `qwen-flash`、deepseekの`deepseek-chat`など。
+> 推奨モデル：火山引擎の`doubao-seed-1-6-flash`、`doubao-seed-1-6`シリーズ、智譜の`glm-4-flash`、阿里雲の`qwen-plus`、
+`qwen-flash`、deepseekの`deepseek-chat`など。
 
 > [302.AI](https://share.302.ai/BgRLAe)👈 このリンクから登録で1ドル分の無料クレジットを提供
 
@@ -425,7 +479,7 @@ if __name__ == "__main__":
 |:-----------|:---------------------------------------------------------------------------------------------|:-----------------------------------------------------------|
 | ollama     |                                                                                              | `http://127.0.0.1:11434/v1`                                |
 | lm studio  |                                                                                              | `http://127.0.0.1:1234/v1`                                 |
-| 302.AI     | [ここをクリックして取得](https://share.302.ai/BgRLAe)                                                   | `https://api.302.ai/v1`                                      |
+| 302.AI     | [ここをクリックして取得](https://share.302.ai/BgRLAe)                                                   | `https://api.302.ai/v1`                                    |
 | openrouter | [ここをクリックして取得](https://openrouter.ai/settings/keys)                                           | `https://openrouter.ai/api/v1`                             |
 | openai     | [ここをクリックして取得](https://platform.openai.com/api-keys)                                          | `https://api.openai.com/v1/`                               |
 | gemini     | [ここをクリックして取得](https://aistudio.google.com/u/0/apikey)                                        | `https://generativelanguage.googleapis.com/v1beta/openai/` |

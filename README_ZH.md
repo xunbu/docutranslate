@@ -406,13 +406,67 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
+### 示例 5: 其它workflow的配置项(使用 `HtmlWorkflow`、`EpubWorkflow`)
+
+这里以异步方式为例。
+
+```python
+# HtmlWorkflow
+from docutranslate.translator.ai_translator.html_translator import HtmlTranslatorConfig
+from docutranslate.workflow.html_workflow import HtmlWorkflowConfig, HtmlWorkflow
+
+
+async def html():
+    # 1. 构建翻译器配置
+    translator_config = HtmlTranslatorConfig(
+        base_url="https://api.openai.com/v1/",
+        api_key="YOUR_OPENAI_API_KEY",
+        model_id="gpt-4o",
+        to_lang="中文",
+        insert_mode="replace",  # 备选项 "replace", "append", "prepend"
+        separator="\n",  # "append", "prepend"模式时使用的分隔符
+    )
+
+    # 2. 构建主工作流配置
+    workflow_config = HtmlWorkflowConfig(
+        translator_config=translator_config,
+    )
+    workflow_html = HtmlWorkflow(config=workflow_config)
+
+
+# EpubWorkflow
+from docutranslate.exporter.epub.epub2html_exporter import Epub2HTMLExporterConfig
+from docutranslate.translator.ai_translator.epub_translator import EpubTranslatorConfig
+from docutranslate.workflow.epub_workflow import EpubWorkflowConfig, EpubWorkflow
+
+
+async def epub():
+    # 1. 构建翻译器配置
+    translator_config = EpubTranslatorConfig(
+        base_url="https://api.openai.com/v1/",
+        api_key="YOUR_OPENAI_API_KEY",
+        model_id="gpt-4o",
+        to_lang="中文",
+        insert_mode="replace",  # 备选项 "replace", "append", "prepend"
+        separator="\n",  # "append", "prepend"模式时使用的分隔符
+    )
+
+    # 2. 构建主工作流配置
+    workflow_config = EpubWorkflowConfig(
+        translator_config=translator_config,
+        html_exporter_config=Epub2HTMLExporterConfig(cdn=True),
+    )
+    workflow_epub = EpubWorkflow(config=workflow_config)
+```
+
 ## 前置条件与配置详解
 
 ### 1. 获取大模型 API Key
 
 翻译功能依赖于大型语言模型，您需要从相应的 AI 平台获取 `base_url`, `api_key` 和 `model_id`。
 
-> 推荐模型：火山引擎的`doubao-seed-1-6-flash`、`doubao-seed-1-6`系列、智谱的`glm-4-flash`，阿里云的 `qwen-plus`、`qwen-flash`，deepseek的`deepseek-chat`等。
+> 推荐模型：火山引擎的`doubao-seed-1-6-flash`、`doubao-seed-1-6`系列、智谱的`glm-4-flash`，阿里云的 `qwen-plus`、`qwen-flash`
+> ，deepseek的`deepseek-chat`等。
 
 > [302.AI](https://share.302.ai/BgRLAe)👈从该链接注册可享1美元免费额度
 
