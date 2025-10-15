@@ -15,6 +15,9 @@ from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 from docx.table import _Cell, Table
 
+# 注意：根据最终方案，lxml 不再需要，已移除
+# from lxml import etree
+
 from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, SegmentsTranslateAgent
 from docutranslate.ir.document import Document
 from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTranslator
@@ -58,19 +61,21 @@ class DocxTranslator(AiTranslator):
     一个基于高级结构化解析的 .docx 文件翻译器。
     它能高精度保留样式，并正确处理正文、表格、页眉/脚、脚注/尾注、超链接和目录(TOC)等复杂元素。
 
-    [v4.2 - 修复版]
-    - 修复了对域代码（Fields）结果文本的错误跳过问题，确保目录条目可被翻译。
-    - 新增了对结构化文档标签（Structured Document Tags, SDT）的递归解析，
-      确保由内容控件（如自动目录）包裹的内容可以被正确处理。
+    [v5.3 - 语义切分修复版]
+    - 修复了 v5.2 方案中因过度切分格式变化文本（如 H₂O）导致翻译上下文丢失的问题。
+    - 废弃了基于 <w:rPr> 比较的切分逻辑，转而采用更稳健的语义边界切分。
+    - 核心改动：在处理完一个域（Field）的结束标记（fldCharType="end"）后强制刷新文本段，
+      这既能正确分离引用标记（如[1]）与后续文本，防止格式污染，又能保持化学式等
+      含格式变化的连续文本的完整性。
+
+    [v5.1 - 遍历修复版]
+    - 重构了核心遍历函数 _traverse_container，使其能稳健处理所有类型的文本容器，
+      包括页眉 (header)、页脚 (footer)、脚注 (footnote) 和尾注 (endnote)。
 
     [v5.0 - 增强版]
     - 引入了智能域处理状态机，精确识别并跳过 PAGEREF (页码) 和 SEQ (序号) 等不应翻译的动态域内容。
     - 优化了文本切分逻辑，解决了目录(TOC)和图表目录(TOF)条目被错误拆分为“标题”和“页码”两部分的问题。
     - 根除了因复杂域处理不当导致的目录项重复翻译问题，确保每个条目只被提取和翻译一次。
-
-    [v5.1 - 遍历修复版]
-    - 重构了核心遍历函数 _traverse_container，使其能稳健处理所有类型的文本容器，
-      包括页眉 (header)、页脚 (footer)、脚注 (footnote) 和尾注 (endnote)。
     """
     IGNORED_TAGS = {
         qn('w:proofErr'), qn('w:lastRenderedPageBreak'), qn('w:bookmarkStart'),
@@ -80,8 +85,8 @@ class DocxTranslator(AiTranslator):
     RECURSIVE_CONTAINER_TAGS = {
         qn('w:smartTag'), qn('w:sdtContent'), qn('w:hyperlink'),
     }
-    # [v5.0] 定义不应翻译其结果的域指令
-    SKIPPABLE_FIELD_INSTRUCTIONS = {'PAGEREF', 'SEQ', 'PAGE', 'NUMPAGES', 'DATE', 'TIME', 'SECTION'}
+    # [v5.0] 定义不应翻译其结果的域指令, [v5.3] 增加了 'REF'
+    SKIPPABLE_FIELD_INSTRUCTIONS = {'PAGEREF', 'SEQ', 'PAGE', 'NUMPAGES', 'DATE', 'TIME', 'SECTION', 'REF'}
 
     def __init__(self, config: DocxTranslatorConfig):
         super().__init__(config=config)
@@ -121,7 +126,7 @@ class DocxTranslator(AiTranslator):
                 self._process_element_children(child, elements, texts, state)
                 continue
 
-            # --- [v5.0] 智能域处理逻辑 ---
+            # --- [v5.3] 智能域处理逻辑 ---
             instr_text_element = child.find(qn('w:instrText')) if isinstance(child, CT_R) else None
             if instr_text_element is not None:
                 instr_text = instr_text_element.text.strip()
@@ -142,6 +147,10 @@ class DocxTranslator(AiTranslator):
                         flush_segment()
                         state['is_skipping_result'] = True
                 elif fld_type == 'end':
+                    # ===== [v5.3] 关键改动 =====
+                    # 在域结束后强制刷新，确保域结果（如[1]）和后面的文本分开。
+                    # 这就是我们需要的语义边界。
+                    flush_segment()
                     state['is_in_skippable_field'] = False
                     state['is_skipping_result'] = False
                 continue
@@ -155,6 +164,7 @@ class DocxTranslator(AiTranslator):
                 if is_image_run(run) or is_formatting_only_run(run):
                     flush_segment()
                 else:
+                    # [v5.3] 移除了 v5.2 的 rPr 比较逻辑，允许 H₂O 合并
                     state['current_runs'].append(run)
             else:
                 flush_segment()
