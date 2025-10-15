@@ -30,22 +30,23 @@ def is_image_run(run: Run) -> bool:
     return '<w:drawing' in xml or '<w:pict' in xml
 
 
+# ==================== MODIFICATION START ====================
+#  对 is_formatting_only_run 函数进行了修改
+#  旧的实现无法识别仅包含颜色等 rPr 属性的空 Run，导致其与后续文本 Run 错误合并。
+#  新的实现通过一个更简单的标准来判断：只要一个 Run 的文本内容在去除空白后为空，
+#  它就被认为是纯格式化的，从而解决了交叉引用文本消失的问题。
+# ==========================================================
 def is_formatting_only_run(run: Run) -> bool:
     """
-    检查一个 Run 是否主要用于格式化，例如一个空的粗体/斜体/下划线 Run。
+    检查一个 Run 是否仅用于格式化，不包含应被翻译的实质性文本。
+    这包括：
+    - 完全没有文本的 Run (即使它带有颜色等格式)。
+    - 只包含空格、制表符等空白字符的 Run。
     """
-    text = run.text
-    if not text.strip():
-        # Handles empty runs with formatting
-        if run.underline or run.bold or run.italic or run.font.strike or run.font.subscript or run.font.superscript:
-            return True
-        # Handles runs that are just whitespace but have formatting that might be visually significant
-        if text and run.underline:
-            return True
-        # A simple tab run is also considered formatting-only for our purpose
-        if text == '\t':
-            return True
-    return False
+    return not run.text.strip()
+
+
+# ===================== MODIFICATION END =====================
 
 
 # ---------------- 配置类 ----------------
@@ -85,8 +86,8 @@ class DocxTranslator(AiTranslator):
     RECURSIVE_CONTAINER_TAGS = {
         qn('w:smartTag'), qn('w:sdtContent'), qn('w:hyperlink'),
     }
-    # [v5.0] 定义不应翻译其结果的域指令, [v5.3] 增加了 'REF'
-    SKIPPABLE_FIELD_INSTRUCTIONS = {'PAGEREF', 'SEQ', 'PAGE', 'NUMPAGES', 'DATE', 'TIME', 'SECTION', 'REF'}
+    # [v5.0] 定义不应翻译其结果的域指令
+    SKIPPABLE_FIELD_INSTRUCTIONS = {'PAGEREF', 'SEQ', 'PAGE', 'NUMPAGES', 'DATE', 'TIME', 'SECTION'}
 
     def __init__(self, config: DocxTranslatorConfig):
         super().__init__(config=config)
@@ -263,7 +264,9 @@ class DocxTranslator(AiTranslator):
 
             first_real_run_index = -1
             for i, run in enumerate(runs):
+                # 确保run仍然在文档树中
                 if run.element.getparent() is not None:
+                    # 找到第一个可以写入文本的run
                     run.text = final_text
                     first_real_run_index = i
                     break
@@ -272,6 +275,7 @@ class DocxTranslator(AiTranslator):
                 self.logger.warning(f"无法应用翻译 '{final_text}'，因为找不到有效的run。")
                 return
 
+            # 从第一个有效的run之后开始，删除所有多余的run
             for i in range(first_real_run_index + 1, len(runs)):
                 run = runs[i]
                 parent_element = run.element.getparent()
@@ -279,6 +283,7 @@ class DocxTranslator(AiTranslator):
                     try:
                         parent_element.remove(run.element)
                     except ValueError:
+                        # 如果元素已经被其他操作移除，这里会抛出ValueError，可以安全地忽略
                         self.logger.debug(f"尝试删除一个不存在的run元素。这通常是安全的。")
                         pass
 
