@@ -34,7 +34,14 @@ from fastapi.openapi.docs import (
 )
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field, field_validator, model_validator, AliasChoices
+from pydantic import (
+    BaseModel,
+    Field,
+    field_validator,
+    model_validator,
+    AliasChoices,
+    ConfigDict,
+)
 
 from docutranslate import __version__
 from docutranslate.agents.agent import ThinkingMode
@@ -300,8 +307,8 @@ class GlossaryAgentConfigPayload(BaseModel):
     system_proxy_enable: bool = Field(
         default=default_params["system_proxy_enable"], description="是否使用系统代理", examples=[True, False]
     )
-    custom_prompt:Optional[str]=Field(
-        default=None,description="生成术语表的用户自定义提示词"
+    custom_prompt: Optional[str] = Field(
+        default=None, description="生成术语表的用户自定义提示词"
     )
 
 
@@ -579,8 +586,8 @@ class TranslateServiceRequest(BaseModel):
         ..., description="包含工作流类型和相应参数的载荷。"
     )
 
-    class Config:
-        json_schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "examples": [
                 {
                     "file_name": "annual_report_203.pdf",
@@ -781,6 +788,7 @@ class TranslateServiceRequest(BaseModel):
                 },
             ]
         }
+    )
 
 
 # --- Background Task Logic ---
