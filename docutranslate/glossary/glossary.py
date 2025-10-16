@@ -19,7 +19,7 @@ class Glossary:
         flag = False
         prompt = "\nHere is the reference glossary:\n"
         for src, dst in self.glossary_dict.items():
-            if src in text:
+            if src.lower().strip() in text.lower():
                 prompt += f"{src}=>{dst}\n"
                 flag = True
         prompt += "Glossary ends\n"
