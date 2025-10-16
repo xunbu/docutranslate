@@ -292,7 +292,7 @@ class Agent:
             response.raise_for_status()
             # print(f"【测试】resp:\n{response.json()}")
             result = response.json()["choices"][0]["message"]["content"]
-
+            # print(f"【测试】\nprompt:\n{prompt}\nresp:\n{result}")
             # 获取token使用情况
             response_data = response.json()
             input_tokens, cached_tokens, output_tokens, reasoning_tokens = (
