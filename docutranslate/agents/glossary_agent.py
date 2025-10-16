@@ -18,6 +18,9 @@ from docutranslate.utils.json_utils import segments2json_chunks
 def generate_prompt(json_segments: str, to_lang: str):
     return f"""
 You will receive a JSON-formatted list of paragraphs where keys are paragraph numbers and values are paragraph contents.
+You need to extract person names and location names from these paragraphs and translate these terms into {to_lang}.
+Finally, output a glossary of original terms:translated terms
+
 Here is the input:
 
 <input>
@@ -25,33 +28,25 @@ Here is the input:
 {json_segments}
 ```
 </input>
-You need to extract person names and location names from these paragraphs and translate these terms into {to_lang}.
-Finally, output a glossary of Source Nouns:Target Nouns
-> The source noun in the output glossary must exactly match the original term in original language, while target noun is the {to_lang} translation of the term
-> Do not extract special tags or untranslatable elements (such as code, brand names, technical terms)
-> The same source noun should only appear once in the glossary without repetition
-> The Target Nouns
 
-Here is an example of the expected format:
+<Requirement>
+- The original language is identified based on the context.The target language is {to_lang}
+- The same src should only appear once in the glossary without repetition
+- Do not include special tags or tags formatted as `<ph-xxxxxx>` in the glossary
+- Do not include common nouns in the glossary.
+- No explanation in Translated Term.
+</Requirement>
+
+The output format should be plain JSON text in a JSON array format:
+{[{"src": "<Original Term>", "dst": "<Translated Term>"}]}
 
 <example>
+Assuming the source language is English and the target language is Chinese in the example
 Input:
-
-```json
-{{
-"3":"text",
-"4":"text"
-}}
-```
-
-Output
-
-```json
-{'[{"src": "Source Noun1", "dst": "Target Noun1"},\n {"src": "Source Noun2", "dst": "Target Noun2"}, \n{"src": "Source Noun3", "dst": "Target Noun3"}]'}
-```
-
+{{"0":"Jobs likes apples","1":"Bill Gates is sunbathing in Shanghai."}}
+Output:
+{r'[{"src": "Jobs", "dst": "乔布斯"}, {"src": "Bill Gates", "dst": "比尔盖茨"}, {"src": "Shanghai", "dst": "上海"}]'}
 </example>
-Please return the translated JSON Array directly without including any additional information.
 """
 
 
