@@ -6,7 +6,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Self, Literal, List, Dict, Any
+from typing import Self, Literal, List, Dict, Any, Tuple
 
 from bs4 import BeautifulSoup, Tag
 
@@ -18,7 +18,8 @@ from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTr
 @dataclass
 class EpubTranslatorConfig(AiTranslatorConfig):
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
-    separator: str = "\n"
+    # 建议使用 <br />，它在 XHTML (EPUB标准) 中更规范
+    separator: str = "<br />"
 
 
 class EpubTranslator(AiTranslator):
@@ -33,7 +34,7 @@ class EpubTranslator(AiTranslator):
         self.translate_agent = None
         if not self.skip_translate:
             agent_config = SegmentsTranslateAgentConfig(
-                custom_prompt=config.custom_prompt,  # 使用优化后的prompt
+                custom_prompt=config.custom_prompt,
                 to_lang=config.to_lang,
                 base_url=config.base_url,
                 api_key=config.api_key,
@@ -52,11 +53,15 @@ class EpubTranslator(AiTranslator):
         self.separator = config.separator
 
     def _pre_translate(self, document: Document) -> tuple[
-        Dict[str, bytes], List[Dict[str, Any]], List[str]
+        Dict[str, bytes],  # all_files: 原始文件内容
+        Dict[str, BeautifulSoup],  # soups: 解析后的HTML对象
+        List[Dict[str, Any]],  # items_to_translate: 待翻译项
+        List[str]  # original_texts: 原始HTML片段
     ]:
         all_files = {}
+        soups = {}  # << [关键修改] 存储解析后的BS对象
         items_to_translate = []
-        original_texts = []  # 现在这里存储的是HTML片段
+        original_texts = []
 
         with zipfile.ZipFile(BytesIO(document.content), 'r') as zf:
             for filename in zf.namelist():
@@ -94,41 +99,38 @@ class EpubTranslator(AiTranslator):
                     self.logger.warning(f"在 EPUB 中找不到文件: {file_path}")
                     continue
 
-                soup = BeautifulSoup(content_bytes, "html.parser")
+                # << [关键修改] 解析一次并存储
+                if file_path not in soups:
+                    soups[file_path] = BeautifulSoup(content_bytes, "html.parser")
+
+                soup = soups[file_path]
                 for tag in soup.find_all(TAGS_TO_TRANSLATE):
-                    # 获取标签内部的HTML，而不是纯文本
                     inner_html = tag.decode_contents()
-                    # 只有在内部有实际内容（不仅仅是空白）时才翻译
                     if inner_html and not inner_html.isspace():
                         item_info = {
                             "file_path": file_path,
-                            "tag": tag,
+                            "tag": tag,  # 这个tag是soups[file_path]中的活引用
                             "original_html": inner_html,
                         }
                         items_to_translate.append(item_info)
                         original_texts.append(inner_html)
 
-        return all_files, items_to_translate, original_texts
+        return all_files, soups, items_to_translate, original_texts
 
     def _after_translate(
             self,
             all_files: Dict[str, bytes],
+            soups: Dict[str, BeautifulSoup],  # << [关键修改] 接收解析好的BS对象
             items_to_translate: List[Dict[str, Any]],
             translated_texts: List[str],
-            original_texts: List[str],  # 这里是 original_htmls
+            original_texts: List[str],
     ) -> bytes:
-        modified_soups = {}
-
         for i, item_info in enumerate(items_to_translate):
-            file_path = item_info["file_path"]
+            # << [关键修改] 直接使用 item_info 中的活引用 tag，它属于 soups 字典中的一个对象
             tag: Tag = item_info["tag"]
             translated_html = translated_texts[i]
             original_html = original_texts[i]
 
-            if file_path not in modified_soups:
-                modified_soups[file_path] = tag.find_parent('html')
-
-            # [修改] 处理 insert_mode，现在操作的是HTML片段
             if self.insert_mode == "replace":
                 final_html = translated_html
             elif self.insert_mode == "append":
@@ -138,15 +140,24 @@ class EpubTranslator(AiTranslator):
             else:
                 final_html = translated_html
 
-            # [修改] 清空旧内容，并追加解析后的新HTML内容
+            # 清空旧内容
             tag.clear()
-            # 解析AI返回的HTML字符串，'html.parser'对此有很好的容错性
-            new_content = BeautifulSoup(final_html, 'html.parser')
-            # 将解析后的所有子节点追加到原tag中
-            for child in new_content.contents:
-                tag.append(child.extract())  # extract()会从原文档树中移除节点，避免重复
 
-        for file_path, soup in modified_soups.items():
+            # 解析新的HTML片段
+            new_content_soup = BeautifulSoup(final_html, 'html.parser')
+
+            # << [关键修复] 将新片段的*内容*（而不是整个文档）移动到原始标签中
+            # 使用 list() 创建副本以安全地迭代和修改
+            if new_content_soup.body:
+                nodes_to_insert = list(new_content_soup.body.children)
+            else:
+                nodes_to_insert = list(new_content_soup.children)
+
+            for node in nodes_to_insert:
+                tag.append(node.extract())  # .extract() 从旧树中移除并返回节点
+
+        # << [关键修改] 从修改后的soups对象生成新的文件内容
+        for file_path, soup in soups.items():
             all_files[file_path] = str(soup).encode('utf-8')
 
         output_buffer = BytesIO()
@@ -158,11 +169,10 @@ class EpubTranslator(AiTranslator):
                     zf_out.writestr(filename, content, compress_type=zipfile.ZIP_DEFLATED)
         return output_buffer.getvalue()
 
-    # translate 和 translate_async 方法无需修改，因为它们调用的_pre_translate和_after_translate已经被更新了
     def translate(self, document: Document) -> Self:
-        all_files, items_to_translate, original_texts = self._pre_translate(document)
+        all_files, soups, items_to_translate, original_texts = self._pre_translate(document)
         if not items_to_translate:
-            self.logger.info("\n文件中没有找到需要翻译的纯文本内容。")
+            self.logger.info("\n文件中没有找到需要翻译的内容。")
             return self
         if self.glossary_agent:
             self.glossary_dict_gen = self.glossary_agent.send_segments(original_texts, self.chunk_size)
@@ -172,17 +182,18 @@ class EpubTranslator(AiTranslator):
             translated_texts = self.translate_agent.send_segments(original_texts, self.chunk_size)
         else:
             translated_texts = original_texts
+        # << [关键修改] 传递 soups 对象
         document.content = self._after_translate(
-            all_files, items_to_translate, translated_texts, original_texts
+            all_files, soups, items_to_translate, translated_texts, original_texts
         )
         return self
 
     async def translate_async(self, document: Document) -> Self:
-        all_files, items_to_translate, original_texts = await asyncio.to_thread(
+        all_files, soups, items_to_translate, original_texts = await asyncio.to_thread(
             self._pre_translate, document
         )
         if not items_to_translate:
-            self.logger.info("\n文件中没有找到需要翻译的纯文本内容。")
+            self.logger.info("\n文件中没有找到需要翻译的内容。")
             return self
 
         if self.glossary_agent:
@@ -195,7 +206,8 @@ class EpubTranslator(AiTranslator):
             )
         else:
             translated_texts = original_texts
+        # << [关键修改] 传递 soups 对象
         document.content = await asyncio.to_thread(
-            self._after_translate, all_files, items_to_translate, translated_texts, original_texts
+            self._after_translate, all_files, soups, items_to_translate, translated_texts, original_texts
         )
         return self
