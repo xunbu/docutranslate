@@ -66,6 +66,22 @@ def is_styled_whitespace_run(run: Run) -> bool:
     # 仅当 Run 的属性中包含我们定义的“显著”样式之一时，才返回 True。
     return any(child.tag in SIGNIFICANT_STYLES for child in rPr)
 
+# ---------- 新增修改部分 1: 增加 is_tab_run 辅助函数 ----------
+def is_tab_run(run: Run) -> bool:
+    """
+    检查一个 Run 是否主要代表一个制表符，应被视作格式边界。
+    仅当 Run 的文本内容为空或仅包含空白，且 XML 中存在 <w:tab/> 时，
+    才将其视为纯格式化用途的 Run。
+    """
+    # .text 属性会将 <w:tab/> 转换成 '\t'
+    # 如果 .text 在去除空白后仍有内容，说明这个 Run 不仅仅是个制表符。
+    if run.text.strip():
+        return False
+
+    xml = getattr(run.element, 'xml', '')
+    return '<w:tab' in xml or '<w:ptab' in xml
+# ---------------------- 修改结束 ----------------------
+
 
 # ---------------- 配置类 ----------------
 @dataclass
@@ -150,11 +166,14 @@ class DocxTranslator(AiTranslator):
 
             if isinstance(child, CT_R):
                 run = Run(child, None)
+                # ---------- 新增修改部分 2: 在判断条件中加入 is_tab_run ----------
                 # [v6.2] 使用更精确的检查来识别作为边界的 Run。
-                if is_image_run(run) or is_formatting_only_run(run) or is_styled_whitespace_run(run):
+                # 新增 is_tab_run() 检查，将包含制表符的 Run 也视为边界。
+                if is_image_run(run) or is_formatting_only_run(run) or is_styled_whitespace_run(run) or is_tab_run(run):
                     flush_segment()
                 else:
                     state['current_runs'].append(run)
+                # ---------------------- 修改结束 ----------------------
             else:
                 flush_segment()
 
