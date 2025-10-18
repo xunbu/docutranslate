@@ -15,9 +15,6 @@ from docx.text.paragraph import Paragraph
 from docx.text.run import Run
 from docx.table import _Cell, Table
 
-# 注意：根据最终方案，lxml 不再需要，已移除
-# from lxml import etree
-
 from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, SegmentsTranslateAgent
 from docutranslate.ir.document import Document
 from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTranslator
@@ -30,12 +27,6 @@ def is_image_run(run: Run) -> bool:
     return '<w:drawing' in xml or '<w:pict' in xml
 
 
-# ==================== MODIFICATION START ====================
-#  对 is_formatting_only_run 函数进行了修改
-#  旧的实现无法识别仅包含颜色等 rPr 属性的空 Run，导致其与后续文本 Run 错误合并。
-# #  新的实现通过一个更简单的标准来判断：只要一个 Run 的文本内容为空，
-# #  它就被认为是纯格式化的，从而解决了交叉引用文本消失的问题。
-# ==========================================================
 def is_formatting_only_run(run: Run) -> bool:
     """
     检查一个 Run 是否仅用于格式化，不包含任何应被渲染的文本。
@@ -44,7 +35,19 @@ def is_formatting_only_run(run: Run) -> bool:
     return run.text == ""
 
 
-# ===================== MODIFICATION END =====================
+def is_styled_whitespace_run(run: Run) -> bool:
+    """
+    检查一个 Run 是否只包含空白字符，但应用了应保留的直接格式（如下划线）。
+    这些 Run 应被视为翻译段的边界并保持不变。
+    """
+    # 如果 Run 不只包含空白，或者完全为空，则不符合条件
+    if not (run.text and run.text.isspace()):
+        return False
+
+    rPr = run.element.rPr
+    # 如果 rPr 元素存在且有任何子元素（例如 <w:u> 表示下划线），
+    # 这意味着样式被直接应用到了这个空白 Run 上。
+    return rPr is not None and len(list(rPr)) > 0
 
 
 # ---------------- 配置类 ----------------
@@ -60,21 +63,19 @@ class DocxTranslator(AiTranslator):
     一个基于高级结构化解析的 .docx 文件翻译器。
     它能高精度保留样式，并正确处理正文、表格、页眉/脚、脚注/尾注、超链接和目录(TOC)等复杂元素。
 
-    [v5.3 - 语义切分修复版]
-    - 修复了 v5.2 方案中因过度切分格式变化文本（如 H₂O）导致翻译上下文丢失的问题。
-    - 废弃了基于 <w:rPr> 比较的切分逻辑，转而采用更稳健的语义边界切分。
-    - 核心改动：在处理完一个域（Field）的结束标记（fldCharType="end"）后强制刷新文本段，
-      这既能正确分离引用标记（如[1]）与后续文本，防止格式污染，又能保持化学式等
-      含格式变化的连续文本的完整性。
+    [v6.1 - 格式保留修复版]
+    - 修复了因合并 Run 导致下划线等格式在翻译后丢失的问题。
+    - 通过引入 is_styled_whitespace_run 检查，将仅包含空格但带有样式的 Run（如下划线空格）
+      视为与图片类似的不可翻译边界。
+    - 这可以防止这些关键的格式化 Run 被合并到文本段中或在应用翻译时被错误地删除，
+      从而确保了下划线、加粗空格等格式的完整保留。
 
-    [v5.1 - 遍历修复版]
-    - 重构了核心遍历函数 _traverse_container，使其能稳健处理所有类型的文本容器，
-      包括页眉 (header)、页脚 (footer)、脚注 (footnote) 和尾注 (endnote)。
-
-    [v5.0 - 增强版]
-    - 引入了智能域处理状态机，精确识别并跳过 PAGEREF (页码) 和 SEQ (序号) 等不应翻译的动态域内容。
-    - 优化了文本切分逻辑，解决了目录(TOC)和图表目录(TOF)条目被错误拆分为“标题”和“页码”两部分的问题。
-    - 根除了因复杂域处理不当导致的目录项重复翻译问题，确保每个条目只被提取和翻译一次。
+    [v6.0 - 语义切分重构版]
+    - 核心思想重构：不再试图通过复杂的状态机去识别和“跳过”特定类型的域（如页码、序号）。
+    - 默认提取所有文本：所有域的结果（PAGEREF, SEQ 等）现在都会被提取出来进行处理。
+    - 简化切分逻辑：仅使用域的开始（begin）和结束（end）标记作为强制性的语义边界，在此处切分文本段。
+      这确保了域结果（如交叉引用"[1]"）与其前后的文本在语义上分离，同时又避免了因跳过逻辑导致的文本丢失风险。
+    - 提升鲁棒性：新逻辑对未知或复杂的域结构更具适应性，确保了文本提取的完整性。
     """
     IGNORED_TAGS = {
         qn('w:proofErr'), qn('w:lastRenderedPageBreak'), qn('w:bookmarkStart'),
@@ -84,8 +85,6 @@ class DocxTranslator(AiTranslator):
     RECURSIVE_CONTAINER_TAGS = {
         qn('w:smartTag'), qn('w:sdtContent'), qn('w:hyperlink'),
     }
-    # [v5.0] 定义不应翻译其结果的域指令
-    SKIPPABLE_FIELD_INSTRUCTIONS = {'PAGEREF', 'SEQ', 'PAGE', 'NUMPAGES', 'DATE', 'TIME', 'SECTION'}
 
     def __init__(self, config: DocxTranslatorConfig):
         super().__init__(config=config)
@@ -125,47 +124,28 @@ class DocxTranslator(AiTranslator):
                 self._process_element_children(child, elements, texts, state)
                 continue
 
-            # --- [v5.3] 智能域处理逻辑 ---
-            instr_text_element = child.find(qn('w:instrText')) if isinstance(child, CT_R) else None
-            if instr_text_element is not None:
-                instr_text = instr_text_element.text.strip()
-                if any(keyword in instr_text for keyword in self.SKIPPABLE_FIELD_INSTRUCTIONS):
-                    state['is_in_skippable_field'] = True
-                continue
-
-            field_char_element = child.find(qn('w:fldChar')) if isinstance(child, CT_R) else (
-                child if child.tag == qn('w:fldChar') else None)
+            # --- [v6.0 Refactored] 简化的域处理逻辑 ---
+            field_char_element = child.find(qn('w:fldChar')) if isinstance(child, CT_R) else None
             if field_char_element is not None:
                 fld_type = field_char_element.get(qn('w:fldCharType'))
-                if fld_type == 'begin':
+                if fld_type == 'begin' or fld_type == 'end':
                     flush_segment()
-                    state['is_in_skippable_field'] = False
-                    state['is_skipping_result'] = False
-                elif fld_type == 'separate':
-                    if state.get('is_in_skippable_field'):
-                        flush_segment()
-                        state['is_skipping_result'] = True
-                elif fld_type == 'end':
-                    # ===== [v5.3] 关键改动 =====
-                    # 在域结束后强制刷新，确保域结果（如[1]）和后面的文本分开。
-                    # 这就是我们需要的语义边界。
-                    flush_segment()
-                    state['is_in_skippable_field'] = False
-                    state['is_skipping_result'] = False
                 continue
-
-            if state.get('is_skipping_result'):
-                continue
-            # --- 域处理逻辑结束 ---
 
             if isinstance(child, CT_R):
                 run = Run(child, None)
-                if is_image_run(run) or is_formatting_only_run(run):
+                # [v6.1 FIX] 将带样式的空白 Run（如下划线）视为与图片一样的边界，
+                # 以防止其格式在翻译过程中丢失。
+                if is_image_run(run) or is_formatting_only_run(run) or is_styled_whitespace_run(run):
+                    # 这些 Run 是边界，不应包含在可翻译段落中。
+                    # 我们刷新任何之前的文本，然后这个 Run 本身被跳过，
+                    # 从而在文档中保持原样。
                     flush_segment()
                 else:
-                    # [v5.3] 移除了 v5.2 的 rPr 比较逻辑，允许 H₂O 合并
+                    # 这是一个包含实际可翻译文本的 Run，将其添加到当前段落。
                     state['current_runs'].append(run)
             else:
+                # 如果子元素不是 Run，它也充当一个边界。
                 flush_segment()
 
     def _process_paragraph(self, para: Paragraph, elements: List[Dict[str, Any]], texts: List[str]):
@@ -173,10 +153,10 @@ class DocxTranslator(AiTranslator):
             return
         state = {
             'current_runs': [],
-            'is_in_skippable_field': False,
-            'is_skipping_result': False
         }
         self._process_element_children(para._p, elements, texts, state)
+
+        # 刷新段落末尾任何剩余的 runs
         current_runs = state['current_runs']
         if current_runs:
             full_text = "".join(r.text for r in current_runs)
