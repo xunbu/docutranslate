@@ -150,6 +150,7 @@ class HtmlTranslator(AiTranslator):
                          translated_texts: list[str], original_texts: list[str]) -> bytes:
         """
         将翻译后的文本写回到BeautifulSoup对象中对应的节点或属性，并返回最终的HTML字节流。
+        【版本 3.0: 修正了对HTML分隔符的支持】
         """
         if len(translatable_items) != len(translated_texts):
             self.logger.error("翻译前后的文本片段数量不匹配 (%d vs %d)，跳过写入操作以防损坏文件。",
@@ -160,36 +161,59 @@ class HtmlTranslator(AiTranslator):
             translated_text = translated_texts[i]
             original_text = original_texts[i]
 
-            new_content = ""
-            if self.insert_mode == "replace":
-                if item['type'] == 'node':
-                    # 对于文本节点，保留原文前后的空白字符，这对维持内联元素的间距至关重要。
-                    leading_space = original_text[:len(original_text) - len(original_text.lstrip())]
-                    trailing_space = original_text[len(original_text.rstrip()):]
-                    new_content = leading_space + translated_text + trailing_space
-                else:  # 属性
-                    new_content = translated_text
-
-            elif self.insert_mode == "append":
-                new_content = original_text + self.separator + translated_text
-            elif self.insert_mode == "prepend":
-                new_content = translated_text + self.separator + original_text
-            else:
-                self.logger.error(f"不正确的HtmlTranslatorConfig参数: insert_mode='{self.insert_mode}'")
-                new_content = original_text  # 出错时恢复原文
-
-            # 根据类型将内容写回
             if item['type'] == 'node':
                 node = item['object']
-                # 检查节点是否仍然在解析树中，以防在处理过程中被移动或删除
-                if node.parent:
-                    node.replace_with(NavigableString(new_content))
+                if not node.parent:  # 确保节点仍然在树中
+                    continue
+
+                # --- 构造包含HTML的新内容字符串 ---
+                new_content_str = ""
+                if self.insert_mode == "replace":
+                    leading_space = original_text[:len(original_text) - len(original_text.lstrip())]
+                    trailing_space = original_text[len(original_text.rstrip()):]
+                    new_content_str = leading_space + translated_text + trailing_space
+                elif self.insert_mode == "append":
+                    new_content_str = original_text + self.separator + translated_text
+                elif self.insert_mode == "prepend":
+                    new_content_str = translated_text + self.separator + original_text
+                else:
+                    self.logger.error(f"不正确的HtmlTranslatorConfig参数: insert_mode='{self.insert_mode}'")
+                    new_content_str = original_text
+
+                # --- 核心修改：正确地将HTML字符串片段插入DOM ---
+                # 1. 使用一个临时的父标签（如此处的'div'）来解析HTML片段，
+                #    这是在BeautifulSoup中处理片段的标准做法，避免了自动添加<html><body>。
+                temp_soup = BeautifulSoup(f"<div>{new_content_str}</div>", 'html.parser')
+                new_elements = temp_soup.div.contents
+
+                # 2. 将解析出的新元素（可能是文本节点和<br>标签的混合）
+                #    以相反的顺序插入到原始节点之后。这样做可以保持它们的原始顺序。
+                for element in reversed(new_elements):
+                    node.insert_after(element)
+
+                # 3. 移除原始的文本节点
+                node.decompose()
+
             elif item['type'] == 'attribute':
+                # --- 属性逻辑保持不变，因为属性值不支持HTML ---
                 tag = item['tag']
                 attr = item['attribute']
-                tag[attr] = new_content
+                new_attr_value = ""
 
-        # 将修改后的BeautifulSoup对象编码为utf-8字节流
+                # 在属性值中，<br>将被视为普通文本，这是正确的行为
+                separator_for_attr = self.separator.replace('<br>', ' ').replace('<br/>', ' ')
+
+                if self.insert_mode == "replace":
+                    new_attr_value = translated_text
+                elif self.insert_mode == "append":
+                    new_attr_value = original_text + separator_for_attr + translated_text
+                elif self.insert_mode == "prepend":
+                    new_attr_value = translated_text + separator_for_attr + original_text
+                else:
+                    new_attr_value = original_text
+
+                tag[attr] = new_attr_value.strip()
+
         return soup.encode('utf-8')
 
     def translate(self, document: Document) -> Self:
