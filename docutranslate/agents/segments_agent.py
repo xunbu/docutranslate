@@ -22,11 +22,9 @@ You will receive a sequence of original text segments to be translated, represen
 Here is the input:
 
 <input>
-
 ```json
 {json_segments}
 ```
-
 </input>
 
 For each Key-Value Pair in the JSON, translate the contents of the value into {to_lang}, Write the translation back into the value for that JSON.
@@ -60,7 +58,7 @@ Please return the translated JSON directly without including any additional info
 """
 
 def get_original_segments(prompt:str):
-    match = re.search(r'<input>(.*)</input>', prompt, re.DOTALL)
+    match = re.search(r'<input>\n```json\n(.*)\n```\n</input>', prompt, re.DOTALL)
     if match:
         return match.group(1)
     else:

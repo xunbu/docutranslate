@@ -51,7 +51,7 @@ Output:
 
 
 def get_original_segments(prompt: str):
-    match = re.search(r'<input>(.*)</input>', prompt, re.DOTALL)
+    match = re.search(r'<input>\n```json\n(.*)\n```\n</input>', prompt, re.DOTALL)
     if match:
         return match.group(1)
     else:

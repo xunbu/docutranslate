@@ -83,7 +83,7 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
             for attachment in converter.attachments:
                 self.attachment.add_attachment(attachment)
         # 缓存解析后文件
-        md_based_convert_cacher.cache_result(document_md.copy(), self.document_original, convert_engin, convert_config)
+        md_based_convert_cacher.cache_result(document_md, self.document_original, convert_engin, convert_config)
 
         return document_md
 

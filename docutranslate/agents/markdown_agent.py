@@ -1,10 +1,19 @@
 # SPDX-FileCopyrightText: 2025 QinHan
 # SPDX-License-Identifier: MPL-2.0
-
+import re
 from dataclasses import dataclass
 
 from .agent import Agent, AgentConfig
 from ..glossary.glossary import Glossary
+
+
+def get_original_markdown(prompt: str):
+    match = re.search(r'<input>\n(.*)\n</input>', prompt, re.DOTALL)
+    if match:
+        return match.group(1)
+    else:
+        raise ValueError("无法从prompt中提取初始文本")
+
 
 def generate_prompt(markdown_text: str, to_lang: str):
     return f"""
@@ -20,8 +29,11 @@ Treat the text input as markdown text and translate it into {to_lang},output tra
 - Output the translated markdown text as plain text (not in a markdown code block, with no extraneous text).
 
 The markdown text input:
+<input>
  {markdown_text}
+</input>
 """
+
 
 @dataclass
 class MDTranslateAgentConfig(AgentConfig):
@@ -33,7 +45,7 @@ class MDTranslateAgentConfig(AgentConfig):
 class MDTranslateAgent(Agent):
     def __init__(self, config: MDTranslateAgentConfig):
         super().__init__(config)
-        self.to_lang=config.to_lang
+        self.to_lang = config.to_lang
         self.system_prompt = f"""
 # Role
 You are a professional machine translation engine.
@@ -50,12 +62,15 @@ You are a professional machine translation engine.
         return system_prompt, prompt
 
     def send_chunks(self, prompts: list[str]):
-        prompts=[generate_prompt(prompt,self.to_lang) for prompt in prompts]
-        return super().send_prompts(prompts=prompts, pre_send_handler=self._pre_send_handler)
+        prompts = [generate_prompt(prompt, self.to_lang) for prompt in prompts]
+        return super().send_prompts(prompts=prompts, pre_send_handler=self._pre_send_handler,
+                                    error_result_handler=lambda prompt, logger: get_original_markdown(prompt))
 
     async def send_chunks_async(self, prompts: list[str]):
         prompts = [generate_prompt(prompt, self.to_lang) for prompt in prompts]
-        return await super().send_prompts_async(prompts=prompts, pre_send_handler=self._pre_send_handler)
+        return await super().send_prompts_async(prompts=prompts, pre_send_handler=self._pre_send_handler,
+                                                error_result_handler=lambda prompt, logger: get_original_markdown(
+                                                    prompt))
 
     def update_glossary_dict(self, update_dict: dict | None):
         if self.glossary_dict is None:
