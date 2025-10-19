@@ -19,7 +19,6 @@ from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, Se
 from docutranslate.ir.document import Document
 from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTranslator
 
-
 # ---------------- 辅助函数 ----------------
 
 # [v6.2] 定义一组具有显著视觉效果的格式标签。
@@ -51,22 +50,10 @@ def is_formatting_only_run(run: Run) -> bool:
     return run.text == ""
 
 
-def is_styled_whitespace_run(run: Run) -> bool:
-    """
-    [v6.2] 检查一个 Run 是否只包含空白字符，但应用了应保留的“显著”格式。
-    这些 Run 应被视为翻译段的边界并保持不变。
-    """
-    if not (run.text and run.text.isspace()):
-        return False
+# ---------- 新增修改部分 1: is_styled_whitespace_run 函数被移除 ----------
+# 此函数不再需要，因为新的逻辑会根据格式变化来切分，而不是根据带格式的空格。
+# ---------------------- 修改结束 ----------------------
 
-    rPr = run.element.rPr
-    if rPr is None:
-        return False
-
-    # 仅当 Run 的属性中包含我们定义的“显著”样式之一时，才返回 True。
-    return any(child.tag in SIGNIFICANT_STYLES for child in rPr)
-
-# ---------- 新增修改部分 1: 增加 is_tab_run 辅助函数 ----------
 def is_tab_run(run: Run) -> bool:
     """
     检查一个 Run 是否主要代表一个制表符，应被视作格式边界。
@@ -80,7 +67,6 @@ def is_tab_run(run: Run) -> bool:
 
     xml = getattr(run.element, 'xml', '')
     return '<w:tab' in xml or '<w:ptab' in xml
-# ---------------------- 修改结束 ----------------------
 
 
 # ---------------- 配置类 ----------------
@@ -95,6 +81,12 @@ class DocxTranslator(AiTranslator):
     """
     一个基于高级结构化解析的 .docx 文件翻译器。
     它能高精度保留样式，并正确处理正文、表格、页眉/脚、脚注/尾注、超链接和目录(TOC)等复杂元素。
+
+    [v6.3 - 上下文感知格式切分]
+    - 根本性地改进了文本切分逻辑，解决了因带格式的空格（如下划线空格）导致连续短语被错误拆分的问题。
+    - 新逻辑不再将任何带格式的空格视为固定的边界，而是通过比较相邻文本片段的“显著格式”是否一致来决定是否合并。
+    - 只要格式（如下划线、高亮等）保持不变，即使中间有空格，文本也会被视为一个连续的翻译单元，
+      极大地提升了对标题、合同条款等格式化文本的翻译准确性和流畅性。
 
     [v6.2 - 精确格式保留]
     - 根据用户反馈，精确定义了构成“重要格式”的样式范围。
@@ -135,6 +127,24 @@ class DocxTranslator(AiTranslator):
         self.insert_mode = config.insert_mode
         self.separator = config.separator
 
+    # ---------- 新增修改部分 2: 增加用于比较格式的辅助函数 ----------
+    def _get_significant_styles(self, run: Run) -> frozenset:
+        """从一个 Run 中提取“显著”格式标签的集合。"""
+        if run is None:
+            return frozenset()
+        rPr = run.element.rPr
+        if rPr is None:
+            return frozenset()
+        return frozenset(child.tag for child in rPr if child.tag in SIGNIFICANT_STYLES)
+
+    def _have_same_significant_styles(self, run1: Run, run2: Run) -> bool:
+        """检查两个 Run 是否具有相同的“显著”格式集合。"""
+        styles1 = self._get_significant_styles(run1)
+        styles2 = self._get_significant_styles(run2)
+        return styles1 == styles2
+
+    # ---------------------- 修改结束 ----------------------
+
     def _process_element_children(self, element, elements: List[Dict[str, Any]], texts: List[str],
                                   state: Dict[str, Any]):
 
@@ -155,6 +165,7 @@ class DocxTranslator(AiTranslator):
             if child.tag in self.RECURSIVE_CONTAINER_TAGS:
                 flush_segment()
                 self._process_element_children(child, elements, texts, state)
+                flush_segment()  # 在递归容器后也刷新，确保其内容成为独立片段
                 continue
 
             field_char_element = child.find(qn('w:fldChar')) if isinstance(child, CT_R) else None
@@ -166,15 +177,26 @@ class DocxTranslator(AiTranslator):
 
             if isinstance(child, CT_R):
                 run = Run(child, None)
-                # ---------- 新增修改部分 2: 在判断条件中加入 is_tab_run ----------
-                # [v6.2] 使用更精确的检查来识别作为边界的 Run。
-                # 新增 is_tab_run() 检查，将包含制表符的 Run 也视为边界。
-                if is_image_run(run) or is_formatting_only_run(run) or is_styled_whitespace_run(run) or is_tab_run(run):
+
+                # ---------- 新增修改部分 3: 重构核心切分逻辑 ----------
+                # 步骤 1: 检查绝对边界（图片、制表符等），它们总是会结束当前的片段。
+                if is_image_run(run) or is_formatting_only_run(run) or is_tab_run(run):
                     flush_segment()
-                else:
-                    state['current_runs'].append(run)
+                    continue  # 这些 Run 本身不包含在任何文本片段中
+
+                # 步骤 2: 基于格式变化进行切分。
+                last_run_in_segment = state['current_runs'][-1] if state['current_runs'] else None
+
+                # 如果这是一个新片段的第一个Run，或者它的格式与上一个Run相同，则继续合并。
+                # 只有当格式发生变化时，才刷新（切分）之前的片段。
+                if last_run_in_segment and not self._have_same_significant_styles(last_run_in_segment, run):
+                    flush_segment()
+
+                # 将当前 Run 添加到片段中
+                state['current_runs'].append(run)
                 # ---------------------- 修改结束 ----------------------
             else:
+                # 遇到任何非 Run 的块级元素（如在单元格中嵌套的表格），都应结束当前文本片段。
                 flush_segment()
 
     def _process_paragraph(self, para: Paragraph, elements: List[Dict[str, Any]], texts: List[str]):
@@ -186,6 +208,7 @@ class DocxTranslator(AiTranslator):
         }
         self._process_element_children(para._p, elements, texts, state)
 
+        # 确保在段落处理结束时，刷新所有剩余的 Run
         current_runs = state['current_runs']
         if current_runs:
             full_text = "".join(r.text for r in current_runs)
@@ -259,16 +282,19 @@ class DocxTranslator(AiTranslator):
             if not runs: return
 
             first_real_run_index = -1
+            # 找到第一个可以写入文本的run
             for i, run in enumerate(runs):
                 if run.element.getparent() is not None:
                     run.text = final_text
                     first_real_run_index = i
                     break
 
+            # 如果没有找到有效的run（例如，它们都已被删除），则记录警告
             if first_real_run_index == -1:
                 self.logger.warning(f"无法应用翻译 '{final_text}'，因为找不到有效的run。")
                 return
 
+            # 删除所有后续的run，因为它们的文本已经被合并到第一个run中了
             for i in range(first_real_run_index + 1, len(runs)):
                 run = runs[i]
                 parent_element = run.element.getparent()
@@ -276,6 +302,7 @@ class DocxTranslator(AiTranslator):
                     try:
                         parent_element.remove(run.element)
                     except ValueError:
+                        # 在某些复杂情况下，一个run可能已经被其父元素隐式删除
                         self.logger.debug(f"尝试删除一个不存在的run元素。这通常是安全的。")
                         pass
 
