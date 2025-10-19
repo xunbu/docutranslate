@@ -82,6 +82,11 @@ class DocxTranslator(AiTranslator):
     一个基于高级结构化解析的 .docx 文件翻译器。
     它能高精度保留样式，并正确处理正文、表格、页眉/脚、脚注/尾注、超链接和目录(TOC)等复杂元素。
 
+    [v6.4 - 形状文本翻译]
+    - 新增对形状（Shapes）内文本的提取与翻译支持。现在可以正确翻译标注、流程图等图形元素中的文字。
+    - 改进了核心遍历逻辑，使其能够深入 <w:drawing> 元素，解析内部的 <w:txbxContent>（文本框内容），
+      同时保持对无文本的普通图片的原有处理方式，实现鲁棒性和兼容性。
+
     [v6.3 - 上下文感知格式切分]
     - 根本性地改进了文本切分逻辑，解决了因带格式的空格（如下划线空格）导致连续短语被错误拆分的问题。
     - 新逻辑不再将任何带格式的空格视为固定的边界，而是通过比较相邻文本片段的“显著格式”是否一致来决定是否合并。
@@ -145,7 +150,9 @@ class DocxTranslator(AiTranslator):
 
     # ---------------------- 修改结束 ----------------------
 
-    def _process_element_children(self, element, elements: List[Dict[str, Any]], texts: List[str],
+    # ---------- 代码修改部分 1: 形状翻译逻辑的核心实现 ----------
+    def _process_element_children(self, element, parent_paragraph: Paragraph, elements: List[Dict[str, Any]],
+                                  texts: List[str],
                                   state: Dict[str, Any]):
 
         def flush_segment():
@@ -164,7 +171,7 @@ class DocxTranslator(AiTranslator):
 
             if child.tag in self.RECURSIVE_CONTAINER_TAGS:
                 flush_segment()
-                self._process_element_children(child, elements, texts, state)
+                self._process_element_children(child, parent_paragraph, elements, texts, state)
                 flush_segment()  # 在递归容器后也刷新，确保其内容成为独立片段
                 continue
 
@@ -176,37 +183,49 @@ class DocxTranslator(AiTranslator):
                 continue
 
             if isinstance(child, CT_R):
-                run = Run(child, None)
+                # 传入 parent_paragraph 以确保 Run 对象具有正确的上下文
+                run = Run(child, parent_paragraph)
 
-                # ---------- 新增修改部分 3: 重构核心切分逻辑 ----------
-                # 步骤 1: 检查绝对边界（图片、制表符等），它们总是会结束当前的片段。
+                # 新增逻辑：处理形状（drawing/pict）内的文本
+                # 形状可以包含文本框，需要优先于图片处理逻辑进行解析
+                if '<w:drawing' in run.element.xml or '<w:pict' in run.element.xml:
+                    # 使用 list() 消耗迭代器，以便检查是否找到了文本框
+                    text_boxes = list(run.element.iter(qn('w:txbxContent')))
+                    if text_boxes:
+                        flush_segment()  # 包含文本的形状是一个边界，刷新前面的文本
+                        for txbx_content in text_boxes:
+                            # 遍历文本框内的所有段落
+                            for p_element in txbx_content.findall(qn('w:p')):
+                                # 创建新的段落对象，并传入父级上下文
+                                shape_para = Paragraph(p_element, parent_paragraph)
+                                # 递归处理该段落
+                                self._process_paragraph(shape_para, elements, texts)
+
+                        # 如果处理了形状内的文本，则该 Run 的任务已完成
+                        continue
+
+                # 保留原有逻辑: 检查绝对边界（图片、制表符等）
                 if is_image_run(run) or is_formatting_only_run(run) or is_tab_run(run):
                     flush_segment()
                     continue  # 这些 Run 本身不包含在任何文本片段中
 
-                # 步骤 2: 基于格式变化进行切分。
+                # 保留原有逻辑: 基于格式变化进行切分
                 last_run_in_segment = state['current_runs'][-1] if state['current_runs'] else None
-
-                # 如果这是一个新片段的第一个Run，或者它的格式与上一个Run相同，则继续合并。
-                # 只有当格式发生变化时，才刷新（切分）之前的片段。
                 if last_run_in_segment and not self._have_same_significant_styles(last_run_in_segment, run):
                     flush_segment()
 
                 # 将当前 Run 添加到片段中
                 state['current_runs'].append(run)
-                # ---------------------- 修改结束 ----------------------
             else:
                 # 遇到任何非 Run 的块级元素（如在单元格中嵌套的表格），都应结束当前文本片段。
                 flush_segment()
 
     def _process_paragraph(self, para: Paragraph, elements: List[Dict[str, Any]], texts: List[str]):
-        # [v6.2] 此处无需检查 para.text.strip()，因为一个段落可能只包含一个带样式的空白 Run，
-        # 这种 Run 我们需要保留，而 .text.strip() 会将其视为空。
-        # 具体的文本提取逻辑在 _process_element_children 中处理。
         state = {
             'current_runs': [],
         }
-        self._process_element_children(para._p, elements, texts, state)
+        # 修改调用：传入 `para` 对象作为父级上下文
+        self._process_element_children(para._p, para, elements, texts, state)
 
         # 确保在段落处理结束时，刷新所有剩余的 Run
         current_runs = state['current_runs']
@@ -216,6 +235,8 @@ class DocxTranslator(AiTranslator):
                 elements.append({"type": "text_runs", "runs": list(current_runs)})
                 texts.append(full_text)
             current_runs.clear()
+
+    # ---------------------- 修改结束 ----------------------
 
     def _process_body_elements(self, parent_element, container, elements: List[Dict[str, Any]], texts: List[str]):
         """ 遍历一个容器内的所有顶级元素（段落、表格、内容控件等） """
