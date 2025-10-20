@@ -2,8 +2,10 @@
 # SPDX-License-Identifier: MPL-2.0
 import asyncio
 import os
+import re
 import xml.etree.ElementTree as ET
 import zipfile
+from collections import defaultdict
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Self, Literal, List, Dict, Any, Tuple
@@ -88,6 +90,7 @@ class EpubTranslator(AiTranslator):
             full_href = os.path.join(opf_dir, href).replace('\\', '/')
             manifest_items[item_id] = {'href': full_href, 'media_type': item.get('media-type')}
 
+        # TAGS_TO_TRANSLATE 定义了哪些块级标签的内容需要被翻译
         TAGS_TO_TRANSLATE = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'div']
 
         for item_id, item_data in manifest_items.items():
@@ -99,21 +102,35 @@ class EpubTranslator(AiTranslator):
                     self.logger.warning(f"在 EPUB 中找不到文件: {file_path}")
                     continue
 
-                # << [关键修改] 解析一次并存储
                 if file_path not in soups:
                     soups[file_path] = BeautifulSoup(content_bytes, "html.parser")
 
                 soup = soups[file_path]
                 for tag in soup.find_all(TAGS_TO_TRANSLATE):
                     inner_html = tag.decode_contents()
-                    if inner_html and not inner_html.isspace():
-                        item_info = {
-                            "file_path": file_path,
-                            "tag": tag,  # 这个tag是soups[file_path]中的活引用
-                            "original_html": inner_html,
-                        }
-                        items_to_translate.append(item_info)
-                        original_texts.append(inner_html)
+                    if not inner_html or inner_html.isspace():
+                        continue
+
+                    # 使用正则表达式按 <br> 标签分割内容，同时保留 <br> 标签本身
+                    html_parts = re.split(r'(<br\s*/?>)', inner_html, flags=re.IGNORECASE)
+
+                    is_split = len(html_parts) > 1
+
+                    for part in html_parts:
+                        part_stripped = part.strip()
+                        # 判断当前部分是否是 <br> 标签
+                        is_br_tag = re.fullmatch(r'<br\s*/?>', part_stripped, flags=re.IGNORECASE)
+
+                        # 我们只翻译那些不是 <br> 标签且有实际内容的片段
+                        if not is_br_tag and part_stripped:
+                            item_info = {
+                                "file_path": file_path,
+                                "tag": tag,  # 父标签的引用
+                                "original_html": part,  # 这部分是需要翻译的原文
+                                "original_full_html": inner_html if is_split else None  # 仅在分割时保存完整原文
+                            }
+                            items_to_translate.append(item_info)
+                            original_texts.append(part)
 
         return all_files, soups, items_to_translate, original_texts
 
@@ -125,38 +142,61 @@ class EpubTranslator(AiTranslator):
             translated_texts: List[str],
             original_texts: List[str],
     ) -> bytes:
+        # 由于一个父标签可能被<br>分割成多个翻译块，我们需要重构替换逻辑
+        # 按父标签（通过其对象id）对所有翻译块进行分组
+        tag_reconstruction_map = defaultdict(lambda: {'new_html': None, 'chunks': []})
+
+        # 1. 初始化每个父标签的重建信息
         for i, item_info in enumerate(items_to_translate):
-            # << [关键修改] 直接使用 item_info 中的活引用 tag，它属于 soups 字典中的一个对象
-            tag: Tag = item_info["tag"]
-            translated_html = translated_texts[i]
-            original_html = original_texts[i]
+            tag = item_info["tag"]
+            tag_id = id(tag)
+            if tag_reconstruction_map[tag_id]['new_html'] is None:
+                # 如果有分割，使用保存的完整原文；否则，使用当前块的原文（因为就这一个块）
+                original_full_html = item_info.get("original_full_html") or item_info["original_html"]
+                tag_reconstruction_map[tag_id]['new_html'] = original_full_html
+                tag_reconstruction_map[tag_id]['tag_obj'] = tag
+
+        # 2. 为每个父标签准备好所有原始块和翻译块的对应关系
+        for i, item_info in enumerate(items_to_translate):
+            tag = item_info["tag"]
+            tag_id = id(tag)
+            original_chunk = original_texts[i]
+            translated_chunk = translated_texts[i]
 
             if self.insert_mode == "replace":
-                final_html = translated_html
+                final_chunk = translated_chunk
             elif self.insert_mode == "append":
-                final_html = original_html + self.separator + translated_html
+                final_chunk = original_chunk + self.separator + translated_chunk
             elif self.insert_mode == "prepend":
-                final_html = translated_html + self.separator + original_html
+                final_chunk = translated_chunk + self.separator + original_chunk
             else:
-                final_html = translated_html
+                final_chunk = translated_chunk
 
-            # 清空旧内容
+            tag_reconstruction_map[tag_id]['chunks'].append({'original': original_chunk, 'final': final_chunk})
+
+        # 3. 对每个父标签，用其所有的翻译块重建完整内容
+        for tag_id, data in tag_reconstruction_map.items():
+            tag: Tag = data['tag_obj']
+            reconstructed_html = data['new_html']
+
+            for chunk_info in data['chunks']:
+                # 使用replace函数进行替换。为避免错误替换，处理原始文本中的特殊字符
+                # 这个方法在原始文本块在父标签中重复出现时可能出错，但对于大多数情况是有效的
+                reconstructed_html = reconstructed_html.replace(chunk_info['original'], chunk_info['final'], 1)
+
+            # 4. 更新父标签的内容
             tag.clear()
+            new_content_soup = BeautifulSoup(reconstructed_html, 'html.parser')
 
-            # 解析新的HTML片段
-            new_content_soup = BeautifulSoup(final_html, 'html.parser')
-
-            # << [关键修复] 将新片段的*内容*（而不是整个文档）移动到原始标签中
-            # 使用 list() 创建副本以安全地迭代和修改
             if new_content_soup.body:
                 nodes_to_insert = list(new_content_soup.body.children)
             else:
                 nodes_to_insert = list(new_content_soup.children)
 
             for node in nodes_to_insert:
-                tag.append(node.extract())  # .extract() 从旧树中移除并返回节点
+                tag.append(node.extract())
 
-        # << [关键修改] 从修改后的soups对象生成新的文件内容
+        # 从修改后的soups对象生成新的文件内容
         for file_path, soup in soups.items():
             all_files[file_path] = str(soup).encode('utf-8')
 
@@ -182,7 +222,6 @@ class EpubTranslator(AiTranslator):
             translated_texts = self.translate_agent.send_segments(original_texts, self.chunk_size)
         else:
             translated_texts = original_texts
-        # << [关键修改] 传递 soups 对象
         document.content = self._after_translate(
             all_files, soups, items_to_translate, translated_texts, original_texts
         )
@@ -206,7 +245,6 @@ class EpubTranslator(AiTranslator):
             )
         else:
             translated_texts = original_texts
-        # << [关键修改] 传递 soups 对象
         document.content = await asyncio.to_thread(
             self._after_translate, all_files, soups, items_to_translate, translated_texts, original_texts
         )
