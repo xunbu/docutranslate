@@ -108,6 +108,7 @@ class SegmentsTranslateAgent(Agent):
         result = get_target_segments(result)
         if result == "":
             if original_segments.strip() != "":
+                # print(f"【测试】origin_prompt:\n{origin_prompt}\nresult:\n{result}")
                 raise AgentResultError("result为空值但原文不为空")
             return {}
         try:
