@@ -347,16 +347,12 @@ class DocxTranslator(AiTranslator):
             for info, trans in zip(elements, translated):
                 self._apply_translation(info, trans)
         else:
-            # 1. 按段落对所有翻译信息进行分组
             paragraph_segments = defaultdict(list)
             for i, info in enumerate(elements):
-                # 'paragraph' 是在 _process_paragraph 中添加的
                 paragraph = info["paragraph"]
                 para_id = id(paragraph._p)
-                # 保存元素索引和对应的译文
                 paragraph_segments[para_id].append({"index": i, "translation": translated[i]})
 
-            # 2. 遍历每个需要翻译的段落
             processed_paragraphs = set()
             for info in elements:
                 paragraph = info["paragraph"]
@@ -367,38 +363,59 @@ class DocxTranslator(AiTranslator):
                     continue
                 processed_paragraphs.add(para_id)
 
-                # 3. 创建一个原始段落的深层XML副本
                 translated_p_element = deepcopy(p_element)
-
-                # 为这个副本创建一个临时的 Paragraph 对象
-                # 父级容器（如 _body, _tc, etc.）对于应用翻译是必要的
                 translated_paragraph_obj = Paragraph(translated_p_element, paragraph._parent)
-
-                # 4. 在副本上执行“替换”操作
                 segments_for_this_para = paragraph_segments[para_id]
 
-                # 需要将属于这个副本的文本块 (elements) 找出来并应用翻译
                 for seg_info in segments_for_this_para:
                     element_index = seg_info["index"]
                     translation = seg_info["translation"]
-
-                    # 关键：创建一个指向副本内部元素的 element_info
-                    # 我们不能直接用原始的 info，因为它指向原始段落
-                    # 但我们可以重用 runs 的结构，然后更新其父级
                     original_element_info = elements[element_index]
                     translated_element_info = {
                         "type": "text_runs",
                         "runs": [Run(r.element, translated_paragraph_obj) for r in original_element_info["runs"]],
                         "paragraph": translated_paragraph_obj
                     }
-
                     self._apply_translation(translated_element_info, translation)
 
-                # 5. 将样式完美的译文段落副本插入到原始段落旁边
+                # --- 修改逻辑：创建并插入支持 \n 换行的分隔符段落 ---
+                separator_p_element = None
+                if self.separator:
+                    separator_p_element = OxmlElement('w:p')
+                    # 我们将所有文本和换行符都放在一个 run 中，以保持简单
+                    run_element = OxmlElement('w:r')
+
+                    lines = self.separator.split('\n')
+                    for i, line in enumerate(lines):
+                        # 添加当前行的文本
+                        text_element = OxmlElement('w:t')
+                        # xml:space="preserve" 确保前后的空格被保留
+                        text_element.set(qn('xml:space'), 'preserve')
+                        text_element.text = line
+                        run_element.append(text_element)
+
+                        # 如果不是最后一行，则添加一个换行符 <w:br/>
+                        if i < len(lines) - 1:
+                            br_element = OxmlElement('w:br')
+                            run_element.append(br_element)
+
+                    separator_p_element.append(run_element)
+                # --- 修改逻辑结束 ---
+
+                # 将译文段落和（如果存在）分隔符段落插入文档
                 if self.insert_mode == "append":
-                    p_element.addnext(translated_p_element)
+                    # 插入顺序：原文 -> 分隔符 -> 译文
+                    current_element = p_element
+                    if separator_p_element is not None:
+                        current_element.addnext(separator_p_element)
+                        current_element = separator_p_element
+                    current_element.addnext(translated_p_element)
                 elif self.insert_mode == "prepend":
+                    # 插入顺序：译文 -> 分隔符 -> 原文
                     p_element.addprevious(translated_p_element)
+                    if separator_p_element is not None:
+                        # addnext 可以在刚插入的译文元素上调用，效果是在它后面、原文前面插入
+                        translated_p_element.addnext(separator_p_element)
 
         doc_output_stream = BytesIO()
         doc.save(doc_output_stream)
