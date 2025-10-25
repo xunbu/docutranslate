@@ -1,6 +1,8 @@
 # SPDX-FileCopyrightText: 2025 QinHan
 # SPDX-License-Identifier: MPL-2.0
 import asyncio
+from collections import defaultdict
+from copy import deepcopy
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Self, Literal, List, Dict, Any, Tuple
@@ -8,6 +10,7 @@ from typing import Self, Literal, List, Dict, Any, Tuple
 import docx
 from docx.document import Document as DocumentObject
 from docx.opc.part import Part
+from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.oxml.text.run import CT_R
 from docx.section import _Header, _Footer
@@ -161,7 +164,8 @@ class DocxTranslator(AiTranslator):
                 return
             full_text = "".join(r.text for r in current_runs)
             if full_text.strip():
-                elements.append({"type": "text_runs", "runs": list(current_runs)})
+                # 在 elements 中增加对父段落的引用
+                elements.append({"type": "text_runs", "runs": list(current_runs), "paragraph": parent_paragraph})
                 texts.append(full_text)
             state['current_runs'].clear()
 
@@ -232,7 +236,7 @@ class DocxTranslator(AiTranslator):
         if current_runs:
             full_text = "".join(r.text for r in current_runs)
             if full_text.strip():
-                elements.append({"type": "text_runs", "runs": list(current_runs)})
+                elements.append({"type": "text_runs", "runs": list(current_runs), "paragraph": para})
                 texts.append(full_text)
             current_runs.clear()
 
@@ -306,6 +310,9 @@ class DocxTranslator(AiTranslator):
             # 找到第一个可以写入文本的run
             for i, run in enumerate(runs):
                 if run.element.getparent() is not None:
+                    # 如果 run 是副本的一部分，其 _parent 可能仍然指向原始文档的段落
+                    # 但我们需要确保它与 element_info["paragraph"] 同步
+                    run._parent = element_info["paragraph"]
                     run.text = final_text
                     first_real_run_index = i
                     break
@@ -327,6 +334,7 @@ class DocxTranslator(AiTranslator):
                         self.logger.debug(f"尝试删除一个不存在的run元素。这通常是安全的。")
                         pass
 
+    # ---------- 代码修改部分：重写 _after_translate 方法 ----------
     def _after_translate(self, doc: DocumentObject, elements: List[Dict[str, Any]], translated: List[str],
                          originals: List[str]) -> bytes:
         if len(elements) != len(translated):
@@ -335,20 +343,68 @@ class DocxTranslator(AiTranslator):
             min_len = min(len(elements), len(translated), len(originals))
             elements, translated, originals = elements[:min_len], translated[:min_len], originals[:min_len]
 
-        for info, orig, trans in zip(elements, originals, translated):
-            if self.insert_mode == "replace":
-                final_text = trans
-            elif self.insert_mode == "append":
-                final_text = orig + self.separator + trans
-            elif self.insert_mode == "prepend":
-                final_text = trans + self.separator + orig
-            else:
-                final_text = trans
-            self._apply_translation(info, final_text)
+        if self.insert_mode == "replace":
+            for info, trans in zip(elements, translated):
+                self._apply_translation(info, trans)
+        else:
+            # 1. 按段落对所有翻译信息进行分组
+            paragraph_segments = defaultdict(list)
+            for i, info in enumerate(elements):
+                # 'paragraph' 是在 _process_paragraph 中添加的
+                paragraph = info["paragraph"]
+                para_id = id(paragraph._p)
+                # 保存元素索引和对应的译文
+                paragraph_segments[para_id].append({"index": i, "translation": translated[i]})
+
+            # 2. 遍历每个需要翻译的段落
+            processed_paragraphs = set()
+            for info in elements:
+                paragraph = info["paragraph"]
+                p_element = paragraph._p
+                para_id = id(p_element)
+
+                if para_id in processed_paragraphs:
+                    continue
+                processed_paragraphs.add(para_id)
+
+                # 3. 创建一个原始段落的深层XML副本
+                translated_p_element = deepcopy(p_element)
+
+                # 为这个副本创建一个临时的 Paragraph 对象
+                # 父级容器（如 _body, _tc, etc.）对于应用翻译是必要的
+                translated_paragraph_obj = Paragraph(translated_p_element, paragraph._parent)
+
+                # 4. 在副本上执行“替换”操作
+                segments_for_this_para = paragraph_segments[para_id]
+
+                # 需要将属于这个副本的文本块 (elements) 找出来并应用翻译
+                for seg_info in segments_for_this_para:
+                    element_index = seg_info["index"]
+                    translation = seg_info["translation"]
+
+                    # 关键：创建一个指向副本内部元素的 element_info
+                    # 我们不能直接用原始的 info，因为它指向原始段落
+                    # 但我们可以重用 runs 的结构，然后更新其父级
+                    original_element_info = elements[element_index]
+                    translated_element_info = {
+                        "type": "text_runs",
+                        "runs": [Run(r.element, translated_paragraph_obj) for r in original_element_info["runs"]],
+                        "paragraph": translated_paragraph_obj
+                    }
+
+                    self._apply_translation(translated_element_info, translation)
+
+                # 5. 将样式完美的译文段落副本插入到原始段落旁边
+                if self.insert_mode == "append":
+                    p_element.addnext(translated_p_element)
+                elif self.insert_mode == "prepend":
+                    p_element.addprevious(translated_p_element)
 
         doc_output_stream = BytesIO()
         doc.save(doc_output_stream)
         return doc_output_stream.getvalue()
+
+    # ---------------------- 修改结束 ----------------------
 
     def translate(self, document: Document) -> Self:
         doc, elements, originals = self._pre_translate(document)
