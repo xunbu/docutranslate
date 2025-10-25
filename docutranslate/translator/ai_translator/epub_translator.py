@@ -20,14 +20,16 @@ from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTr
 @dataclass
 class EpubTranslatorConfig(AiTranslatorConfig):
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
-    # 建议使用 <br />，它在 XHTML (EPUB标准) 中更规范
-    separator: str = "<br />"
+    # 建议使用 \n，代码会将其转换为 <br />，更灵活
+    separator: str = "\n"
 
 
 class EpubTranslator(AiTranslator):
     """
     一个用于翻译 EPUB 文件中内容的翻译器。
     【高级版】此版本直接翻译HTML内容，以保留内联格式，并支持表格翻译。
+    【结构化修改版 v2】借鉴 DocxTranslator 的实现，在 append/prepend 模式下，
+    对常规块级元素创建新标签存放译文，对表格单元格则在内部追加内容，以保证文档结构的正确性。
     """
 
     def __init__(self, config: EpubTranslatorConfig):
@@ -90,10 +92,7 @@ class EpubTranslator(AiTranslator):
             full_href = os.path.join(opf_dir, href).replace('\\', '/')
             manifest_items[item_id] = {'href': full_href, 'media_type': item.get('media-type')}
 
-        # ==================== 代码修改 1: 添加表格相关的标签 ====================
         TAGS_TO_TRANSLATE = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'div', 'td', 'th']
-        # 定义一个正则表达式，用于按 <br> 和 <img> 标签分割内容
-        split_pattern = re.compile(r'(<br\s*/?>|<img[^>]*>)', re.IGNORECASE)
 
         for item_id, item_data in manifest_items.items():
             media_type = item_data['media_type']
@@ -114,63 +113,23 @@ class EpubTranslator(AiTranslator):
 
                 tags_to_process = []
                 for tag in all_potential_tags:
-                    # 采用“Bottom-Up”逻辑，只选择不包含其他可翻译块级标签的“叶子”标签。
                     contains_other_block = tag.find(
                         lambda child_tag: child_tag in all_potential_tags_set and child_tag is not tag
                     )
                     if not contains_other_block:
                         tags_to_process.append(tag)
-                # ==================== 修改结束 ====================
 
                 for tag in tags_to_process:
                     inner_html = tag.decode_contents()
-                    if not inner_html or inner_html.isspace():
-                        continue
+                    plain_text = tag.get_text(strip=True)
 
-                    # ==================== 代码修改 2: 增加对表格标签的特殊处理 ====================
-                    # 对于表格单元格（td, th），我们希望直接翻译其内容，并替换。
-                    # 这样做可以避免在单元格内部错误地插入 <br> 导致表格布局破坏。
-                    # 其他标签（如 p, div）则可以继续使用分割逻辑，以支持段内换行。
-                    is_table_cell = tag.name in ['td', 'th']
-                    # ==================== 修改结束 ====================
-
-                    html_parts = split_pattern.split(inner_html)
-
-                    # 如果不是表格单元格，且存在 <br> 或 <img>，则按片段处理
-                    is_split = len(html_parts) > 1 and not is_table_cell
-
-                    if is_split:
-                        # 逻辑保持不变：处理被 <br> 或 <img> 分割的段落
-                        for part in html_parts:
-                            part_stripped = part.strip()
-                            if not part_stripped:
-                                continue
-
-                            is_separator_tag = split_pattern.fullmatch(part_stripped)
-                            plain_text = BeautifulSoup(part, 'html.parser').get_text(strip=True)
-
-                            if not is_separator_tag and plain_text:
-                                item_info = {
-                                    "file_path": file_path,
-                                    "tag": tag,
-                                    "original_html": part,
-                                    "original_full_html": inner_html,
-                                    "is_split": True
-                                }
-                                items_to_translate.append(item_info)
-                                original_texts.append(part)
-                    else:
-                        # 对于完整的标签内容（或表格单元格），我们整体处理
-                        plain_text = tag.get_text(strip=True)
-                        if plain_text:
-                            item_info = {
-                                "file_path": file_path,
-                                "tag": tag,
-                                "original_html": inner_html,
-                                "is_split": False
-                            }
-                            items_to_translate.append(item_info)
-                            original_texts.append(inner_html)
+                    if plain_text:
+                        item_info = {
+                            "file_path": file_path,
+                            "tag": tag,
+                        }
+                        items_to_translate.append(item_info)
+                        original_texts.append(inner_html)
 
         return all_files, soups, items_to_translate, original_texts
 
@@ -183,84 +142,76 @@ class EpubTranslator(AiTranslator):
             original_texts: List[str],
     ) -> bytes:
 
-        # ==================== 代码修改 3: 重构 _after_translate 逻辑 ====================
-        # 使用一个更清晰的 defaultdict 来处理内容的重构
-        # key 是每个独立 tag 对象的 id，value 是待处理的信息
-        tag_reconstruction_map = defaultdict(
-            lambda: {'chunks': [], 'is_split': False, 'original_full_html': None, 'tag_obj': None})
-
         for i, item_info in enumerate(items_to_translate):
-            tag = item_info["tag"]
-            tag_id = id(tag)
+            original_tag = item_info["tag"]
+            soup = soups[item_info["file_path"]]
+            original_html = original_texts[i]
+            translated_html = translated_texts[i]
 
-            tag_reconstruction_map[tag_id]['is_split'] = item_info['is_split']
-            tag_reconstruction_map[tag_id]['tag_obj'] = tag
-            if item_info['is_split']:
-                tag_reconstruction_map[tag_id]['original_full_html'] = item_info['original_full_html']
+            # --- 关键逻辑：根据标签类型选择不同的处理策略 ---
+            is_table_cell = original_tag.name in ['td', 'th']
 
-            tag_reconstruction_map[tag_id]['chunks'].append({
-                'original': original_texts[i],
-                'translated': translated_texts[i]
-            })
+            if self.insert_mode == "replace":
+                original_tag.clear()
+                new_content_soup = BeautifulSoup(translated_html, 'html.parser')
+                for node in list(new_content_soup.children):
+                    original_tag.append(node.extract())
 
-        for tag_id, data in tag_reconstruction_map.items():
-            tag: Tag = data['tag_obj']
-            final_html = ""
+            elif is_table_cell:
+                # --- 表格单元格处理：在标签内部组合内容 ---
+                original_tag.clear()
 
-            if data['is_split']:
-                # 如果是分割的段落，我们需要重组它
-                reconstructed_html = data['original_full_html']
-                for chunk in data['chunks']:
-                    original_chunk = chunk['original']
-                    translated_chunk = chunk['translated']
+                # 解析HTML片段
+                original_nodes = BeautifulSoup(original_html, 'html.parser').contents
+                translated_nodes = BeautifulSoup(translated_html, 'html.parser').contents
 
-                    if self.insert_mode == "replace":
-                        final_chunk = translated_chunk
-                    elif self.insert_mode == "append":
-                        final_chunk = original_chunk + self.separator + translated_chunk
-                    else:  # prepend
-                        final_chunk = translated_chunk + self.separator + original_chunk
+                # 创建分隔符节点
+                separator_nodes = []
+                if self.separator:
+                    lines = self.separator.split('\n')
+                    for j, line in enumerate(lines):
+                        if line:
+                            separator_nodes.append(NavigableString(line))
+                        if j < len(lines) - 1:
+                            separator_nodes.append(soup.new_tag('br'))
 
-                    # 使用带计数的替换，确保只替换第一个匹配项
-                    reconstructed_html = reconstructed_html.replace(original_chunk, final_chunk, 1)
-
-                final_html = reconstructed_html
-            else:
-                # 如果是完整的标签内容（包括表格单元格），则直接处理
-                chunk = data['chunks'][0]
-                original_chunk = chunk['original']
-                translated_chunk = chunk['translated']
-
-                if self.insert_mode == "replace":
-                    final_html = translated_chunk
-                elif self.insert_mode == "append":
-                    # 对于表格，即使是 append 模式，直接拼接也可能破坏格式。
-                    # 因此，对于 td/th，我们强制在内部用 separator 分隔，而不是在标签外。
-                    if tag.name in ['td', 'th']:
-                        final_html = f"{original_chunk}{self.separator}{translated_chunk}"
-                    else:
-                        final_html = original_chunk + self.separator + translated_chunk
+                # 根据模式按顺序重新填充
+                if self.insert_mode == "append":
+                    nodes_order = [original_nodes, separator_nodes, translated_nodes]
                 else:  # prepend
-                    if tag.name in ['td', 'th']:
-                        final_html = f"{translated_chunk}{self.separator}{original_chunk}"
-                    else:
-                        final_html = translated_chunk + self.separator + original_chunk
+                    nodes_order = [translated_nodes, separator_nodes, original_nodes]
 
-            # 清空旧内容并插入新内容
-            tag.clear()
-            # 使用 BeautifulSoup 解析最终的 HTML 片段，以正确处理嵌套标签
-            new_content_soup = BeautifulSoup(final_html, 'html.parser')
+                for node_list in nodes_order:
+                    for node in node_list:
+                        original_tag.append(node.extract() if isinstance(node, Tag) else node)
 
-            # new_content_soup.body 可能不存在，如果 final_html 不含 body 标签。
-            # 我们需要从 soup 的顶层子节点开始插入。
-            nodes_to_insert = list(new_content_soup.children)
-            if len(nodes_to_insert) == 1 and nodes_to_insert[0].name == 'html':
-                nodes_to_insert = list(nodes_to_insert[0].body.children)
+            else:
+                # --- 常规块级元素处理：创建新标签 ---
+                translated_tag = soup.new_tag(original_tag.name, attrs=original_tag.attrs)
+                new_content_soup = BeautifulSoup(translated_html, 'html.parser')
+                for node in list(new_content_soup.children):
+                    translated_tag.append(node.extract())
 
-            for node in nodes_to_insert:
-                # .extract() 会将节点从原文档树中移除，这样可以直接 append 到新位置
-                tag.append(node.extract())
-        # ==================== 修改结束 ====================
+                separator_tag = None
+                if self.separator:
+                    separator_tag = soup.new_tag('p')
+                    lines = self.separator.split('\n')
+                    for j, line in enumerate(lines):
+                        if line:
+                            separator_tag.append(NavigableString(line))
+                        if j < len(lines) - 1:
+                            separator_tag.append(soup.new_tag('br'))
+
+                if self.insert_mode == "append":
+                    current_node = original_tag
+                    if separator_tag:
+                        current_node.insert_after(separator_tag)
+                        current_node = separator_tag
+                    current_node.insert_after(translated_tag)
+                elif self.insert_mode == "prepend":
+                    original_tag.insert_before(translated_tag)
+                    if separator_tag:
+                        translated_tag.insert_after(separator_tag)
 
         for file_path, soup in soups.items():
             all_files[file_path] = str(soup).encode('utf-8')
@@ -278,7 +229,9 @@ class EpubTranslator(AiTranslator):
         all_files, soups, items_to_translate, original_texts = self._pre_translate(document)
         if not items_to_translate:
             self.logger.info("\n文件中没有找到需要翻译的内容。")
+            document.content = self._after_translate(all_files, soups, [], [], [])
             return self
+
         if self.glossary_agent:
             self.glossary_dict_gen = self.glossary_agent.send_segments(original_texts, self.chunk_size)
             if self.translate_agent:
@@ -298,6 +251,7 @@ class EpubTranslator(AiTranslator):
         )
         if not items_to_translate:
             self.logger.info("\n文件中没有找到需要翻译的内容。")
+            document.content = await asyncio.to_thread(self._after_translate, all_files, soups, [], [], [])
             return self
 
         if self.glossary_agent:
