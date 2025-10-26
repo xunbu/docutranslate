@@ -4,21 +4,29 @@
     <meta charset="UTF-8">
     <title>{{ title }}</title>
     <style>
-        body{
+        /*
+         * 重置 body 和 html，并设置基础样式，使其行为与主页面的预览窗格一致
+         */
+        html, body {
             padding: 0;
             margin: 0;
-        }
-        pre {
-            width: 100%;
-            height: 95%;
-            border: none;
-            margin: 0;
-            padding: 0;
-            overflow: auto;
-            background-color: var(--bs-body-bg);
-            display: block;
+            font-family: monospace; /* 为整个文档设置等宽字体 */
             font-size: 14px;
-            line-height: 21px;
+            line-height: 1.5; /* 使用相对单位以获得更好的缩放效果 */
+            /* 尝试使用主应用的CSS变量，并提供备用颜色方案 */
+            background-color: var(--bs-body-bg, white);
+            color: var(--bs-body-color, black);
+        }
+
+        pre {
+            /* 移除尺寸和溢出限制，让父级(body)来处理滚动 */
+            margin: 0;
+
+            /* 设置内边距，与原文预览窗格的样式完全一致 */
+            padding: 1rem;
+
+            /* 关键：保留所有空白和换行，但不对长行进行自动换行 */
+            white-space: pre;
         }
     </style>
 </head>
