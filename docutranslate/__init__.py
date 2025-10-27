@@ -1,3 +1,3 @@
 # SPDX-FileCopyrightText: 2025 QinHan
 # SPDX-License-Identifier: MPL-2.0
-__version__="1.4.17"
+__version__="1.4.18a1"
