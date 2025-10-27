@@ -347,46 +347,43 @@ class DocxTranslator(AiTranslator):
                 self._apply_translation(info, trans)
         else:
             paragraph_segments = defaultdict(list)
+            # [结构优化] 预先按段落对所有片段进行分组
             for i, info in enumerate(elements):
                 paragraph = info["paragraph"]
-                para_id = id(paragraph._p)
-                paragraph_segments[para_id].append({"index": i, "translation": translated[i]})
+                paragraph_segments[id(paragraph._p)].append({
+                    "index": i,
+                    "translation": translated[i],
+                    "paragraph_obj": paragraph
+                })
 
-            processed_paragraphs = set()
-            for info in elements:
-                paragraph = info["paragraph"]
+            # [结构优化] 直接遍历按段落分组后的字典，每个段落只处理一次
+            for para_id, segments_for_this_para in paragraph_segments.items():
+                # 从该组的第一个片段中获取唯一的段落对象
+                paragraph = segments_for_this_para[0]["paragraph_obj"]
                 p_element = paragraph._p
-                para_id = id(p_element)
-
-                if para_id in processed_paragraphs:
-                    continue
-                processed_paragraphs.add(para_id)
 
                 translated_p_element = deepcopy(p_element)
                 translated_paragraph_obj = Paragraph(translated_p_element, paragraph._parent)
-                segments_for_this_para = paragraph_segments[para_id]
 
-                # --- [BUG修复] ---
-                # 获取原始段落和副本段落中的所有 run 列表
-                original_runs = paragraph.runs
-                copied_runs = translated_paragraph_obj.runs
-
-                # 创建一个从原始 run 的 element ID 到 副本 run 对象的映射
-                # 这能保证我们能精确找到每个原始 run 在副本中的对应项
-                run_map = {
-                    id(orig_run.element): copied_run
-                    for orig_run, copied_run in zip(original_runs, copied_runs)
+                # [超链接修复] 使用 iter() 进行深度搜索，而不是 findall()
+                original_r_elements = p_element.iter(qn('w:r'))
+                copied_r_elements = translated_p_element.iter(qn('w:r'))
+                element_map = {
+                    id(orig_r): copied_r
+                    for orig_r, copied_r in zip(original_r_elements, copied_r_elements)
                 }
-                # --- [BUG修复结束] ---
 
                 for seg_info in segments_for_this_para:
                     element_index = seg_info["index"]
                     translation = seg_info["translation"]
                     original_element_info = elements[element_index]
 
-                    # --- [BUG修复] 使用映射来获取正确的副本Runs ---
-                    runs_from_copy = [run_map[id(r.element)] for r in original_element_info["runs"] if
-                                      id(r.element) in run_map]
+                    runs_from_copy = []
+                    for r in original_element_info["runs"]:
+                        copied_r_element = element_map.get(id(r.element))
+                        if copied_r_element is not None:
+                            new_run = Run(copied_r_element, translated_paragraph_obj)
+                            runs_from_copy.append(new_run)
 
                     if not runs_from_copy:
                         self.logger.warning("在副本段落中找不到对应的Runs，跳过翻译应用。")
@@ -394,48 +391,35 @@ class DocxTranslator(AiTranslator):
 
                     translated_element_info = {
                         "type": "text_runs",
-                        "runs": runs_from_copy,  # 使用从副本中正确找到的Runs
+                        "runs": runs_from_copy,
                         "paragraph": translated_paragraph_obj
                     }
                     self._apply_translation(translated_element_info, translation)
 
-                # --- 修改逻辑：创建并插入支持 \n 换行的分隔符段落 ---
+                # --- 分隔符和插入逻辑 (保持不变) ---
                 separator_p_element = None
                 if self.separator:
                     separator_p_element = OxmlElement('w:p')
-                    # 我们将所有文本和换行符都放在一个 run 中，以保持简单
                     run_element = OxmlElement('w:r')
-
                     lines = self.separator.split('\n')
                     for i, line in enumerate(lines):
-                        # 添加当前行的文本
                         text_element = OxmlElement('w:t')
-                        # xml:space="preserve" 确保前后的空格被保留
                         text_element.set(qn('xml:space'), 'preserve')
                         text_element.text = line
                         run_element.append(text_element)
-
-                        # 如果不是最后一行，则添加一个换行符 <w:br/>
                         if i < len(lines) - 1:
-                            br_element = OxmlElement('w:br')
-                            run_element.append(br_element)
-
+                            run_element.append(OxmlElement('w:br'))
                     separator_p_element.append(run_element)
-                # --- 修改逻辑结束 ---
 
-                # 将译文段落和（如果存在）分隔符段落插入文档
                 if self.insert_mode == "append":
-                    # 插入顺序：原文 -> 分隔符 -> 译文
                     current_element = p_element
                     if separator_p_element is not None:
                         current_element.addnext(separator_p_element)
                         current_element = separator_p_element
                     current_element.addnext(translated_p_element)
                 elif self.insert_mode == "prepend":
-                    # 插入顺序：译文 -> 分隔符 -> 原文
                     p_element.addprevious(translated_p_element)
                     if separator_p_element is not None:
-                        # addnext 可以在刚插入的译文元素上调用，效果是在它后面、原文前面插入
                         translated_p_element.addnext(separator_p_element)
 
         doc_output_stream = BytesIO()
