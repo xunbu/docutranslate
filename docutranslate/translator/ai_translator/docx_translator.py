@@ -334,7 +334,6 @@ class DocxTranslator(AiTranslator):
                         self.logger.debug(f"尝试删除一个不存在的run元素。这通常是安全的。")
                         pass
 
-    # ---------- 代码修改部分：重写 _after_translate 方法 ----------
     def _after_translate(self, doc: DocumentObject, elements: List[Dict[str, Any]], translated: List[str],
                          originals: List[str]) -> bytes:
         if len(elements) != len(translated):
@@ -367,13 +366,35 @@ class DocxTranslator(AiTranslator):
                 translated_paragraph_obj = Paragraph(translated_p_element, paragraph._parent)
                 segments_for_this_para = paragraph_segments[para_id]
 
+                # --- [BUG修复] ---
+                # 获取原始段落和副本段落中的所有 run 列表
+                original_runs = paragraph.runs
+                copied_runs = translated_paragraph_obj.runs
+
+                # 创建一个从原始 run 的 element ID 到 副本 run 对象的映射
+                # 这能保证我们能精确找到每个原始 run 在副本中的对应项
+                run_map = {
+                    id(orig_run.element): copied_run
+                    for orig_run, copied_run in zip(original_runs, copied_runs)
+                }
+                # --- [BUG修复结束] ---
+
                 for seg_info in segments_for_this_para:
                     element_index = seg_info["index"]
                     translation = seg_info["translation"]
                     original_element_info = elements[element_index]
+
+                    # --- [BUG修复] 使用映射来获取正确的副本Runs ---
+                    runs_from_copy = [run_map[id(r.element)] for r in original_element_info["runs"] if
+                                      id(r.element) in run_map]
+
+                    if not runs_from_copy:
+                        self.logger.warning("在副本段落中找不到对应的Runs，跳过翻译应用。")
+                        continue
+
                     translated_element_info = {
                         "type": "text_runs",
-                        "runs": [Run(r.element, translated_paragraph_obj) for r in original_element_info["runs"]],
+                        "runs": runs_from_copy,  # 使用从副本中正确找到的Runs
                         "paragraph": translated_paragraph_obj
                     }
                     self._apply_translation(translated_element_info, translation)
@@ -420,8 +441,6 @@ class DocxTranslator(AiTranslator):
         doc_output_stream = BytesIO()
         doc.save(doc_output_stream)
         return doc_output_stream.getvalue()
-
-    # ---------------------- 修改结束 ----------------------
 
     def translate(self, document: Document) -> Self:
         doc, elements, originals = self._pre_translate(document)
