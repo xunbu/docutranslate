@@ -334,6 +334,71 @@ class DocxTranslator(AiTranslator):
                         self.logger.debug(f"尝试删除一个不存在的run元素。这通常是安全的。")
                         pass
 
+    # ---------- FIX START: 新增用于清理副本段落的辅助方法 ----------
+    def _prune_unwanted_elements_from_copy(self, p_element: OxmlElement):
+        """
+        从复制的段落元素中移除包含图片或页码字段的 Run。
+        这可以防止在“append”和“prepend”模式下出现重复。
+        """
+        runs_to_remove = []
+        runs = p_element.findall(qn('w:r'))
+
+        i = 0
+        while i < len(runs):
+            run_element = runs[i]
+
+            # 检查图片
+            if run_element.find(qn('w:drawing')) is not None or run_element.find(qn('w:pict')) is not None:
+                runs_to_remove.append(run_element)
+                i += 1
+                continue
+
+            # 检查页码字段
+            fldChar = run_element.find(qn('w:fldChar'))
+            if fldChar is not None and fldChar.get(qn('w:fldCharType')) == 'begin':
+                is_page_field = False
+                field_end_index = -1
+
+                # 向前查找以确定是否是页码字段
+                for j in range(i + 1, len(runs)):
+                    next_run = runs[j]
+                    instrText = next_run.find(qn('w:instrText'))
+                    if instrText is not None and instrText.text is not None:
+                        text = instrText.text.strip().upper()
+                        if 'PAGE' in text or 'NUMPAGES' in text:
+                            is_page_field = True
+                        break
+
+                    next_fldChar = next_run.find(qn('w:fldChar'))
+                    if next_fldChar is not None and next_fldChar.get(qn('w:fldCharType')) == 'begin':
+                        break
+
+                if is_page_field:
+                    # 如果是页码字段，则找到其结束标记并标记整个字段的 runs
+                    field_runs_to_remove = [run_element]
+                    end_found = False
+                    for j in range(i + 1, len(runs)):
+                        field_run = runs[j]
+                        field_runs_to_remove.append(field_run)
+                        end_fldChar = field_run.find(qn('w:fldChar'))
+                        if end_fldChar is not None and end_fldChar.get(qn('w:fldCharType')) == 'end':
+                            end_found = True
+                            field_end_index = j
+                            break
+
+                    if end_found:
+                        runs_to_remove.extend(field_runs_to_remove)
+                        i = field_end_index + 1
+                        continue
+            i += 1
+
+        # 从 XML 树中实际移除被标记的 runs
+        for run_to_remove in runs_to_remove:
+            if run_to_remove.getparent() is not None:
+                p_element.remove(run_to_remove)
+
+    # ---------- FIX END ----------
+
     def _after_translate(self, doc: DocumentObject, elements: List[Dict[str, Any]], translated: List[str],
                          originals: List[str]) -> bytes:
         if len(elements) != len(translated):
@@ -363,6 +428,11 @@ class DocxTranslator(AiTranslator):
                 p_element = paragraph._p
 
                 translated_p_element = deepcopy(p_element)
+
+                # ---------- FIX: 在处理副本前调用新增的修剪逻辑 ----------
+                self._prune_unwanted_elements_from_copy(translated_p_element)
+                # -------------------------------------------------------------
+
                 translated_paragraph_obj = Paragraph(translated_p_element, paragraph._parent)
 
                 # [超链接修复] 使用 iter() 进行深度搜索，而不是 findall()
