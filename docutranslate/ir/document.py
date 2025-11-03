@@ -17,8 +17,8 @@ class Document:
         if not self._stem:
             return None
         if len(self._stem)>50:
-            return self._stem[:50]+self.suffix
-        return self._stem+self.suffix
+            return self._stem[:50]
+        return self._stem
 
     @property
     def name(self)->str|None:
