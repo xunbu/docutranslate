@@ -485,7 +485,7 @@ class DocxTranslator(AiTranslator):
                             runs_from_copy.append(new_run)
 
                     if not runs_from_copy:
-                        self.logger.warning("在副本段落中找不到对应的Runs，跳过翻译应用。")
+                        # self.logger.warning("在副本段落中找不到对应的Runs，跳过翻译应用。")
                         continue
 
                     translated_element_info = {
