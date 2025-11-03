@@ -8,8 +8,18 @@ class Document:
     def __init__(self,suffix:str,content:bytes,stem:str|None=None,path:Path=None):
         self.suffix=suffix
         self.content=content
-        self.stem=stem
+        self._stem=stem
         self.path=path
+
+
+    @property
+    def stem(self)->str|None:
+        if not self._stem:
+            return None
+        if len(self._stem)>50:
+            return self._stem[:50]+self.suffix
+        return self._stem+self.suffix
+
     @property
     def name(self)->str|None:
         if not self.stem:
