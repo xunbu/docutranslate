@@ -141,7 +141,7 @@ def extract_token_info(response_data: dict) -> tuple[int, int, int, int]:
             reasoning_tokens = usage["completion_tokens_details"]["reasoning_tokens"]
         return input_tokens, cached_tokens, output_tokens, reasoning_tokens
     except TypeError as e:
-        print(f"获取token发生错误:{e.__repr__()}")
+        # print(f"获取token失败，跳过token计数:{e.__repr__()}")
         return -1, -1, -1, -1
 
 
