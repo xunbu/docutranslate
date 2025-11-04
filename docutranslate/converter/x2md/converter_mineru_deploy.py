@@ -18,7 +18,7 @@ class ConverterMineruDeployConfig(X2MarkdownConverterConfig):
     base_url: str = "http://127.0.0.1:8000"
     output_dir: str = "./output"  # 覆盖默认值 ./output
     # lang_list: list[str] | None = None
-    backend: Literal["pipeline", "vlm"] = "pipeline"
+    backend: Literal["pipeline", "transformers", "mlx-engine", "vllm-engine", "vllm-async-engine"] = "pipeline"
     # parse_method: str = "auto"
     formula_enable: bool = True
     # table_enable: bool = True

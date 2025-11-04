@@ -429,7 +429,7 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
         "http://127.0.0.1:8000",
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务地址。",
     )
-    mineru_deploy_backend: Literal["pipeline", "vlm"] = Field(
+    mineru_deploy_backend: Literal["pipeline", "transformers", "mlx-engine", "vllm-engine", "vllm-async-engine"] = Field(
         "pipeline",
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务使用的后端。",
     )
