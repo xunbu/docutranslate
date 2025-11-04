@@ -17,23 +17,23 @@ from docutranslate.utils.markdown_utils import embed_inline_image_from_zip
 class ConverterMineruDeployConfig(X2MarkdownConverterConfig):
     base_url: str = "http://127.0.0.1:8000"
     output_dir: str = "./output"  # 覆盖默认值 ./output
-    lang_list: list[str] | None = None
-    backend: Literal["pipeline", "vlm"] = "pipeline"  # 默认值
-    parse_method: str = "auto"  # 默认值
-    formula_enable: bool = True  # 默认值
-    table_enable: bool = True  # 默认值
-    server_url: str | None = None  # 可选
-    return_md: bool = True  # 默认值
-    return_middle_json: bool = True  # 默认值
-    return_model_output: bool = False  # 默认值
-    return_content_list: bool = False  # 默认值
-    return_images: bool = True  # 默认值
-    response_format_zip: bool = True  # 默认值
-    start_page_id: int = 0  # 默认值
-    end_page_id: int = 99999  # 默认值
+    # lang_list: list[str] | None = None
+    backend: Literal["pipeline", "vlm"] = "pipeline"
+    # parse_method: str = "auto"
+    formula_enable: bool = True
+    # table_enable: bool = True
+    # server_url: str | None = None
+    # return_md: bool = True
+    # return_middle_json: bool = True
+    # return_model_output: bool = False
+    # return_content_list: bool = False
+    # return_images: bool = True
+    # response_format_zip: bool = True
+    start_page_id: int = 0
+    end_page_id: int = 99999
 
     def gethash(self) ->Hashable:
-        return (self.backend,self.formula_enable,self.table_enable)
+        return (self.backend,self.formula_enable,self.start_page_id,self.end_page_id)
 
 # 配置HTTP客户端
 timeout = httpx.Timeout(
@@ -61,16 +61,16 @@ class ConverterMineruDeploy(X2MarkdownConverter):
         data = {
             "output_dir": self.config.output_dir,
             "backend": self.config.backend,
-            "parse_method": self.config.parse_method,
+            "parse_method": "auto",
             "formula_enable": self.config.formula_enable,
-            "table_enable": self.config.table_enable,
-            "server_url": self.config.server_url,
-            "return_md": self.config.return_md,
-            "return_middle_json": self.config.return_middle_json,
-            "return_model_output": self.config.return_model_output,
-            "return_content_list": self.config.return_content_list,
-            "return_images": self.config.return_images,
-            "response_format_zip": self.config.response_format_zip,
+            "table_enable": True,
+            "server_url": None,
+            "return_md": True,
+            "return_middle_json": True,
+            "return_model_output": False,
+            "return_content_list": False,
+            "return_images": True,
+            "response_format_zip": True,
             "start_page_id": self.config.start_page_id,
             "end_page_id": self.config.end_page_id
         }
