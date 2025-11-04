@@ -64,6 +64,7 @@ def uris2placeholder(markdown: str, mask_dict: MaskDict):
 
         # 整个图片都替换为占位符
         mask_dict.set(id, match.group())
+        print(f"生成占位符<ph-{id}>")
         return f"<ph-{id}>"
 
     uri_pattern = r'(!\[.*?\])\((.*?)\)'
@@ -77,6 +78,7 @@ def placeholder2uris(markdown: str, mask_dict: MaskDict):
         uri = mask_dict.get(id)
         if uri is None:
             return match.group()
+        print(f"占位符<ph-{id}>已还原为图片")
         return uri
 
     ph_pattern = r"<ph-([a-zA-Z0-9]+)>"
