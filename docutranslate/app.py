@@ -37,7 +37,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import (
     BaseModel,
     Field,
-    field_validator,
     model_validator,
     AliasChoices,
     ConfigDict,
@@ -46,7 +45,6 @@ from pydantic import (
 from docutranslate import __version__
 from docutranslate.agents.agent import ThinkingMode
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig
-from docutranslate.exporter.md.types import ConvertEngineType
 
 # --- 核心代码 Imports ---
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
@@ -78,6 +76,9 @@ from docutranslate.workflow.xlsx_workflow import XlsxWorkflow, XlsxWorkflowConfi
 if DOCLING_EXIST or TYPE_CHECKING:
     from docutranslate.converter.x2md.converter_docling import ConverterDoclingConfig
 from docutranslate.converter.x2md.converter_mineru import ConverterMineruConfig
+# --- 新增的 Import ---
+from docutranslate.converter.x2md.converter_mineru_deploy import ConverterMineruDeployConfig
+# ----------------------
 from docutranslate.exporter.md.md2html_exporter import MD2HTMLExporterConfig
 from docutranslate.exporter.txt.txt2html_exporter import TXT2HTMLExporterConfig
 from docutranslate.translator.ai_translator.md_translator import MDTranslatorConfig
@@ -399,31 +400,61 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
     workflow_type: Literal["markdown_based"] = Field(
         ..., description="指定使用基于Markdown的翻译工作流。"
     )
-    convert_engine: ConvertEngineType = Field(
+    convert_engine: Literal["identity", "mineru", "docling", "mineru_deploy"] = Field(
         "identity",
-        description="选择将文件解析为markdown的引擎。如果输入文件是.md，此项可为`null`或不传。",
-        examples=["identity", "mineru", "docling"],
-    )
-    mineru_token: Optional[str] = Field(
-        None, description="当 `convert_engine` 为 'mineru' 时必填的API令牌。"
-    )
-    formula_ocr: bool = Field(
-        True, description="是否对公式进行OCR识别。对 `mineru` 和 `docling` 均有效。"
-    )
-    code_ocr: bool = Field(
-        True, description="是否对代码块进行OCR识别。仅 `docling` 引擎有效。"
-    )
-    model_version: Literal["pipeline", "vlm"] = Field(
-        "vlm", description="Mineru模型的版本，'vlm'是更新的版本。仅 `mineru` 引擎有效。"
+        description="选择将文件解析为markdown的引擎。'mineru_deploy' 适用于本地部署的 MinerU 服务。如果输入文件是.md，此项可为`identity`或不传。",
+        examples=["identity", "mineru", "docling", "mineru_deploy"],
     )
 
-    @field_validator("mineru_token")
-    def check_mineru_token(cls, v, values):
-        if values.data.get("convert_engine") == "mineru" and not v:
+    # --- Engine-Specific Parameters ---
+
+    # -- For "mineru" (Cloud API) --
+    mineru_token: Optional[str] = Field(
+        None, description="[仅当 convert_engine='mineru'] 必填的API令牌。"
+    )
+    model_version: Literal["pipeline", "vlm"] = Field(
+        "vlm", description="[仅当 convert_engine='mineru'] Mineru Cloud模型的版本。"
+    )
+    formula_ocr: bool = Field(
+        True, description="[仅当 convert_engine='mineru' 或 'docling'] 是否对公式进行OCR识别。"
+    )
+
+    # -- For "docling" --
+    code_ocr: bool = Field(
+        True, description="[仅当 convert_engine='docling'] 是否对代码块进行OCR识别。"
+    )
+
+    # -- For "mineru_deploy" (Local Deployment) --
+    mineru_deploy_base_url: Optional[str] = Field(
+        "http://127.0.0.1:8000",
+        description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务地址。",
+    )
+    mineru_deploy_backend: Literal["pipeline", "vlm"] = Field(
+        "pipeline",
+        description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务使用的后端。",
+    )
+    mineru_deploy_formula_enable: bool = Field(
+        True,
+        description="[仅当 convert_engine='mineru_deploy'] 本地部署的服务是否启用公式解析。",
+    )
+    mineru_deploy_start_page_id: int = Field(
+        0, description="[仅当 convert_engine='mineru_deploy'] 起始解析页面。"
+    )
+    mineru_deploy_end_page_id: int = Field(
+        99999, description="[仅当 convert_engine='mineru_deploy'] 结束解析页面。"
+    )
+
+    @model_validator(mode="after")
+    def check_engine_params(self):
+        if self.convert_engine == "mineru" and not self.mineru_token:
             raise ValueError(
                 "当 `convert_engine` 为 'mineru' 时，`mineru_token` 字段是必须的。"
             )
-        return v
+        if self.convert_engine == "mineru_deploy" and not self.mineru_deploy_base_url:
+            raise ValueError(
+                "当 `convert_engine` 为 'mineru_deploy' 时，`mineru_deploy_base_url` 字段是必须的。"
+            )
+        return self
 
 
 class TextWorkflowParams(BaseWorkflowParams):
@@ -610,6 +641,21 @@ class TranslateServiceRequest(BaseModel):
                         "mineru_token": "your-mineru-token-if-any",
                         "formula_ocr": True,
                         "model_version": "vlm",
+                    },
+                },
+                {
+                    "file_name": "local_test.pdf",
+                    "file_content": "JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PC9...",
+                    "payload": {
+                        "workflow_type": "markdown_based",
+                        "skip_translate": True,
+                        "to_lang": "中文",
+                        "convert_engine": "mineru_deploy",
+                        "mineru_deploy_base_url": "http://127.0.0.1:8000",
+                        "mineru_deploy_backend": "pipeline",
+                        "mineru_deploy_formula_enable": True,
+                        "mineru_deploy_start_page_id": 0,
+                        "mineru_deploy_end_page_id": 5,
                     },
                 },
                 {
@@ -873,6 +919,14 @@ async def _perform_translation(
                     mineru_token=payload.mineru_token,
                     formula_ocr=payload.formula_ocr,
                     model_version=payload.model_version,
+                )
+            elif payload.convert_engine == "mineru_deploy":
+                converter_config = ConverterMineruDeployConfig(
+                    base_url=payload.mineru_deploy_base_url,
+                    backend=payload.mineru_deploy_backend,
+                    formula_enable=payload.mineru_deploy_formula_enable,
+                    start_page_id=payload.mineru_deploy_start_page_id,
+                    end_page_id=payload.mineru_deploy_end_page_id,
                 )
             elif payload.convert_engine == "docling" and DOCLING_EXIST:
                 converter_config = ConverterDoclingConfig(
@@ -1458,7 +1512,6 @@ async def _start_translation_task(
 
     initial_log_msg = f"收到新的翻译请求: {original_filename}"
     print(f"[{task_id}] {initial_log_msg}")
-    log_history.append(initial_log_msg)
     await log_queue.put(initial_log_msg)
 
     try:
@@ -2093,7 +2146,7 @@ async def service_content(
     "/engin-list", tags=["Application"], description="返回正在进行的可用的转换引擎"
 )
 async def service_get_engin_list():
-    engin_list = ["mineru"]
+    engin_list = ["mineru", "mineru_deploy"]
     if DOCLING_EXIST:
         engin_list.append("docling")
     return JSONResponse(content=engin_list)
