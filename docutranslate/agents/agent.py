@@ -437,7 +437,7 @@ class Agent:
         semaphore = asyncio.Semaphore(max_concurrent)
         tasks = []
 
-        proxies = get_httpx_proxies() if self.system_proxy_enable else None
+        proxies = get_httpx_proxies(asyn=True) if self.system_proxy_enable else None
 
         limits = httpx.Limits(
             max_connections=self.max_concurrent * 2,  # 为重试和并发预留空间
@@ -445,7 +445,7 @@ class Agent:
         )
 
         async with httpx.AsyncClient(
-            trust_env=False, proxies=proxies, verify=False, limits=limits
+            trust_env=False, mounts=proxies, verify=False, limits=limits
         ) as client:
 
             async def send_with_semaphore(p_text: str):
@@ -688,9 +688,9 @@ class Agent:
             max_connections=self.max_concurrent * 2,  # 允许连接复用
             max_keepalive_connections=self.max_concurrent,  # 保持活跃连接
         )
-        proxies = get_httpx_proxies() if self.system_proxy_enable else None
+        proxies = get_httpx_proxies(asyn=False) if self.system_proxy_enable else None
         with httpx.Client(
-            trust_env=False, proxies=proxies, verify=False, limits=limits
+            trust_env=False, mounts=proxies, verify=False, limits=limits
         ) as client:
             clients = itertools.repeat(client, len(prompts))
             with ThreadPoolExecutor(max_workers=self.max_concurrent) as executor:
