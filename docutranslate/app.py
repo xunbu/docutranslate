@@ -469,9 +469,9 @@ class TextWorkflowParams(BaseWorkflowParams):
         "\n",
         description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
     )
-    segment_mode: Literal["line", "paragraph"] = Field(
+    segment_mode: Literal["line", "paragraph", "none"] = Field(
         "line",
-        description="分段模式。'line'：按行分段（每行独立翻译），'paragraph'：按段落分段（连续非空行合并为段落）。",
+        description="分段模式。'line'：按行分段（每行独立翻译），'paragraph'：按段落分段（连续非空行合并为段落），'none'：不分段（全文视为一个段落）。",
     )
 
 

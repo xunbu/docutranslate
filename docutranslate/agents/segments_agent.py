@@ -183,7 +183,6 @@ class SegmentsTranslateAgent(Agent):
     def send_segments(self, segments: list[str], chunk_size: int) -> list[str]:
         indexed_originals, chunks, merged_indices_list = segments2json_chunks(segments, chunk_size)
         prompts = [generate_prompt(json.dumps(chunk, ensure_ascii=False, indent=0), self.to_lang) for chunk in chunks]
-
         translated_chunks = super().send_prompts(prompts=prompts, json_format=self.json_format,
                                                  pre_send_handler=self._pre_send_handler,
                                                  result_handler=self._result_handler,
@@ -227,7 +226,6 @@ class SegmentsTranslateAgent(Agent):
                                                              pre_send_handler=self._pre_send_handler,
                                                              result_handler=self._result_handler,
                                                              error_result_handler=self._error_result_handler)
-
         indexed_translated = indexed_originals.copy()
         for chunk in translated_chunks:
             try:

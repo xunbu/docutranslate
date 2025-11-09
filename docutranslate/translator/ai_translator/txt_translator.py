@@ -24,11 +24,12 @@ class TXTTranslatorConfig(AiTranslatorConfig):
         separator (str):
             在 "append" 或 "prepend" 模式下，用于分隔原文和译文的字符串。
             默认为换行符 "\n"。
-        segment_mode (Literal["line", "paragraph"]):
+        segment_mode (Literal["line", "paragraph", "none"]):
             分段模式。
             - "line": 按行分段（每行独立翻译）
             - "paragraph": 按段落分段（连续非空行合并为段落）
-            默认为 "paragraph"。
+            - "none": 不分段（全文视为一个段落）
+            默认为 "line"。
     """
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
     separator: str = "\n"
