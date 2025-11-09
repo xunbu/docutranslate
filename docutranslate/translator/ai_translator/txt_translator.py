@@ -32,7 +32,7 @@ class TXTTranslatorConfig(AiTranslatorConfig):
     """
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
     separator: str = "\n"
-    segment_mode: Literal["line", "paragraph"] = "line"
+    segment_mode: Literal["line", "paragraph", "none"] = "line"
 
 
 class TXTTranslator(AiTranslator):
@@ -91,8 +91,10 @@ class TXTTranslator(AiTranslator):
 
         if self.segment_mode == "line":
             return self._segment_by_line(txt_content)
-        else:  # paragraph mode
+        elif self.segment_mode == "paragraph":  # paragraph mode
             return self._segment_by_paragraph(txt_content)
+        else:
+            return [txt_content]
 
     def _segment_by_line(self, txt_content: str) -> List[str]:
         """
@@ -153,8 +155,10 @@ class TXTTranslator(AiTranslator):
         """
         if self.segment_mode == "line":
             return self._reconstruct_by_line(translated_texts, original_texts)
-        else:  # paragraph mode
+        elif self.segment_mode == "paragraph":  # paragraph mode
             return self._reconstruct_by_paragraph(translated_texts, original_texts)
+        else:
+            return self._reconstruct_none(translated_texts, original_texts)
 
     def _reconstruct_by_line(self, translated_texts: List[str], original_lines: List[str]) -> bytes:
         """
@@ -229,6 +233,36 @@ class TXTTranslator(AiTranslator):
                 result_lines.append(segment)
 
         return "\n".join(result_lines).encode('utf-8')
+
+    def _reconstruct_none(self, translated_texts: List[str], original_texts: List[str]) -> bytes:
+        """
+        不分段模式重建文档。
+
+        Args:
+            translated_texts (List[str]): 翻译后的文本列表（应只包含一个元素）
+            original_texts (List[str]): 原始文本列表（应只包含一个元素）
+
+        Returns:
+            bytes: 重建的文档内容
+        """
+        if not translated_texts or not original_texts:
+            return b""
+
+        original_text = original_texts[0]
+        translated_text = translated_texts[0]
+
+        # 根据插入模式处理
+        if self.insert_mode == "replace":
+            result_text = translated_text
+        elif self.insert_mode == "append":
+            result_text = original_text + self.separator + translated_text
+        elif self.insert_mode == "prepend":
+            result_text = translated_text + self.separator + original_text
+        else:
+            self.logger.error(f"不正确的insert_mode参数: '{self.insert_mode}'")
+            result_text = translated_text
+
+        return result_text.encode('utf-8')
 
     def translate(self, document: Document) -> Self:
         """

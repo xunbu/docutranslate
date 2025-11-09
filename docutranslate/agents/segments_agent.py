@@ -79,7 +79,7 @@ class SegmentsTranslateAgentConfig(AgentConfig):
     to_lang: str
     custom_prompt: str | None = None
     glossary_dict: dict[str, str] | None = None
-    json_format:bool = True
+    json_format:bool = False
 
 
 class SegmentsTranslateAgent(Agent):
@@ -147,8 +147,9 @@ class SegmentsTranslateAgent(Agent):
                 for key in missing_keys:
                     final_chunk[key] = str(original_chunk[key])
 
+
                 # 抛出自定义异常，将部分结果和错误信息一起传递出去
-                raise PartialAgentResultError("键不匹配，触发重试", partial_result=final_chunk)
+                raise PartialAgentResultError("键不匹配，触发重试", partial_result=final_chunk,append_prompt=f"\nThe following keys must be included:{','.join(sorted(list(missing_keys)))}")
 
             # 如果键完全匹配（理想情况），正常返回
             for key, value in repaired_result.items():

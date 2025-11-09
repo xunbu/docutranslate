@@ -32,9 +32,10 @@ class AgentResultError(ValueError):
 class PartialAgentResultError(ValueError):
     """一个特殊的异常，用于表示结果不完整但包含了部分成功的数据，以便触发重试。该错误不计入总错误数"""
 
-    def __init__(self, message, partial_result: dict):
+    def __init__(self, message, partial_result: dict,append_prompt:str=None):
         super().__init__(message)
         self.partial_result = partial_result
+        self.append_prompt=append_prompt
 
 
 @dataclass(kw_only=True)
@@ -327,6 +328,8 @@ class Agent:
             self.logger.error(f"收到部分返回结果，将尝试重试: {e}")
             current_partial_result = e.partial_result
             should_retry = True
+            if e.append_prompt:
+                prompt+=e.append_prompt
             # is_hard_error 保持 False
 
         # 捕获硬错误
