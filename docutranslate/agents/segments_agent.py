@@ -57,31 +57,36 @@ Output(target language: {to_lang}):
 Please return the translated JSON directly without including any additional information and preserve special tags or untranslatable elements (such as code, brand names, technical terms) as they are.
 """
 
-def get_original_segments(prompt:str):
+
+def get_original_segments(prompt: str):
     match = re.search(r'<input>\n```json\n(.*)\n```\n</input>', prompt, re.DOTALL)
     if match:
         return match.group(1)
     else:
         raise ValueError("无法从prompt中提取初始文本")
 
-def get_target_segments(result:str):
+
+def get_target_segments(result: str):
     match = re.search(r'```json(.*)```', result, re.DOTALL)
     if match:
         return match.group(1)
     else:
         return result
 
+
 @dataclass
 class SegmentsTranslateAgentConfig(AgentConfig):
     to_lang: str
     custom_prompt: str | None = None
     glossary_dict: dict[str, str] | None = None
+    json_format:bool = True
 
 
 class SegmentsTranslateAgent(Agent):
     def __init__(self, config: SegmentsTranslateAgentConfig):
         super().__init__(config)
         self.to_lang = config.to_lang
+        self.json_format = config.json_format
         self.system_prompt = f"""
 # Role
 - You are a professional, authentic machine translation engine.
@@ -104,7 +109,7 @@ class SegmentsTranslateAgent(Agent):
         - 如果键不匹配，构造一个部分成功的结果，并通过 PartialTranslationError 异常抛出，以触发重试。
         - 其他错误（如JSON解析失败、模型偷懒）则抛出普通 ValueError 触发重试。
         """
-        original_segments=get_original_segments(origin_prompt)
+        original_segments = get_original_segments(origin_prompt)
         result = get_target_segments(result)
         if result == "":
             if original_segments.strip() != "":
@@ -160,7 +165,7 @@ class SegmentsTranslateAgent(Agent):
         处理在所有重试后仍然失败的请求。
         作为备用方案，返回原文内容，并将所有值转换为字符串。
         """
-        original_segments=get_original_segments(origin_prompt)
+        original_segments = get_original_segments(origin_prompt)
         if original_segments == "":
             return {}
         try:
@@ -178,7 +183,8 @@ class SegmentsTranslateAgent(Agent):
         indexed_originals, chunks, merged_indices_list = segments2json_chunks(segments, chunk_size)
         prompts = [generate_prompt(json.dumps(chunk, ensure_ascii=False, indent=0), self.to_lang) for chunk in chunks]
 
-        translated_chunks = super().send_prompts(prompts=prompts, pre_send_handler=self._pre_send_handler,
+        translated_chunks = super().send_prompts(prompts=prompts, json_format=self.json_format,
+                                                 pre_send_handler=self._pre_send_handler,
                                                  result_handler=self._result_handler,
                                                  error_result_handler=self._error_result_handler)
 
@@ -216,7 +222,8 @@ class SegmentsTranslateAgent(Agent):
                                                                                  chunk_size)
         prompts = [generate_prompt(json.dumps(chunk, ensure_ascii=False, indent=0), self.to_lang) for chunk in chunks]
 
-        translated_chunks = await super().send_prompts_async(prompts=prompts, pre_send_handler=self._pre_send_handler,
+        translated_chunks = await super().send_prompts_async(prompts=prompts, json_format=self.json_format,
+                                                             pre_send_handler=self._pre_send_handler,
                                                              result_handler=self._result_handler,
                                                              error_result_handler=self._error_result_handler)
 

@@ -32,6 +32,7 @@ thinking_mode:dict[mode_type,tuple[thinking_field, enable_value, disable_value]]
             },
         ),
         "siliconflow": ("enable_thinking", True, False),
+        "default":("reasoning_effort","medium","minimal"),
     }
 
 
@@ -45,7 +46,7 @@ def get_thinking_mode_by_model_id(model_id: str) -> tuple[str, str | dict, str |
         return thinking_mode["volces"]
     elif "gemini" in model_id:
         return thinking_mode["google"]
-    return None
+    return thinking_mode["default"]
 
 
 def get_thinking_mode(provider: str, model_id: str) -> tuple[str, str | dict, str | dict] | None:
@@ -62,7 +63,7 @@ def get_thinking_mode(provider: str, model_id: str) -> tuple[str, str | dict, st
         return thinking_mode["siliconflow"]
     elif provider == "api.302.ai":
         return get_thinking_mode_by_model_id(model_id)
-    return None
+    return thinking_mode["default"]
 
 
 # def add_thinking_mode(data: dict, provider: str, model_id: str, think_enable: bool):

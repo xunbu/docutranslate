@@ -234,8 +234,9 @@ class Agent:
         elif self.thinking == "disable":
             data[field_thinking] = val_disable
 
+
     def _prepare_request_data(
-        self, prompt: str, system_prompt: str, temperature=None, top_p=0.9
+        self, prompt: str, system_prompt: str, temperature=None, top_p=0.9,json_format=False
     ):
         if temperature is None:
             temperature = self.temperature
@@ -254,6 +255,8 @@ class Agent:
         }
         if self.thinking != "default":
             self._add_thinking_mode(data)
+        if json_format:
+            data["response_format"] = {"type": "json_object"}
         return headers, data
 
     async def send_async(
@@ -263,6 +266,7 @@ class Agent:
         system_prompt: None | str = None,
         retry=True,
         retry_count=0,
+        json_format=False,
         pre_send_handler: PreSendHandlerType = None,
         result_handler: ResultHandlerType = None,
         error_result_handler: ErrorResultHandlerType = None,
@@ -274,7 +278,7 @@ class Agent:
             system_prompt, prompt = pre_send_handler(system_prompt, prompt)
         # print(f"system_prompt:\n{system_prompt}")
         # print(f"【测试】prompt:\n{prompt}")
-        headers, data = self._prepare_request_data(prompt, system_prompt)
+        headers, data = self._prepare_request_data(prompt, system_prompt,json_format=json_format)
         should_retry = False
         is_hard_error = False  # 新增标志，用于区分是否为硬错误
         current_partial_result = None
@@ -412,6 +416,7 @@ class Agent:
         prompts: list[str],
         system_prompt: str | None = None,
         max_concurrent: int | None = None,
+        json_format=False,
         pre_send_handler: PreSendHandlerType = None,
         result_handler: ResultHandlerType = None,
         error_result_handler: ErrorResultHandlerType = None,
@@ -454,6 +459,7 @@ class Agent:
                         client=client,
                         prompt=p_text,
                         system_prompt=system_prompt,
+                        json_format=json_format,
                         pre_send_handler=pre_send_handler,
                         result_handler=result_handler,
                         error_result_handler=error_result_handler,
@@ -494,6 +500,7 @@ class Agent:
         system_prompt: None | str = None,
         retry=True,
         retry_count=0,
+        json_format=False,
         pre_send_handler=None,
         result_handler=None,
         error_result_handler=None,
@@ -504,7 +511,7 @@ class Agent:
         if pre_send_handler:
             system_prompt, prompt = pre_send_handler(system_prompt, prompt)
 
-        headers, data = self._prepare_request_data(prompt, system_prompt)
+        headers, data = self._prepare_request_data(prompt, system_prompt,json_format=json_format)
         should_retry = False
         is_hard_error = False  # 新增标志，用于区分是否为硬错误
         current_partial_result = None
@@ -638,15 +645,17 @@ class Agent:
         client: httpx.Client,
         prompt: str,
         system_prompt: None | str,
+        json_format,
         count: PromptsCounter,
         pre_send_handler,
         result_handler,
-        error_result_handler,
+        error_result_handler
     ) -> Any:
         result = self.send(
             client,
             prompt,
             system_prompt,
+            json_format=json_format,
             pre_send_handler=pre_send_handler,
             result_handler=result_handler,
             error_result_handler=error_result_handler,
@@ -658,6 +667,7 @@ class Agent:
         self,
         prompts: list[str],
         system_prompt: str | None = None,
+        json_format=False,
         pre_send_handler: PreSendHandlerType = None,
         result_handler: ResultHandlerType = None,
         error_result_handler: ErrorResultHandlerType = None,
@@ -680,6 +690,7 @@ class Agent:
         counter = PromptsCounter(len(prompts), self.logger)
 
         system_prompts = itertools.repeat(system_prompt, len(prompts))
+        json_formats = itertools.repeat(json_format, len(prompts))
         counters = itertools.repeat(counter, len(prompts))
         pre_send_handlers = itertools.repeat(pre_send_handler, len(prompts))
         result_handlers = itertools.repeat(result_handler, len(prompts))
@@ -699,6 +710,7 @@ class Agent:
                     clients,
                     prompts,
                     system_prompts,
+                    json_formats,
                     counters,
                     pre_send_handlers,
                     result_handlers,
