@@ -376,6 +376,9 @@ class BaseWorkflowParams(BaseModel):
         None,
         description="用于术语表生成的Agent的配置。如果 `glossary_generate_enable` 为 `True`，此项必填。",
     )
+    force_json: bool = Field(
+        default=False, description="应输出json格式时强制ai输出json"
+    )
 
     @model_validator(mode="before")
     @classmethod
@@ -907,6 +910,7 @@ async def _perform_translation(
                     "timeout",
                     "retry",
                     "system_proxy_enable",
+                    "force_json",
                 },
                 exclude_none=True,
             )
@@ -969,6 +973,7 @@ async def _perform_translation(
                     "timeout",
                     "retry",
                     "system_proxy_enable",
+                    "force_json",
                 },
                 exclude_none=True,
             )
@@ -1005,6 +1010,7 @@ async def _perform_translation(
                     "timeout",
                     "retry",
                     "system_proxy_enable",
+                    "force_json",
                 },
                 exclude_none=True,
             )
@@ -1043,6 +1049,7 @@ async def _perform_translation(
                     "timeout",
                     "retry",
                     "system_proxy_enable",
+                    "force_json",
                 },
                 exclude_none=True,
             )
@@ -1080,6 +1087,7 @@ async def _perform_translation(
                     "timeout",
                     "retry",
                     "system_proxy_enable",
+                    "force_json",
                 },
                 exclude_none=True,
             )
@@ -1117,6 +1125,7 @@ async def _perform_translation(
                     "timeout",
                     "retry",
                     "system_proxy_enable",
+                    "force_json",
                 },
                 exclude_none=True,
             )
@@ -1154,6 +1163,7 @@ async def _perform_translation(
                     "timeout",
                     "retry",
                     "system_proxy_enable",
+                    "force_json",
                 },
                 exclude_none=True,
             )
@@ -1192,6 +1202,7 @@ async def _perform_translation(
                     "timeout",
                     "retry",
                     "system_proxy_enable",
+                    "force_json",
                 },
                 exclude_none=True,
             )
@@ -1228,6 +1239,7 @@ async def _perform_translation(
                     "timeout",
                     "retry",
                     "system_proxy_enable",
+                    "force_json",
                 },
                 exclude_none=True,
             )

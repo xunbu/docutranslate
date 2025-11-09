@@ -45,7 +45,8 @@ class XlsxTranslator(AiTranslator):
                 logger=self.logger,
                 glossary_dict=config.glossary_dict,
                 retry=config.retry,
-                system_proxy_enable=config.system_proxy_enable
+                system_proxy_enable=config.system_proxy_enable,
+                json_format=config.force_json
             )
             self.translate_agent = SegmentsTranslateAgent(agent_config)
         self.insert_mode = config.insert_mode
