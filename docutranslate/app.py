@@ -207,7 +207,7 @@ async def lifespan(app: FastAPI):
     global_logger.propagate = False
     global_logger.setLevel(logging.INFO)
     print("应用启动完成，多任务状态已初始化。")
-    print(f"服务接口文档: http://127.0.0.1:{app.state.port_to_use}/docs")
+    print(f"服务接口文档: http://1227.0.0.1:{app.state.port_to_use}/docs")
     print(f"请用浏览器访问 http://127.0.0.1:{app.state.port_to_use}\n")
     yield
     # 清理任何可能残留的临时目录
@@ -468,6 +468,10 @@ class TextWorkflowParams(BaseWorkflowParams):
     separator: str = Field(
         "\n",
         description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
+    )
+    segment_mode: Literal["line", "paragraph"] = Field(
+        "line",
+        description="分段模式。'line'：按行分段（每行独立翻译），'paragraph'：按段落分段（连续非空行合并为段落）。",
     )
 
 
@@ -961,6 +965,7 @@ async def _perform_translation(
                     "glossary_dict",
                     "insert_mode",
                     "separator",
+                    "segment_mode",
                     "timeout",
                     "retry",
                     "system_proxy_enable",
