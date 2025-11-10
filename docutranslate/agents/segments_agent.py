@@ -39,8 +39,8 @@ Input:
 
 ```json
 {{
-3:source,
-4:source,
+"3":source,
+"4":source,
 }}
 ```
 
@@ -48,11 +48,27 @@ Output(target language: {to_lang}):
 
 ```json
 {{
-3:translation,
-4:translation,
+"3":translation,
+"4":translation,
 }}
 ```
+For statements that must be combined during translation, employ merging at the minimal structural level. The total number of keys must remain unchanged after merging, and any empty values should be retained.
+Below is an example of how merging should be done when necessary:
 
+input:
+```json
+{{
+"3":"汤姆说:“杰克你",
+"4":"好”。"
+}}
+```
+output:
+```json
+{{
+"3":"Tom says:\"Hello Jack.\"",
+"4":""
+}}
+```
 </example>
 Please return the translated JSON directly without including any additional information and preserve special tags or untranslatable elements (such as code, brand names, technical terms) as they are.
 """
@@ -149,7 +165,7 @@ class SegmentsTranslateAgent(Agent):
 
 
                 # 抛出自定义异常，将部分结果和错误信息一起传递出去
-                raise PartialAgentResultError("键不匹配，触发重试", partial_result=final_chunk,append_prompt=f"\nThe following keys must be included:{','.join(sorted(list(missing_keys)))}")
+                raise PartialAgentResultError("键不匹配，触发重试", partial_result=final_chunk,append_prompt=f"\nBe careful not to omit any keys from the input; do not combine sentences when translating.\n")
 
             # 如果键完全匹配（理想情况），正常返回
             for key, value in repaired_result.items():

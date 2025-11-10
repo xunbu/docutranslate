@@ -429,7 +429,7 @@ class Agent:
         )
         total = len(prompts)
         self.logger.info(
-            f"base-url:{self.baseurl},model-id:{self.model_id},concurrent:{max_concurrent},temperature:{self.temperature},system_proxy:{self.system_proxy_enable}"
+            f"base-url:{self.baseurl},model-id:{self.model_id},concurrent:{max_concurrent},temperature:{self.temperature},system_proxy:{self.system_proxy_enable},json_output:{json_format}"
         )
         self.logger.info(f"预计发送{total}个请求，并发请求数:{max_concurrent}")
         self.total_error_counter.max_errors_count = (
@@ -676,7 +676,7 @@ class Agent:
         error_result_handler: ErrorResultHandlerType = None,
     ) -> list[Any]:
         self.logger.info(
-            f"base-url:{self.baseurl},model-id:{self.model_id},concurrent:{self.max_concurrent},temperature:{self.temperature},system_proxy:{self.system_proxy_enable}"
+            f"base-url:{self.baseurl},model-id:{self.model_id},concurrent:{self.max_concurrent},temperature:{self.temperature},system_proxy:{self.system_proxy_enable},json_output:{json_format}"
         )
         self.logger.info(
             f"预计发送{len(prompts)}个请求，并发请求数:{self.max_concurrent}"
