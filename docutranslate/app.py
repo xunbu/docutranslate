@@ -207,7 +207,7 @@ async def lifespan(app: FastAPI):
     global_logger.propagate = False
     global_logger.setLevel(logging.INFO)
     print("应用启动完成，多任务状态已初始化。")
-    print(f"服务接口文档: http://1227.0.0.1:{app.state.port_to_use}/docs")
+    print(f"服务接口文档: http://127.0.0.1:{app.state.port_to_use}/docs")
     print(f"请用浏览器访问 http://127.0.0.1:{app.state.port_to_use}\n")
     yield
     # 清理任何可能残留的临时目录
@@ -310,6 +310,9 @@ class GlossaryAgentConfigPayload(BaseModel):
     )
     custom_prompt: Optional[str] = Field(
         default=None, description="生成术语表的用户自定义提示词"
+    )
+    force_json: bool = Field(
+        default=False, description="强制Agent输出JSON格式的术语表。"
     )
 
 
@@ -736,6 +739,7 @@ class TranslateServiceRequest(BaseModel):
                             "timeout": default_params["timeout"],
                             "thinking": "default",
                             "retry": default_params["retry"],
+                            "force_json": False,
                         },
                     },
                 },

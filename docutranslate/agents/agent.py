@@ -50,6 +50,7 @@ class AgentConfig:
     thinking: ThinkingMode = "disable"
     retry: int = 2
     system_proxy_enable: bool = False
+    force_json: bool = False  # 应输出json格式时强制ai输出json
 
 
 class TotalErrorCounter:
@@ -267,7 +268,7 @@ class Agent:
         system_prompt: None | str = None,
         retry=True,
         retry_count=0,
-        json_format=False,
+        force_json=False,
         pre_send_handler: PreSendHandlerType = None,
         result_handler: ResultHandlerType = None,
         error_result_handler: ErrorResultHandlerType = None,
@@ -279,7 +280,7 @@ class Agent:
             system_prompt, prompt = pre_send_handler(system_prompt, prompt)
         # print(f"system_prompt:\n{system_prompt}")
         # print(f"【测试】prompt:\n{prompt}")
-        headers, data = self._prepare_request_data(prompt, system_prompt,json_format=json_format)
+        headers, data = self._prepare_request_data(prompt, system_prompt, json_format=force_json)
         should_retry = False
         is_hard_error = False  # 新增标志，用于区分是否为硬错误
         current_partial_result = None
@@ -392,6 +393,7 @@ class Agent:
                 system_prompt,
                 retry=True,
                 retry_count=retry_count + 1,
+                force_json=force_json,
                 pre_send_handler=pre_send_handler,
                 result_handler=result_handler,
                 error_result_handler=error_result_handler,
@@ -419,7 +421,7 @@ class Agent:
         prompts: list[str],
         system_prompt: str | None = None,
         max_concurrent: int | None = None,
-        json_format=False,
+        force_json=False,
         pre_send_handler: PreSendHandlerType = None,
         result_handler: ResultHandlerType = None,
         error_result_handler: ErrorResultHandlerType = None,
@@ -429,7 +431,7 @@ class Agent:
         )
         total = len(prompts)
         self.logger.info(
-            f"base-url:{self.baseurl},model-id:{self.model_id},concurrent:{max_concurrent},temperature:{self.temperature},system_proxy:{self.system_proxy_enable},json_output:{json_format}"
+            f"base-url:{self.baseurl},model-id:{self.model_id},concurrent:{max_concurrent},temperature:{self.temperature},system_proxy:{self.system_proxy_enable},json_output:{force_json}"
         )
         self.logger.info(f"预计发送{total}个请求，并发请求数:{max_concurrent}")
         self.total_error_counter.max_errors_count = (
@@ -462,7 +464,7 @@ class Agent:
                         client=client,
                         prompt=p_text,
                         system_prompt=system_prompt,
-                        json_format=json_format,
+                        force_json=force_json,
                         pre_send_handler=pre_send_handler,
                         result_handler=result_handler,
                         error_result_handler=error_result_handler,
@@ -503,7 +505,7 @@ class Agent:
         system_prompt: None | str = None,
         retry=True,
         retry_count=0,
-        json_format=False,
+        force_json=False,
         pre_send_handler=None,
         result_handler=None,
         error_result_handler=None,
@@ -514,7 +516,7 @@ class Agent:
         if pre_send_handler:
             system_prompt, prompt = pre_send_handler(system_prompt, prompt)
 
-        headers, data = self._prepare_request_data(prompt, system_prompt,json_format=json_format)
+        headers, data = self._prepare_request_data(prompt, system_prompt, json_format=force_json)
         should_retry = False
         is_hard_error = False  # 新增标志，用于区分是否为硬错误
         current_partial_result = None
@@ -621,6 +623,7 @@ class Agent:
                 system_prompt,
                 retry=True,
                 retry_count=retry_count + 1,
+                force_json=force_json,
                 pre_send_handler=pre_send_handler,
                 result_handler=result_handler,
                 error_result_handler=error_result_handler,
@@ -648,7 +651,7 @@ class Agent:
         client: httpx.Client,
         prompt: str,
         system_prompt: None | str,
-        json_format,
+        force_json,
         count: PromptsCounter,
         pre_send_handler,
         result_handler,
@@ -658,7 +661,7 @@ class Agent:
             client,
             prompt,
             system_prompt,
-            json_format=json_format,
+            force_json=force_json,
             pre_send_handler=pre_send_handler,
             result_handler=result_handler,
             error_result_handler=error_result_handler,

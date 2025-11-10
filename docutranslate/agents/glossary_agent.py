@@ -66,16 +66,18 @@ def get_target_segments(result: str):
         return result
 
 
-@dataclass
+@dataclass(kw_only=True)
 class GlossaryAgentConfig(AgentConfig):
     to_lang: str
     custom_prompt: str = None
+    force_json: bool = False
 
 
 class GlossaryAgent(Agent):
     def __init__(self, config: GlossaryAgentConfig):
         super().__init__(config)
         self.to_lang = config.to_lang
+        self.force_json=config.force_json
         self.system_prompt = f"""
 # Role
 You are a professional glossary extractor
@@ -114,7 +116,7 @@ You are a professional glossary extractor
         result = {}
         indexed_originals, chunks, merged_indices_list = segments2json_chunks(segments, chunk_size)
         prompts = [generate_prompt(json.dumps(chunk, ensure_ascii=False), self.to_lang) for chunk in chunks]
-        translated_chunks = super().send_prompts(prompts=prompts,
+        translated_chunks = super().send_prompts(prompts=prompts, json_format=self.force_json,
                                                  result_handler=self._result_handler,
                                                  error_result_handler=self._error_result_handler)
         for chunk in translated_chunks:
@@ -138,7 +140,7 @@ You are a professional glossary extractor
         indexed_originals, chunks, merged_indices_list = await asyncio.to_thread(segments2json_chunks, segments,
                                                                                  chunk_size)
         prompts = [generate_prompt(json.dumps(chunk, ensure_ascii=False), self.to_lang) for chunk in chunks]
-        translated_chunks = await super().send_prompts_async(prompts=prompts,
+        translated_chunks = await super().send_prompts_async(prompts=prompts, force_json=self.force_json,
                                                              result_handler=self._result_handler,
                                                              error_result_handler=self._error_result_handler)
         for chunk in translated_chunks:

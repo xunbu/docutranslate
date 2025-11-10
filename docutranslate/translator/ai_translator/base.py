@@ -26,7 +26,6 @@ class AiTranslatorConfig(TranslatorConfig, AgentConfig):
     glossary_generate_enable: bool = False
     glossary_agent_config: GlossaryAgentConfig | None = None
     skip_translate: bool = False  # 当skip_translate为False时base_url、model_id为必填项
-    force_json:bool=False # 应输出json格式时强制ai输出json
 
 T = TypeVar("T", bound=Document)
 
@@ -64,6 +63,7 @@ class AiTranslator(Translator[T]):
                     logger=self.logger,
                     retry=config.retry,
                     system_proxy_enable=config.system_proxy_enable,
+                    force_json=config.force_json,
                 )
                 self.glossary_agent = GlossaryAgent(glossary_agent_config)
 

@@ -90,19 +90,19 @@ def get_target_segments(result: str):
         return result
 
 
-@dataclass
+@dataclass(kw_only=True)
 class SegmentsTranslateAgentConfig(AgentConfig):
     to_lang: str
     custom_prompt: str | None = None
     glossary_dict: dict[str, str] | None = None
-    json_format:bool = False
+    force_json:bool = False
 
 
 class SegmentsTranslateAgent(Agent):
     def __init__(self, config: SegmentsTranslateAgentConfig):
         super().__init__(config)
         self.to_lang = config.to_lang
-        self.json_format = config.json_format
+        self.force_json = config.force_json
         self.system_prompt = f"""
 # Role
 - You are a professional, authentic machine translation engine.
@@ -199,7 +199,7 @@ class SegmentsTranslateAgent(Agent):
     def send_segments(self, segments: list[str], chunk_size: int) -> list[str]:
         indexed_originals, chunks, merged_indices_list = segments2json_chunks(segments, chunk_size)
         prompts = [generate_prompt(json.dumps(chunk, ensure_ascii=False, indent=0), self.to_lang) for chunk in chunks]
-        translated_chunks = super().send_prompts(prompts=prompts, json_format=self.json_format,
+        translated_chunks = super().send_prompts(prompts=prompts, json_format=self.force_json,
                                                  pre_send_handler=self._pre_send_handler,
                                                  result_handler=self._result_handler,
                                                  error_result_handler=self._error_result_handler)
@@ -238,7 +238,7 @@ class SegmentsTranslateAgent(Agent):
                                                                                  chunk_size)
         prompts = [generate_prompt(json.dumps(chunk, ensure_ascii=False, indent=0), self.to_lang) for chunk in chunks]
 
-        translated_chunks = await super().send_prompts_async(prompts=prompts, json_format=self.json_format,
+        translated_chunks = await super().send_prompts_async(prompts=prompts, force_json=self.force_json,
                                                              pre_send_handler=self._pre_send_handler,
                                                              result_handler=self._result_handler,
                                                              error_result_handler=self._error_result_handler)
