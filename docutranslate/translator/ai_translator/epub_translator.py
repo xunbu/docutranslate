@@ -2,13 +2,11 @@
 # SPDX-License-Identifier: MPL-2.0
 import asyncio
 import os
-import re
 import xml.etree.ElementTree as ET
 import zipfile
-from collections import defaultdict
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Self, Literal, List, Dict, Any, Tuple
+from typing import Self, Literal, List, Dict, Any
 
 from bs4 import BeautifulSoup, Tag, NavigableString
 
@@ -105,7 +103,7 @@ class EpubTranslator(AiTranslator):
                     continue
 
                 if file_path not in soups:
-                    soups[file_path] = BeautifulSoup(content_bytes, "html.parser")
+                    soups[file_path] = BeautifulSoup(content_bytes, "lxml")
 
                 soup = soups[file_path]
 
@@ -154,7 +152,7 @@ class EpubTranslator(AiTranslator):
 
             if self.insert_mode == "replace":
                 original_tag.clear()
-                new_content_soup = BeautifulSoup(translated_html, 'html.parser')
+                new_content_soup = BeautifulSoup(translated_html, 'lxml')
                 for node in list(new_content_soup.children):
                     original_tag.append(node.extract())
 
@@ -163,8 +161,8 @@ class EpubTranslator(AiTranslator):
                 original_tag.clear()
 
                 # 解析HTML片段
-                original_nodes = BeautifulSoup(original_html, 'html.parser').contents
-                translated_nodes = BeautifulSoup(translated_html, 'html.parser').contents
+                original_nodes = BeautifulSoup(original_html, 'lxml').contents
+                translated_nodes = BeautifulSoup(translated_html, 'lxml').contents
 
                 # 创建分隔符节点
                 separator_nodes = []
@@ -189,7 +187,7 @@ class EpubTranslator(AiTranslator):
             else:
                 # --- 常规块级元素处理：创建新标签 ---
                 translated_tag = soup.new_tag(original_tag.name, attrs=original_tag.attrs)
-                new_content_soup = BeautifulSoup(translated_html, 'html.parser')
+                new_content_soup = BeautifulSoup(translated_html, 'lxml')
                 for node in list(new_content_soup.children):
                     translated_tag.append(node.extract())
 

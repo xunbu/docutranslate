@@ -7,7 +7,7 @@ from typing import Self, Literal, List, Optional
 import zipfile
 import xml.etree.ElementTree as ET
 
-import openpyxl
+import openpyxl  # openpyxl 仍然保留，以备将来可能需要混合模式或用于其他目的
 from openpyxl.cell import Cell
 
 from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, SegmentsTranslateAgent
@@ -54,84 +54,51 @@ class XlsxTranslator(AiTranslator):
         self.translate_regions = config.translate_regions
 
     def _get_texts_to_translate(self, document: Document) -> List[str]:
-        """使用 openpyxl 识别指定区域内需要翻译的文本。"""
+        """
+        【已修改】通过直接解析内部XML文件来识别需要翻译的文本。
+        这种方法可以正确处理包含富文本的单元格，并确保与重建逻辑一致，但不支持按区域翻译。
+        """
+        if self.translate_regions:
+            self.logger.warning("当前文本提取方法直接解析XML，不支持 'translate_regions'。将翻译文件中的所有文本内容。")
+
         texts_to_translate = set()
+        ns = {'main': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'}
+
         try:
-            # 使用 data_only=True 来获取单元格的计算值，而不是公式
-            workbook = openpyxl.load_workbook(BytesIO(document.content), data_only=True)
-            # 如果未指定区域，则翻译所有文本
-            if not self.translate_regions:
-                for sheet in workbook.worksheets:
-                    for row in sheet.iter_rows():
-                        for cell in row:
-                            # 仅处理共享字符串类型，这是最常见的文本存储方式
-                            if isinstance(cell.value, str) and cell.data_type == "s":
-                                texts_to_translate.add(cell.value)
-                # 同时也要检查表格的标题
-                for sheet in workbook.worksheets:
-                    for table in sheet._tables:
-                        for column in table.tableColumns:
-                            if column.name:
-                                texts_to_translate.add(column.name)
+            with zipfile.ZipFile(BytesIO(document.content), 'r') as original_zip:
+                # --- 1. 处理共享字符串 (sharedStrings.xml) ---
+                # 这是所有文本（包括富文本片段）的主要存储位置。
+                if "xl/sharedStrings.xml" in original_zip.namelist():
+                    with original_zip.open("xl/sharedStrings.xml") as f:
+                        root = ET.fromstring(f.read())
+                        # 查找所有 <t> 元素，无论它们在哪个层级，这能正确捕获富文本片段
+                        text_nodes = root.findall('.//main:t', ns)
+                        for node in text_nodes:
+                            # 确保节点有文本内容且不是纯粹的空白
+                            if node.text and node.text.strip():
+                                texts_to_translate.add(node.text)
 
-            # 如果指定了区域
-            else:
-                processed_coordinates = set()
-                regions_by_sheet = {}
-                all_sheet_regions = []
-                for region in self.translate_regions:
-                    if '!' in region:
-                        sheet_name, cell_range = region.split('!', 1)
-                        # 支持带引号的工作表名称
-                        sheet_name = sheet_name.strip("'")
-                        if sheet_name not in regions_by_sheet:
-                            regions_by_sheet[sheet_name] = []
-                        regions_by_sheet[sheet_name].append(cell_range)
-                    else:
-                        all_sheet_regions.append(region)
+                # --- 2. 处理表格标题 (tableX.xml) ---
+                # 表格的列名不存储在 sharedStrings.xml 中，需要单独处理。
+                for item in original_zip.infolist():
+                    if item.filename.startswith("xl/tables/table"):
+                        with original_zip.open(item.filename) as f:
+                            root = ET.fromstring(f.read())
+                            table_columns = root.findall('.//main:tableColumn', ns)
+                            for col in table_columns:
+                                original_name = col.get('name')
+                                if original_name and original_name.strip():
+                                    texts_to_translate.add(original_name)
 
-                for sheet in workbook.worksheets:
-                    sheet_specific_ranges = regions_by_sheet.get(sheet.title, [])
-                    total_ranges_for_this_sheet = sheet_specific_ranges + all_sheet_regions
-
-                    if not total_ranges_for_this_sheet:
-                        continue
-
-                    # 检查此区域内的表格标题
-                    for table in sheet._tables:
-                        # openpyxl 没有提供简单的方法来检查表格是否与区域相交
-                        # 为简单起见，我们假设如果指定了工作表，则翻译该工作表上的所有表格标题
-                        for column in table.tableColumns:
-                            if column.name:
-                                texts_to_translate.add(column.name)
-
-                    for cell_range in total_ranges_for_this_sheet:
-                        try:
-                            cells_in_range = sheet[cell_range]
-                            flat_cells = []
-                            if isinstance(cells_in_range, Cell):
-                                flat_cells.append(cells_in_range)
-                            elif isinstance(cells_in_range, tuple):
-                                for item in cells_in_range:
-                                    if isinstance(item, Cell):
-                                        flat_cells.append(item)
-                                    elif isinstance(item, tuple):
-                                        flat_cells.extend(item)
-
-                            for cell in flat_cells:
-                                if isinstance(cell.value, str) and cell.data_type == "s":
-                                    texts_to_translate.add(cell.value)
-                        except Exception as e:
-                            self.logger.warning(f"跳过无效的区域 '{cell_range}' 在工作表 '{sheet.title}'. 错误: {e}")
-            workbook.close()
         except Exception as e:
-            self.logger.error(f"使用 openpyxl 预处理文件失败: {e}")
+            self.logger.error(f"直接解析XLSX的XML文件失败: {e}")
 
         return list(texts_to_translate)
 
     def _rebuild_xlsx_with_translated_content(self, original_content_bytes: bytes, translation_map: dict) -> bytes:
         """
-        通过替换 sharedStrings.xml 和 tableX.xml 中的文本内容来重构 XLSX 文件。
+        【无需修改】通过替换 sharedStrings.xml 和 tableX.xml 中的文本内容来重构 XLSX 文件。
+        此函数的逻辑与新的读取逻辑完全匹配。
         """
         # 注册命名空间以正确解析和生成XML
         ns = {
@@ -192,7 +159,7 @@ class XlsxTranslator(AiTranslator):
         original_texts = self._get_texts_to_translate(document)
 
         if not original_texts:
-            print("\n在指定区域中没有找到需要翻译的纯文本内容。")
+            print("\n在文件中没有找到需要翻译的文本内容。")
             return self
 
         if self.glossary_agent:
@@ -215,7 +182,7 @@ class XlsxTranslator(AiTranslator):
         original_texts = await asyncio.to_thread(self._get_texts_to_translate, document)
 
         if not original_texts:
-            print("\n在指定区域中没有找到需要翻译的纯文本内容。")
+            print("\n在文件中没有找到需要翻译的文本内容。")
             return self
 
         if self.glossary_agent:
