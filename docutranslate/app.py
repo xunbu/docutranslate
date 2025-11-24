@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import binascii
+import json
 import logging
 import os
 import shutil
@@ -26,7 +27,16 @@ from typing import (
 
 import httpx
 import uvicorn
-from fastapi import FastAPI, HTTPException, APIRouter, Body, Path as FastApiPath
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    APIRouter,
+    Body,
+    Path as FastApiPath,
+    UploadFile,
+    File,
+    Form,
+)
 from fastapi.openapi.docs import (
     get_swagger_ui_html,
     get_swagger_ui_oauth2_redirect_html,
@@ -40,6 +50,7 @@ from pydantic import (
     model_validator,
     AliasChoices,
     ConfigDict,
+    Json,
 )
 
 from docutranslate import __version__
@@ -250,7 +261,7 @@ DocuTranslate 后端服务 API，提供文档翻译、状态查询、结果下�
 **注意**: 所有任务状态都保存在服务进程的内存中，服务重启将导致所有任务信息丢失。
 
 ### 主要工作流程:
-1.  **`POST /service/translate`**: 提交文件和包含`workflow_type`的翻译参数，启动一个后台任务。服务会自动生成并返回一个唯一的 `task_id`。
+1.  **`POST /service/translate`** 或 **`POST /service/translate/file`**: 提交文件和包含`workflow_type`的翻译参数，启动一个后台任务。服务会自动生成并返回一个唯一的 `task_id`。
 2.  **`GET /service/status/{{task_id}}`**: 使用获取到的 `task_id` 轮询此端点，获取任务的实时状态。
 3.  **`GET /service/logs/{{task_id}}`**: (可选) 获取实时的翻译日志。
 4.  **`GET /service/download/{{task_id}}/{{file_type}}`**: 任务完成后 (当 `download_ready` 为 `true` 时)，通过此端点下载结果文件。
@@ -386,17 +397,26 @@ class BaseWorkflowParams(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def check_translation_fields(cls, values):
+        # 修复: 当使用 FastAPI Form + Json 时，Pydantic V2 mode='before' 验证器可能会接收到 JSON 字符串
+        if isinstance(values, str):
+            try:
+                values = json.loads(values)
+            except ValueError:
+                # 无法解析为 JSON，可能是其他字符串，忽略，交由后续逻辑或抛出错误
+                pass
+
         # 如果不跳过翻译 (值为False或字段不存在)，则验证相关字段必须存在且不为空
-        if not values.get("skip_translate"):
-            # Check for standard keys or their aliases
-            if not (values.get("base_url") or values.get("baseurl")):
-                raise ValueError(
-                    "当 `skip_translate` 为 `False` 时, `base_url` 或 `baseurl` 字段是必须的。"
-                )
-            if not values.get("model_id"):
-                raise ValueError(
-                    "当 `skip_translate` 为 `False` 时, `model_id` 字段是必须的。"
-                )
+        if isinstance(values, dict):
+            if not values.get("skip_translate"):
+                # Check for standard keys or their aliases
+                if not (values.get("base_url") or values.get("baseurl")):
+                    raise ValueError(
+                        "当 `skip_translate` 为 `False` 时, `base_url` 或 `baseurl` 字段是必须的。"
+                    )
+                if not values.get("model_id"):
+                    raise ValueError(
+                        "当 `skip_translate` 为 `False` 时, `model_id` 字段是必须的。"
+                    )
         # 如果跳过翻译，则不进行任何检查，允许 base_url 等字段为空
         return values
 
@@ -1637,6 +1657,72 @@ async def service_translate(
             payload=request.payload,
             file_contents=file_contents,
             original_filename=request.file_name,
+        )
+        return JSONResponse(content=response_data)
+    except HTTPException as e:
+        if e.status_code == 429:
+            return JSONResponse(
+                status_code=e.status_code,
+                content={"task_started": False, "message": e.detail},
+            )
+        if e.status_code == 500:
+            return JSONResponse(
+                status_code=e.status_code,
+                content={"task_started": False, "message": e.detail},
+            )
+        raise e
+
+
+@service_router.post(
+    "/translate/file",
+    summary="提交翻译任务 (文件上传)",
+    description="""
+接收一个上传的文件和包含工作流参数的JSON字符串，启动一个后台翻译任务。
+
+- **工作流选择**: `payload` 表单字段中的 `workflow_type` 字段决定了本次任务的类型。
+- **文件上传**: 通过 `file` 字段上传文件，替代JSON接口中的 `file_content` 和 `file_name`。
+- **参数传递**: `payload` 字段应为一个符合 JSON 格式的字符串，其结构与 `/service/translate` 中的 `payload` 字段完全一致。
+- **异步处理**: 此端点会立即返回任务ID，客户端需轮询状态接口获取进度。
+""",
+    responses={
+        200: {
+            "description": "翻译任务已成功启动。",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "task_started": True,
+                        "task_id": "a1b2c3d4",
+                        "message": "翻译任务已成功启动，请稍候...",
+                    }
+                }
+            },
+        },
+        422: {"description": "请求参数验证失败，例如 JSON 格式错误。"},
+        429: {
+            "description": "服务器已有一个同ID的任务在处理中（理论上不应发生，因为ID是新生成的）。"
+        },
+        500: {"description": "启动后台任务时发生未知错误。"},
+    },
+)
+async def service_translate_file(
+    file: UploadFile = File(..., description="要翻译的文件"),
+    payload: Json[TranslatePayload] = Form(
+        ..., description="包含工作流参数的JSON字符串，结构与JSON接口的payload一致。"
+    ),
+):
+    task_id = uuid.uuid4().hex[:8]
+
+    try:
+        file_contents = await file.read()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"读取上传文件失败: {e}")
+
+    try:
+        response_data = await _start_translation_task(
+            task_id=task_id,
+            payload=payload,
+            file_contents=file_contents,
+            original_filename=file.filename or "uploaded_file",
         )
         return JSONResponse(content=response_data)
     except HTTPException as e:
