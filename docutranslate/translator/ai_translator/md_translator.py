@@ -9,8 +9,12 @@ from docutranslate.agents.markdown_agent import MDTranslateAgentConfig
 from docutranslate.context.md_mask_context import MDMaskUrisContext
 from docutranslate.ir.markdown_document import MarkdownDocument
 from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTranslator
-# 引入新的 is_placeholder 函数
-from docutranslate.utils.markdown_splitter import split_markdown_text, join_markdown_texts, is_placeholder
+# 引入新的布局分割和拼接函数
+from docutranslate.utils.markdown_splitter import (
+    split_markdown_with_layout,
+    join_markdown_with_layout,
+    is_placeholder
+)
 
 
 @dataclass
@@ -42,14 +46,15 @@ class MDTranslator(AiTranslator):
     def translate(self, document: MarkdownDocument) -> Self:
         self.logger.info("正在翻译markdown")
         with MDMaskUrisContext(document):
-            chunks: list[str] = split_markdown_text(document.content.decode(), self.chunk_size)
+            # 使用新接口，获取 chunks 和对应的 separators
+            chunks, separators = split_markdown_with_layout(document.content.decode(), self.chunk_size)
 
             translate_indices: List[int] = []
             translate_chunks: List[str] = []
-            final_result: List[str] = list(chunks)
+            final_result: List[str] = list(chunks)  # 浅拷贝，用于回填翻译结果
 
             for i, chunk in enumerate(chunks):
-                # 直接使用 splitter 中定义的函数
+                # 占位符不翻译
                 if is_placeholder(chunk):
                     continue
                 else:
@@ -68,8 +73,9 @@ class MDTranslator(AiTranslator):
                 for idx, translated_text in zip(translate_indices, translated_sub_results):
                     final_result[idx] = translated_text
 
-            content = join_markdown_texts(final_result)
-            # 做一些加强鲁棒性的操作
+            # 使用记录的 separators 进行还原，完美保留布局
+            content = join_markdown_with_layout(final_result, separators)
+
             content = content.replace(r'\（', r'\(')
             content = content.replace(r'\）', r'\)')
 
@@ -80,7 +86,8 @@ class MDTranslator(AiTranslator):
     async def translate_async(self, document: MarkdownDocument) -> Self:
         self.logger.info("正在翻译markdown")
         with MDMaskUrisContext(document):
-            chunks: list[str] = split_markdown_text(document.content.decode(), self.chunk_size)
+            # 异步方法同样更新
+            chunks, separators = split_markdown_with_layout(document.content.decode(), self.chunk_size)
 
             translate_indices: List[int] = []
             translate_chunks: List[str] = []
@@ -107,7 +114,7 @@ class MDTranslator(AiTranslator):
                     final_result[idx] = translated_text
 
             def run():
-                content = join_markdown_texts(final_result)
+                content = join_markdown_with_layout(final_result, separators)
                 content = content.replace(r'\（', r'\(')
                 content = content.replace(r'\）', r'\)')
                 document.content = content.encode()
