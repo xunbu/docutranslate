@@ -42,6 +42,7 @@ from fastapi.openapi.docs import (
     get_swagger_ui_oauth2_redirect_html,
     get_redoc_html,
 )
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import (
@@ -2394,7 +2395,7 @@ def find_free_port(start_port):
             port += 1
 
 
-def run_app(port: int | None = None):
+def run_app(host=None,port: int | None = None,enable_CORS=False,allow_origin_regex=r"^https?://.*$"):
     initial_port = port or int(os.environ.get("DOCUTRANSLATE_PORT", 8010))
     try:
         port_to_use = find_free_port(initial_port)
@@ -2402,7 +2403,15 @@ def run_app(port: int | None = None):
             print(f"端口 {initial_port} 被占用，将使用端口 {port_to_use} 代替")
         print(f"正在启动 DocuTranslate WebUI 版本号：{__version__}")
         app.state.port_to_use = port_to_use
-        uvicorn.run(app, host=None, port=port_to_use, workers=1)
+        if enable_CORS:
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origin_regex=allow_origin_regex,
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+        uvicorn.run(app, host=host, port=port_to_use, workers=1)
     except Exception as e:
         print(f"启动失败: {e}")
 
