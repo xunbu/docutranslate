@@ -81,7 +81,7 @@ def placeholder2uris(markdown: str, mask_dict: MaskDict):
         print(f"占位符<ph-{id}>已还原为图片")
         return uri
 
-    ph_pattern = r"<ph-([a-zA-Z0-9]+)>"
+    ph_pattern = r"<\s*[pP][hH]\s*-\s*([a-zA-Z0-9]+)\s*>"
     markdown = re.sub(ph_pattern, placeholder2uri, markdown)
     return markdown
 
