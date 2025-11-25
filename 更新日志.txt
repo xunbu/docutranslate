@@ -1,10 +1,11 @@
 更新日志
 ----------------
-v1.5.2版 2025.11.25
+v1.5.2.post1版 2025.11.25
 特性
 - 新的/service/translate/file接口可以直接上传表单文件
 - `docutranslate -i -cors`开启跨域
 优化
+- pdf可复制公式
 - 使用vue重构前端代码
 - 优化xlsx翻译效果
 - 优化epub的性能开销

@@ -5,11 +5,13 @@
     <title>{{title}}</title>
     {{pico}}
     {{katexCss}}
+    <link rel="stylesheet" href="/static/katex/copy-tex.min.css">
     {{katexJs}}
     <script src="/static/katex/copy-tex.min.js"></script>
     {{autoRender}}
     <style>
         html {
+            padding: 2vh 10vw;
             padding: 2vh 10vw;
             font-size: 15px;
         }
@@ -22,12 +24,12 @@
 {{renderMathInElement}}
 {{mermaid}}
 <script>
-    setTimeout(()=>{
-        const KatexErrors=document.getElementsByClassName("katex-error")
+    setTimeout(() => {
+        const KatexErrors = document.getElementsByClassName("katex-error")
         for (const katexError of KatexErrors) {
-            katexError.innerHTML=katexError.title
+            katexError.innerHTML = katexError.title
         }
-    },200)
+    }, 200)
 </script>
 <script>
     mermaid.initialize({
