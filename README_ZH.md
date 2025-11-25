@@ -132,6 +132,10 @@ docutranslate -i
 # 指定端口启动
 docutranslate -i -p 8011
 
+# 允许跨域请求
+docutranslate -i --cors
+
+
 # 也可以通过环境变量指定端口
 export DOCUTRANSLATE_PORT=8011
 docutranslate -i

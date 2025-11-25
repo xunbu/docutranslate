@@ -137,6 +137,9 @@ docutranslate -i
 # ポートを指定して起動
 docutranslate -i -p 8011
 
+# クロスオリジンリクエストを許可する
+docutranslate -i --cors
+
 # 環境変数でポートを指定することもできます
 export DOCUTRANSLATE_PORT=8011
 docutranslate -i

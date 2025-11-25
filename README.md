@@ -147,6 +147,9 @@ docutranslate -i
 # Start on a specific port
 docutranslate -i -p 8011
 
+# Allow Cross-Origin Requests
+docutranslate -i --cors
+
 # You can also specify the port via an environment variable
 export DOCUTRANSLATE_PORT=8011
 docutranslate -i
