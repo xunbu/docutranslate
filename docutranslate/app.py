@@ -2395,7 +2395,7 @@ def find_free_port(start_port):
             port += 1
 
 
-def run_app(host=None,port: int | None = None,enable_CORS=False,allow_origin_regex=r"^https?://.*$"):
+def run_app(host=None,port: int | None = None,enable_CORS=False,allow_origin_regex=r"^(https?://.*|null|file://.*)$"):
     initial_port = port or int(os.environ.get("DOCUTRANSLATE_PORT", 8010))
     try:
         port_to_use = find_free_port(initial_port)
@@ -2404,6 +2404,7 @@ def run_app(host=None,port: int | None = None,enable_CORS=False,allow_origin_reg
         print(f"正在启动 DocuTranslate WebUI 版本号：{__version__}")
         app.state.port_to_use = port_to_use
         if enable_CORS:
+            print(f"已开启跨域，allow_origin_regex：{allow_origin_regex}")
             app.add_middleware(
                 CORSMiddleware,
                 allow_origin_regex=allow_origin_regex,

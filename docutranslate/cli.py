@@ -47,7 +47,7 @@ def main():
     parser.add_argument(
         "--cors-regex",
         type=str,
-        default=r"^https?://.*$",
+        default=r"^(https?://.*|null|file://.*)$",
         help="设置 CORS 允许的 Origin 正则表达式。默认为允许所有 HTTP 和 HTTPS 请求。"
     )
 
