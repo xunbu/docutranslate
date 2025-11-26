@@ -207,22 +207,56 @@ def unembed_base64_images_to_zip(markdown: str, markdown_name: str, image_folder
     with tempfile.TemporaryDirectory() as temp_dir:
         image_folder = os.path.join(temp_dir, image_folder_name)
         os.makedirs(image_folder, exist_ok=True)
-        pattern = r"!\[(.*?)\]\(data:(.*?);.*base64,(.*)\)"
+
+        pattern = r"!\[(.*?)\]\(data:(.*?);.*base64,(.*?)\)"
 
         def unembed_base64_images(match: re.Match) -> str:
-            b64data = match.group(3)
-            extension = mimetypes.guess_extension(match.group(2))
-            image_id = hashlib.md5(b64data.encode()).hexdigest()[:8]
-            image_name = f"{image_id}{extension}"
-            url = f"./{image_folder_name}/{image_name}"
-            # 创建对应的image文件
-            with open(os.path.join(image_folder, image_name), "wb") as f:
-                f.write(base64.b64decode(b64data))
-            return f"![{match.group(1)}]({url})"
+            alt_text = match.group(1)
+            mime_type = match.group(2)
+            b64data_raw = match.group(3)
+
+            # 【修改点2】强制清洗数据：移除所有非 Base64 合法字符（如中文、空格、换行符等）
+            # Base64 字符集只包含 A-Z, a-z, 0-9, +, /, =
+            b64data_clean = re.sub(r'[^A-Za-z0-9+/=]', '', b64data_raw)
+
+            # 简单的扩展名推断
+            extension = mimetypes.guess_extension(mime_type)
+            if not extension:
+                if 'png' in mime_type:
+                    extension = '.png'
+                elif 'jpeg' in mime_type or 'jpg' in mime_type:
+                    extension = '.jpg'
+                elif 'gif' in mime_type:
+                    extension = '.gif'
+                elif 'svg' in mime_type:
+                    extension = '.svg'
+                elif 'webp' in mime_type:
+                    extension = '.webp'
+                else:
+                    extension = '.bin'
+
+            try:
+                # 【修改点3】添加异常捕获
+                image_bytes = base64.b64decode(b64data_clean)
+                image_id = hashlib.md5(image_bytes).hexdigest()[:8]
+                image_name = f"{image_id}{extension}"
+                url = f"./{image_folder_name}/{image_name}"
+
+                with open(os.path.join(image_folder, image_name), "wb") as f:
+                    f.write(image_bytes)
+
+                # 返回替换后的 Markdown 图片链接
+                return f"![{alt_text}]({url})"
+            except Exception as e:
+                print(f"Warning: Failed to decode base64 image in markdown. Error: {e}")
+                # 如果解码失败，返回原始匹配文本（不做替换），保证文档不丢失内容
+                return match.group(0)
 
         modified_md_content = re.sub(pattern, unembed_base64_images, markdown)
+
         with open(os.path.join(temp_dir, f"{markdown_name}"), "w", encoding="utf-8") as f:
             f.write(modified_md_content)
+
         zip_buffer = io.BytesIO()
         folder_path = Path(temp_dir)
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -230,7 +264,6 @@ def unembed_base64_images_to_zip(markdown: str, markdown_name: str, image_folder
                 if file.is_file():
                     zipf.write(file, file.relative_to(folder_path))
     return zip_buffer.getvalue()
-
 
 if __name__ == '__main__':
     pass
