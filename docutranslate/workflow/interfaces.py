@@ -111,3 +111,12 @@ class AssExportable(Protocol[T_ExporterConfig]):
 
     def save_as_ass(self, name: str, output_dir: Path | str, config: T_ExporterConfig | None = None) -> Self:
         ...
+
+
+@runtime_checkable
+class PPTXExportable(Protocol[T_ExporterConfig]):
+    def export_to_pptx(self, config: T_ExporterConfig | None = None) -> bytes:
+        ...
+
+    def save_as_pptx(self, name: str, output_dir: Path | str, config: T_ExporterConfig | None = None) -> Self:
+        ...

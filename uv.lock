@@ -386,6 +386,7 @@ dependencies = [
     { name = "pymdown-extensions" },
     { name = "pysubs2" },
     { name = "python-docx" },
+    { name = "python-pptx" },
     { name = "srt" },
     { name = "xlsx2html" },
 ]
@@ -422,6 +423,7 @@ requires-dist = [
     { name = "pymdown-extensions", specifier = ">=10.16.1" },
     { name = "pysubs2", specifier = ">=1.8.0" },
     { name = "python-docx", specifier = ">=1.2.0" },
+    { name = "python-pptx", specifier = ">=1.0.2" },
     { name = "srt", specifier = ">=3.5.3" },
     { name = "xlsx2html", specifier = ">=0.6.2" },
 ]
