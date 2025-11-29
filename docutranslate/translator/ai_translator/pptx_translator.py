@@ -22,9 +22,6 @@ from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTr
 class PPTXTranslatorConfig(AiTranslatorConfig):
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
     separator: str = "\n"
-    # 指定翻译后的中文字体（东亚字体），防止乱码或回退到宋体
-    # 推荐使用 "Microsoft YaHei" (微软雅黑) 或 "DengXian" (等线)
-    target_cjk_font: str = "Microsoft YaHei"
 
 
 # ---------------- 主类 ----------------
@@ -35,7 +32,7 @@ class PPTXTranslator(AiTranslator):
     改进特性：
     1. 深度遍历：支持母版、版式、备注页、以及隐藏在 AlternateContent (兼容性块) 中的文本。
     2. 公式保护：智能检测文本间的公式，防止翻译后文字错位。
-    3. 字体美化：中西文字体分离，中文使用微软雅黑，英文保持原样。
+    3. 样式保留：翻译后完全保留原有的中英文字体设置，不做强制覆盖。
     4. 布局自适应：防止翻译后文本溢出。
     """
 
@@ -54,7 +51,6 @@ class PPTXTranslator(AiTranslator):
             self.translate_agent = SegmentsTranslateAgent(agent_config)
         self.insert_mode = config.insert_mode
         self.separator = config.separator
-        self.target_cjk_font = config.target_cjk_font
 
     # ---------------- 辅助函数：样式与字体 ----------------
 
@@ -110,18 +106,6 @@ class PPTXTranslator(AiTranslator):
             return False
 
         return True
-
-    def _set_east_asian_font(self, run, font_name: str):
-        """设置 Run 的东亚字体 (解决中文乱码/宋体问题)。"""
-        if not font_name:
-            return
-        try:
-            rPr = run.font._element.get_or_add_rPr()
-            # 设置 ea (East Asian) 字体，不影响 latin (西文) 字体
-            ea = rPr.get_or_add_ea()
-            ea.set(qn('a:typeface'), font_name)
-        except Exception:
-            pass
 
     # ---------------- 核心遍历逻辑 ----------------
 
@@ -283,12 +267,10 @@ class PPTXTranslator(AiTranslator):
         primary_run = runs[0]
 
         try:
-            # 1. 写入文本
+            # 1. 写入文本 (python-pptx 会自动保留原有的 rPr 属性，即保留默认字体)
             primary_run.text = text_to_set
 
-            # 2. 设置东亚字体 (保留西文字体设置)
-            if self.target_cjk_font:
-                self._set_east_asian_font(primary_run, self.target_cjk_font)
+            # 2. (已移除字体强制设置逻辑，以保留 PPT 原样)
 
             # 3. 处理溢出
             text_frame = element_info.get("text_frame")

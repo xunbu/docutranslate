@@ -65,6 +65,9 @@ from docutranslate.workflow.base import Workflow
 from docutranslate.workflow.docx_workflow import DocxWorkflow, DocxWorkflowConfig
 from docutranslate.workflow.epub_workflow import EpubWorkflow, EpubWorkflowConfig
 from docutranslate.workflow.html_workflow import HtmlWorkflow, HtmlWorkflowConfig
+# --- 新增的 Import ---
+from docutranslate.workflow.pptx_workflow import PPTXWorkflow, PPTXWorkflowConfig
+# ----------------------
 from docutranslate.workflow.interfaces import DocxExportable, EpubExportable
 from docutranslate.workflow.interfaces import (
     HTMLExportable,
@@ -75,6 +78,7 @@ from docutranslate.workflow.interfaces import (
     SrtExportable,
     CsvExportable,
     AssExportable,
+    PPTXExportable,  # Added PPTXExportable
 )
 from docutranslate.workflow.json_workflow import JsonWorkflow, JsonWorkflowConfig
 from docutranslate.workflow.md_based_workflow import (
@@ -88,9 +92,7 @@ from docutranslate.workflow.xlsx_workflow import XlsxWorkflow, XlsxWorkflowConfi
 if DOCLING_EXIST or TYPE_CHECKING:
     from docutranslate.converter.x2md.converter_docling import ConverterDoclingConfig
 from docutranslate.converter.x2md.converter_mineru import ConverterMineruConfig
-# --- 新增的 Import ---
 from docutranslate.converter.x2md.converter_mineru_deploy import ConverterMineruDeployConfig
-# ----------------------
 from docutranslate.exporter.md.md2html_exporter import MD2HTMLExporterConfig
 from docutranslate.exporter.txt.txt2html_exporter import TXT2HTMLExporterConfig
 from docutranslate.translator.ai_translator.md_translator import MDTranslatorConfig
@@ -108,8 +110,8 @@ from docutranslate.exporter.epub.epub2html_exporter import Epub2HTMLExporterConf
 from docutranslate.translator.ai_translator.html_translator import HtmlTranslatorConfig
 from docutranslate.translator.ai_translator.ass_translator import AssTranslatorConfig
 from docutranslate.exporter.ass.ass2html_exporter import Ass2HTMLExporterConfig
-
-# ------------------------------------
+from docutranslate.translator.ai_translator.pptx_translator import PPTXTranslatorConfig
+from docutranslate.exporter.pptx.pptx2html_exporter import PPTX2HTMLExporterConfig
 
 from docutranslate.logger import global_logger
 from docutranslate.translator import default_params
@@ -133,6 +135,7 @@ WORKFLOW_DICT: Dict[str, Type[Workflow]] = {
     "epub": EpubWorkflow,
     "html": HtmlWorkflow,
     "ass": AssWorkflow,
+    "pptx": PPTXWorkflow,  # Added PPTXWorkflow
 }
 
 # --- 媒体类型映射 ---
@@ -148,6 +151,7 @@ MEDIA_TYPES = {
     "srt": "text/plain; charset=utf-8",
     "epub": "application/epub+zip",
     "ass": "text/plain; charset=utf-8",
+    "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",  # Added PPTX MIME
 }
 
 
@@ -609,6 +613,25 @@ class AssWorkflowParams(BaseWorkflowParams):
 # --- ASS WORKFLOW PARAMS END ---
 
 
+# --- PPTX WORKFLOW PARAMS START ---
+class PPTXWorkflowParams(BaseWorkflowParams):
+    workflow_type: Literal["pptx"] = Field(
+        ..., description="指定使用PPTX的翻译工作流。"
+    )
+    insert_mode: Literal["replace", "append", "prepend"] = Field(
+        "replace",
+        description="翻译文本的插入模式。'replace'：替换原文，'append'：附加到原文后，'prepend'：附加到原文前。",
+    )
+    separator: str = Field(
+        "\n",
+        description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
+    )
+    # target_cjk_font removed as per request
+
+
+# --- PPTX WORKFLOW PARAMS END ---
+
+
 # 3. 使用可辨识联合类型（Discriminated Union）将它们组合起来
 TranslatePayload = Annotated[
     Union[
@@ -621,6 +644,7 @@ TranslatePayload = Annotated[
         EpubWorkflowParams,
         HtmlWorkflowParams,
         AssWorkflowParams,
+        PPTXWorkflowParams,
     ],
     Field(discriminator="workflow_type"),
 ]
@@ -639,6 +663,7 @@ class TranslateServiceRequest(BaseModel):
             "my_book.epub",
             "index.html",
             "dialogue.ass",
+            "presentation.pptx",
         ],
     )
     file_content: str = Field(
@@ -856,6 +881,26 @@ class TranslateServiceRequest(BaseModel):
                         "to_lang": "中文",
                         "insert_mode": "replace",
                         "separator": "\\N",
+                        "chunk_size": default_params["chunk_size"],
+                        "concurrent": default_params["concurrent"],
+                        "temperature": default_params["temperature"],
+                        "timeout": default_params["timeout"],
+                        "thinking": "default",
+                        "retry": default_params["retry"],
+                    },
+                },
+                {
+                    "file_name": "presentation.pptx",
+                    "file_content": "UEsDBBQAAAAIA... (base64-encoded pptx)",
+                    "payload": {
+                        "workflow_type": "pptx",
+                        "skip_translate": False,
+                        "base_url": "https://api.openai.com/v1",
+                        "api_key": "sk-your-api-key-here",
+                        "model_id": "gpt-4o",
+                        "to_lang": "中文",
+                        "insert_mode": "replace",
+                        "separator": "\n",
                         "chunk_size": default_params["chunk_size"],
                         "concurrent": default_params["concurrent"],
                         "temperature": default_params["temperature"],
@@ -1283,6 +1328,46 @@ async def _perform_translation(
             workflow = AssWorkflow(config=workflow_config)
         # --- ASS WORKFLOW LOGIC END ---
 
+        # --- PPTX WORKFLOW LOGIC START ---
+        elif isinstance(payload, PPTXWorkflowParams):
+            task_logger.info("构建 PPTXWorkflow 配置。")
+            translator_args = payload.model_dump(
+                include={
+                    "skip_translate",
+                    "base_url",
+                    "api_key",
+                    "model_id",
+                    "to_lang",
+                    "custom_prompt",
+                    "temperature",
+                    "thinking",
+                    "chunk_size",
+                    "concurrent",
+                    "insert_mode",
+                    "separator",
+                    "glossary_dict",
+                    "timeout",
+                    "retry",
+                    "system_proxy_enable",
+                    "force_json",
+                },
+                exclude_none=True,
+            )
+            translator_args["glossary_generate_enable"] = (
+                payload.glossary_generate_enable
+            )
+            translator_args["glossary_agent_config"] = build_glossary_agent_config()
+            translator_config = PPTXTranslatorConfig(**translator_args)
+
+            html_exporter_config = PPTX2HTMLExporterConfig(cdn=True)
+            workflow_config = PPTXWorkflowConfig(
+                translator_config=translator_config,
+                html_exporter_config=html_exporter_config,
+                logger=task_logger,
+            )
+            workflow = PPTXWorkflow(config=workflow_config)
+        # --- PPTX WORKFLOW LOGIC END ---
+
         else:
             raise TypeError(f"工作流类型 '{payload.workflow_type}' 的处理逻辑未实现。")
 
@@ -1313,30 +1398,7 @@ async def _perform_translation(
         # 定义导出函数映射
         export_map = {}
 
-        # 根据 workflow 的类型填充导出映射
-        if isinstance(workflow, HTMLExportable):
-            html_config = None
-            if isinstance(workflow, MarkdownBasedWorkflow):
-                html_config = MD2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, TXTWorkflow):
-                html_config = TXT2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, JsonWorkflow):
-                html_config = Json2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, XlsxWorkflow):
-                html_config = Xlsx2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, DocxWorkflow):
-                html_config = Docx2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, SrtWorkflow):
-                html_config = Srt2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, EpubWorkflow):
-                html_config = Epub2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, AssWorkflow):
-                html_config = Ass2HTMLExporterConfig(cdn=is_cdn_available)
-            export_map["html"] = (
-                lambda: workflow.export_to_html(html_config),
-                f"{filename_stem}_translated.html",
-                True,
-            )
+
         if isinstance(workflow, MDFormatsExportable):
             export_map["markdown"] = (
                 workflow.export_to_markdown,
@@ -1394,6 +1456,39 @@ async def _perform_translation(
             export_map["ass"] = (
                 workflow.export_to_ass,
                 f"{filename_stem}_translated.ass",
+                True,
+            )
+        if isinstance(workflow, PPTXExportable):
+            export_map["pptx"] = (
+                workflow.export_to_pptx,
+                f"{filename_stem}_translated.pptx",
+                False,
+            )
+
+        # 根据 workflow 的类型填充导出映射
+        if isinstance(workflow, HTMLExportable):
+            html_config = None
+            if isinstance(workflow, MarkdownBasedWorkflow):
+                html_config = MD2HTMLExporterConfig(cdn=is_cdn_available)
+            elif isinstance(workflow, TXTWorkflow):
+                html_config = TXT2HTMLExporterConfig(cdn=is_cdn_available)
+            elif isinstance(workflow, JsonWorkflow):
+                html_config = Json2HTMLExporterConfig(cdn=is_cdn_available)
+            elif isinstance(workflow, XlsxWorkflow):
+                html_config = Xlsx2HTMLExporterConfig(cdn=is_cdn_available)
+            elif isinstance(workflow, DocxWorkflow):
+                html_config = Docx2HTMLExporterConfig(cdn=is_cdn_available)
+            elif isinstance(workflow, SrtWorkflow):
+                html_config = Srt2HTMLExporterConfig(cdn=is_cdn_available)
+            elif isinstance(workflow, EpubWorkflow):
+                html_config = Epub2HTMLExporterConfig(cdn=is_cdn_available)
+            elif isinstance(workflow, AssWorkflow):
+                html_config = Ass2HTMLExporterConfig(cdn=is_cdn_available)
+            elif isinstance(workflow, PPTXWorkflow):
+                html_config = PPTX2HTMLExporterConfig(cdn=is_cdn_available)
+            export_map["html"] = (
+                lambda: workflow.export_to_html(html_config),
+                f"{filename_stem}_translated.html",
                 True,
             )
 
@@ -1616,7 +1711,7 @@ def _cancel_translation_logic(task_id: str):
     description="""
 接收一个包含文件内容（Base64编码）和工作流参数的JSON请求，启动一个后台翻译任务。
 
-- **工作流选择**: 请求体中的 `payload.workflow_type` 字段决定了本次任务的类型（如 `markdown_based`, `txt`, `json`, `xlsx`, `docx`, `srt`, `epub`, `html`, `ass`）。
+- **工作流选择**: 请求体中的 `payload.workflow_type` 字段决定了本次任务的类型（如 `markdown_based`, `txt`, `json`, `xlsx`, `docx`, `srt`, `epub`, `html`, `ass`, `pptx`）。
 - **动态参数**: 根据所选工作流，API需要不同的参数集。请参考下面的Schema或示例。
 - **异步处理**: 此端点会立即返回任务ID，客户端需轮询状态接口获取进度。
 """,
@@ -1960,6 +2055,27 @@ async def service_release_task(task_id: str):
                             },
                         },
                         # --- ASS STATUS EXAMPLE END ---
+                        # --- PPTX STATUS EXAMPLE START ---
+                        "completed_pptx": {
+                            "summary": "已完成 (PPTX)",
+                            "value": {
+                                "task_id": "a1b2c3d6",
+                                "is_processing": False,
+                                "status_message": "翻译成功！用时 30.50 秒。",
+                                "error_flag": False,
+                                "download_ready": True,
+                                "original_filename_stem": "presentation",
+                                "original_filename": "presentation.pptx",
+                                "task_start_time": 1678890300.0,
+                                "task_end_time": 1678890330.50,
+                                "downloads": {
+                                    "pptx": "/service/download/a1b2c3d6/pptx",
+                                    "html": "/service/download/a1b2c3d6/html",
+                                },
+                                "attachment": {},
+                            },
+                        },
+                        # --- PPTX STATUS EXAMPLE END ---
                         "error": {
                             "summary": "失败",
                             "value": {
@@ -2052,6 +2168,7 @@ FileType = Literal[
     "srt",
     "epub",
     "ass",
+    "pptx",
 ]
 
 
@@ -2077,6 +2194,9 @@ FileType = Literal[
                 "application/epub+zip": {
                     "schema": {"type": "string", "format": "binary"}
                 },
+                "application/vnd.openxmlformats-officedocument.presentationml.presentation": {
+                    "schema": {"type": "string", "format": "binary"}
+                },
             },
         },
         404: {
@@ -2092,7 +2212,7 @@ async def service_download_file(
     file_type: FileType = FastApiPath(
         ...,
         description="要下载的文件类型。",
-        examples=["html", "json", "csv", "docx", "srt", "epub", "ass"],
+        examples=["html", "json", "csv", "docx", "srt", "epub", "ass", "pptx"],
     ),
 ):
     task_state = tasks_state.get(task_id)
@@ -2198,6 +2318,14 @@ async def service_download_attachment(
                                 "content": "UEsDBBQAAAAIA... (base64-encoded string)",
                             },
                         },
+                        "pptx_base64": {
+                            "summary": "PPTX 内容 (Base64)",
+                            "value": {
+                                "file_type": "pptx",
+                                "filename": "my_presentation_translated.pptx",
+                                "content": "UEsDBBQAAAAIA... (base64-encoded string)",
+                            },
+                        },
                     }
                 }
             },
@@ -2215,7 +2343,7 @@ async def service_content(
     file_type: FileType = FastApiPath(
         ...,
         description="要获取内容的文件类型。",
-        examples=["html", "json", "csv", "docx", "srt", "epub", "ass"],
+        examples=["html", "json", "csv", "docx", "srt", "epub", "ass", "pptx"],
     ),
 ):
     task_state = tasks_state.get(task_id)
