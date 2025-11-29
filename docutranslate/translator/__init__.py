@@ -1,6 +1,6 @@
 default_params = {
     "thinking": "disable",
-    "chunk_size": 5000,
+    "chunk_size": 4000,
     "concurrent": 30,
     "temperature": 0.7,
     "timeout": 1200,
