@@ -1,9 +1,8 @@
 FROM python:3.11-slim
 LABEL authors="xunbu"
 
-# 1. 定义构建参数（ARG），可以设置一个默认值，比如 0.0.1
-# 这个变量只在 docker build 过程中有效
-ARG DOC_VERSION
+# 1. 定义构建参数，给一个默认值 'latest' 防止构建报错
+ARG DOC_VERSION=latest
 
 # 设置工作目录
 WORKDIR /app
@@ -12,10 +11,16 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 RUN uv init
 
-# 2. 使用变量安装指定版本
-# 注意：这里引用变量的语法是 ${变量名}
-# 如果传入 1.5.1，这行命令就会变成 uv add -U docutranslate==1.5.1
-RUN uv add -U docutranslate==${DOC_VERSION}
+# 2. 安装逻辑：如果是 latest 则不指定版本，否则安装指定版本
+RUN if [ "$DOC_VERSION" = "latest" ]; then \
+        uv add -U docutranslate; \
+    else \
+        uv add -U docutranslate==${DOC_VERSION}; \
+    fi
+
+# 创建挂载目录（建议加上这一行，防止用户忘记挂载导致文件丢失）
+RUN mkdir -p /app/output
+VOLUME /app/output
 
 # 设置环境变量
 ENV DOCUTRANSLATE_PORT=8010
@@ -23,8 +28,11 @@ ENV DOCUTRANSLATE_PORT=8010
 # 暴露端口
 EXPOSE 8010
 
-# 启动命令
-CMD ["uv", "run", "docutranslate", "-i"]
+# 【核心修改】启动命令
+# -i 是强制的，用户在 docker run 后面输入的任何参数都会追加到这行命令末尾
+ENTRYPOINT ["uv", "run", "docutranslate", "-i"]
+
 
 #docker build --build-arg DOC_VERSION=1.5.1 -t xunbu/docutranslate:v1.5.1 .
 #docker push xunbu/docutranslate:v1.5.1
+#docker run -it -p 8010:8010 xunbu/docutranslate:v1.5.1
