@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./DocuTranslate.png" alt="项目Logo" style="width: 150px">
+<img src="./DocuTranslate.png" alt="项目Logo" style="width: 150px">
 </p>
 
 <h1 align="center">DocuTranslate</h1>
@@ -51,6 +51,7 @@ AI 平台 API-Key 即可开始使用。
 
 - **DocuTranslate**: 标准版，使用在线的 `minerU` 引擎解析PDF文档，如果不需要本地解析pdf选这个版本（推荐）。
 - **DocuTranslate_full**: 完整版，内置 `docling` 本地PDF解析引擎，需要本地解析pdf选这个版本。
+> 1.5.1版本以后支持调用本地部署的mineru服务
 
 ## 安装
 
@@ -185,6 +186,22 @@ async def main():
         translator_config=translator_config,  # 传入翻译器配置
         html_exporter_config=MD2HTMLExporterConfig(cdn=True)  # HTML 导出配置
     )
+    
+    # 使用本地部署mineru服务
+    # from docutranslate.converter.x2md.converter_mineru_deploy import ConverterMineruDeployConfig
+    # converter_config = ConverterMineruDeployConfig(
+    #     base_url = "http://127.0.0.1:8000",
+    #     output_dir= "./output",#受mineru限制，解析后的文件会保存到output_dir下，需要定期清理
+    #     backend= "pipeline",
+    #     start_page_id = 0,
+    #     end_page_id = 99999,
+    # )
+    # workflow_config = MarkdownBasedWorkflowConfig(
+    #     convert_engine="mineru_deploy",  # 指定解析引擎
+    #     converter_config=converter_config,  # 传入转换器配置
+    #     translator_config=translator_config,  # 传入翻译器配置
+    #     html_exporter_config=MD2HTMLExporterConfig(cdn=True)  # HTML 导出配置
+    # )
 
     # 4. 实例化工作流
     workflow = MarkdownBasedWorkflow(config=workflow_config)
