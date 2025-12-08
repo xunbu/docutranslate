@@ -16,8 +16,6 @@ class Document:
     def stem(self)->str|None:
         if not self._stem:
             return None
-        if len(self._stem)>50:
-            return self._stem[:50]
         return self._stem
 
     @property

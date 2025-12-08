@@ -1372,7 +1372,9 @@ async def _perform_translation(
             raise TypeError(f"工作流类型 '{payload.workflow_type}' 的处理逻辑未实现。")
 
         # 3. 读取文件内容并执行翻译
-        file_stem = Path(original_filename).stem
+        # --- 修改点: 使用 safe stem (从 task_state 中获取) 而不是重新从 original_filename 解析 ---
+        # 这样确保了 workflow 内部的文件名也是截断过的，避免内部处理时路径过长
+        file_stem = task_state["original_filename_stem"]
         file_suffix = Path(original_filename).suffix
         workflow.read_bytes(content=file_contents, stem=file_stem, suffix=file_suffix)
         await workflow.translate_async()
@@ -1620,6 +1622,9 @@ async def _start_translation_task(
     if task_state.get("temp_dir") and os.path.isdir(task_state["temp_dir"]):
         shutil.rmtree(task_state["temp_dir"])
 
+    raw_stem = Path(original_filename).stem
+    safe_stem = raw_stem[:50] if len(raw_stem) > 50 else raw_stem
+
     task_state.update(
         {
             "is_processing": True,
@@ -1627,7 +1632,7 @@ async def _start_translation_task(
             "error_flag": False,
             "download_ready": False,
             "workflow_instance": None,
-            "original_filename_stem": Path(original_filename).stem,
+            "original_filename_stem": safe_stem, # 存入安全的stem
             "original_filename": original_filename,
             "task_start_time": time.time(),
             "task_end_time": 0,
