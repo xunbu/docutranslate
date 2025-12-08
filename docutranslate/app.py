@@ -460,7 +460,14 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
         "http://127.0.0.1:8000",
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务地址。",
     )
-    mineru_deploy_backend: Literal["pipeline", "transformers", "mlx-engine", "vllm-engine", "vllm-async-engine"] = Field(
+    mineru_deploy_backend: Literal[
+        "pipeline",
+        "vlm-transformers",
+        "vlm-mlx-engine",
+        "vlm-vllm-async-engine",
+        "vlm-lmdeploy-engine",
+        "vlm-http-client"
+    ] = Field(
         "pipeline",
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务使用的后端。",
     )
@@ -473,6 +480,12 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
     )
     mineru_deploy_end_page_id: int = Field(
         99999, description="[仅当 convert_engine='mineru_deploy'] 结束解析页面。"
+    )
+    mineru_deploy_lang_list: Optional[List[str]] = Field(
+        None, description="[仅当 convert_engine='mineru_deploy' 且 backend='pipeline'] 语言列表。"
+    )
+    mineru_deploy_server_url: Optional[str] = Field(
+        None, description="[仅当 convert_engine='mineru_deploy' 且 backend='vlm-http-client'] Server URL."
     )
 
     @model_validator(mode="after")
@@ -1005,6 +1018,8 @@ async def _perform_translation(
                     formula_enable=payload.mineru_deploy_formula_enable,
                     start_page_id=payload.mineru_deploy_start_page_id,
                     end_page_id=payload.mineru_deploy_end_page_id,
+                    lang_list=payload.mineru_deploy_lang_list,
+                    server_url=payload.mineru_deploy_server_url,
                 )
             elif payload.convert_engine == "docling" and DOCLING_EXIST:
                 converter_config = ConverterDoclingConfig(

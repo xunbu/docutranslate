@@ -17,12 +17,12 @@ from docutranslate.utils.markdown_utils import embed_inline_image_from_zip
 class ConverterMineruDeployConfig(X2MarkdownConverterConfig):
     base_url: str = "http://127.0.0.1:8000"
     output_dir: str = "./output"  # 覆盖默认值 ./output
-    # lang_list: list[str] | None = None
-    backend: Literal["pipeline", "transformers", "mlx-engine", "vllm-engine", "vllm-async-engine"] = "pipeline"
+    lang_list: list[Literal["ch", "ch_server", "ch_lite", "en", "korean", "japan", "chinese_cht", "ta", "te", "ka", "th", "el", "latin", "arabic", "east_slavic", "cyrillic", "devanagari"]] | None = None
+    backend: Literal["pipeline", "vlm-transformers", "vlm-mlx-engine", "vlm-vllm-async-engine", "vlm-lmdeploy-engine","vlm-http-client"] = "pipeline"
     # parse_method: str = "auto"
     formula_enable: bool = True
     # table_enable: bool = True
-    # server_url: str | None = None
+    server_url: str | None = None #(Adapted only for vlm-http-client backend)openai compatible server url, e.g., http://127.0.0.1:30000
     # return_md: bool = True
     # return_middle_json: bool = True
     # return_model_output: bool = False
