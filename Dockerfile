@@ -35,4 +35,5 @@ ENTRYPOINT ["uv", "run", "docutranslate", "-i"]
 
 #docker build --build-arg DOC_VERSION=1.5.1 -t xunbu/docutranslate:v1.5.1 .
 #docker push xunbu/docutranslate:v1.5.1
-#docker run -it -p 8010:8010 xunbu/docutranslate:v1.5.1
+#docker run -d -p 8010:8010 xunbu/docutranslate:v1.5.4
+#docker run -it -p 8010:8010 xunbu/docutranslate:v1.5.4

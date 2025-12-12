@@ -89,6 +89,14 @@ uv sync
 
 ```
 
+### docker を使用する場合
+
+```bash
+docker run -d -p 8010:8010 xunbu/docutranslate:latest
+# docker run -it -p 8010:8010 xunbu/docutranslate:latest
+# docker run -it -p 8010:8010 xunbu/docutranslate:v1.5.4
+```
+
 ## コアコンセプト：ワークフロー (Workflow)
 
 新しい DocuTranslate の核となるのは **ワークフロー (Workflow)** です。各ワークフローは、特定の種類のファイル用に設計された、完全なエンドツーエンドの翻訳パイプラインです。巨大なクラスとやり取りするのではなく、ファイルの種類に基づいて適切なワークフローを選択し、設定します。

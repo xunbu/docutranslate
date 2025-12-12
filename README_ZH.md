@@ -90,6 +90,14 @@ uv sync
 
 ```
 
+### 使用docker
+
+```bash
+docker run -d -p 8010:8010 xunbu/docutranslate:latest
+# docker run -it -p 8010:8010 xunbu/docutranslate:latest
+# docker run -it -p 8010:8010 xunbu/docutranslate:v1.5.4
+```
+
 ## 核心概念：工作流 (Workflow)
 
 新版 DocuTranslate 的核心是 **工作流 (Workflow)**。每个工作流都是一个专门为特定类型文件设计的、完整的端到端翻译管道。您不再与一个庞大的类交互，而是根据您的文件类型选择并配置一个合适的工作流。

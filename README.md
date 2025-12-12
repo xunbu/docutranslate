@@ -89,6 +89,14 @@ uv sync
 
 ```
 
+### Using docker
+
+```bash
+docker run -d -p 8010:8010 xunbu/docutranslate:latest
+# docker run -it -p 8010:8010 xunbu/docutranslate:latest
+# docker run -it -p 8010:8010 xunbu/docutranslate:v1.5.4
+```
+
 ## Core Concept: Workflow
 
 The core of the new DocuTranslate is the **Workflow**. Each workflow is a complete end-to-end translation pipeline designed for a specific file type. Instead of interacting with a massive class, you select and configure a suitable workflow based on your file type.
