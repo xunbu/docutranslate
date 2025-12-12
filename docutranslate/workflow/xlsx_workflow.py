@@ -46,7 +46,7 @@ class XlsxWorkflow(Workflow[XlsxWorkflowConfig, Document, Document], HTMLExporta
         suffix = document.suffix
         converter_types = self._converter_factory.get(suffix.lower())
         if converter_types is None:
-            raise ValueError(f"Xlsx工作流不支持{suffix}格式文件")
+            raise ValueError(f"该工作流不支持{suffix}格式，请转为xlsx或csv格式")
         converter_type, converter_config = converter_types
         converter = converter_type(converter_config)
 

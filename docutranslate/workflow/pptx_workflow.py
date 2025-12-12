@@ -30,6 +30,9 @@ class PPTXWorkflow(Workflow[PPTXWorkflowConfig, Document, Document], HTMLExporta
                     sub_config.logger = config.logger
 
     def _pre_translate(self, document_original: Document):
+        suffix = document_original.suffix.lower() if document_original.suffix else ""
+        if suffix != ".pptx":
+            raise ValueError(f"该工作流不支持{suffix}格式，请转为.pptx格式")
         document = document_original.copy()
         translate_config = self.config.translator_config
         translator = PPTXTranslator(translate_config)
