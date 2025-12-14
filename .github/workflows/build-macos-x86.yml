@@ -11,7 +11,7 @@ jobs:
   build-macos:
     # 步骤 1: 指定运行环境为 macOS 14 (Intel)
     # 使用 xlarge runner 确保是 Intel 架构
-    runs-on: macos-13
+    runs-on: macos-14
 
     steps:
       # 步骤 2: 检出你的代码库
