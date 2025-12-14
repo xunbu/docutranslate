@@ -49,6 +49,7 @@ from pydantic import (
     BaseModel,
     Field,
     model_validator,
+    field_validator,  # Added field_validator
     AliasChoices,
     ConfigDict,
     Json,
@@ -299,11 +300,17 @@ class GlossaryAgentConfigPayload(BaseModel):
         examples=["https://api.openai.com/v1"],
     )
     api_key: str = Field(
-        ...,
+        default="xx",
         validation_alias=AliasChoices("api_key", "key"),
-        description="用于术语表生成的Agent的LLM API密钥。",
+        description="用于术语表生成的Agent的LLM API密钥（默认为xx）。",
         examples=["sk-agent-api-key"],
     )
+
+    @field_validator("api_key")
+    @classmethod
+    def set_default_glossary_api_key(cls, v: str) -> str:
+        return v if v and v.strip() else "xx"
+
     model_id: str = Field(
         ..., description="用于术语表生成的Agent的模型ID。", examples=["gpt-4-turbo"]
     )
@@ -344,12 +351,18 @@ class BaseWorkflowParams(BaseModel):
         description="LLM API的基础URL。当 `skip_translate` 为 `False` 时必填。",
         examples=["https://api.openai.com/v1"],
     )
-    api_key: Optional[str] = Field(
-        default=None,
+    api_key: str = Field(
+        default="xx",
         validation_alias=AliasChoices("api_key", "key"),
-        description="LLM API的密钥（可选）。",
+        description="LLM API的密钥（可选，默认为xx）。",
         examples=["sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"],
     )
+
+    @field_validator("api_key")
+    @classmethod
+    def set_default_api_key(cls, v: str) -> str:
+        return v if v and v.strip() else "xx"
+
     model_id: Optional[str] = Field(
         default=None,
         description="要使用的LLM模型ID。当 `skip_translate` 为 `False` 时必填。",
@@ -2481,7 +2494,7 @@ async def redoc_html():
 @app.post("/temp/translate", tags=["Temp"])
 async def temp_translate(
     base_url: str = Body(...),
-    api_key: str = Body(...),
+    api_key: str = Body("xx"),
     model_id: str = Body(...),
     mineru_token: Optional[str] = Body(None),
     file_name: str = Body(...),
