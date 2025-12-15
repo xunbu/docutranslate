@@ -1,16 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
-from PyInstaller.utils.hooks import collect_all
+from PyInstaller.utils.hooks import collect_all, copy_metadata
 import docutranslate
 
 # 初始化列表
 datas = []
 binaries = []
 hiddenimports = ['markdown.extensions.tables', 'pymdownx.arithmatex',
-                'pymdownx.superfences', 'pymdownx.highlight', 'pygments']
+                'pymdownx.superfences', 'pymdownx.highlight', 'pygments',
+                'docling_ibm_models',
+                'docling_parse','cv2']
 
 # 先收集第三方包的资源
-for package in ['easyocr', 'docling', 'pygments']:
+for package in ['easyocr', 'docling', 'pygments', 'docling_ibm_models']:
     try:
         tmp_ret = collect_all(package)
         datas += tmp_ret[0]
@@ -18,6 +20,12 @@ for package in ['easyocr', 'docling', 'pygments']:
         hiddenimports += tmp_ret[2]
     except Exception as e:
         print(f"Warning: Failed to collect resources for {package}: {e}")
+
+try:
+    datas += copy_metadata('docling-ibm-models') # 这里必须用连字符(pip名)
+    datas += copy_metadata('docling-parse')      # 预防性添加
+except Exception as e:
+    print(f"Warning: Failed to copy metadata: {e}")
 
 # 然后添加您的自定义资源（避免重复）
 custom_datas = [
