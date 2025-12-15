@@ -182,10 +182,6 @@ class MarkdownBlockSplitter:
                 # 添加最后剩余的部分
                 if current_sub_block_content:
                     wrapped_block = f"{header}\n{current_sub_block_content}\n{footer}"
-                    # 如果前面已经有分块了，这里需要加 merge token
-                    # 如果这是唯一的块（虽然逻辑上不可能走到这），也不影响
-                    if not first_chunk:
-                        separators.append(MERGE_CODE_TOKEN)
                     blocks.append(wrapped_block)
 
                 # 代码块处理完，无需 pending_separator，因为这是原子的
