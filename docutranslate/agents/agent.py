@@ -122,7 +122,6 @@ class RateLimiter:
 
         # Check RPM
         if self.rpm and len(self.request_timestamps) >= self.rpm:
-            # 取最早的一条记录，计算还需要等待多久才能腾出位置
             earliest = self.request_timestamps[0]
             wait_time = max(wait_time, 60 - (now - earliest))
 
@@ -130,14 +129,10 @@ class RateLimiter:
         if self.tpm:
             current_tokens = sum(t[1] for t in self.token_timestamps)
             if current_tokens + tokens > self.tpm:
-                # 稍微复杂点：需要移除足够多的旧token才能放入新token
-                # 这里做一个简化估算：如果超限，等到最早的记录过期
                 if self.token_timestamps:
                     earliest = self.token_timestamps[0][0]
                     wait_time = max(wait_time, 60 - (now - earliest))
                 else:
-                    # 这种情况理论上不应该发生，除非单次请求超过了TPM上限
-                    # 如果单次超过上限，强制等待1秒（防止死循环）并允许通过(或者抛异常，这里选择允许)
                     pass
 
         return wait_time
@@ -156,14 +151,19 @@ class RateLimiter:
             return
 
         while True:
+            # print(f"[RateLimiter-Async] 准备获取锁...")
             with self.lock:
+                print(f"[RateLimiter-Async] 已加锁 (Checking)")
+
                 wait_time = self._check_and_get_wait_time(tokens)
                 if wait_time <= 0:
                     self._record_usage(tokens)
+                    print(f"[RateLimiter-Async] 释放锁 (成功获取配额)")
                     return
 
-            # 释放锁后等待，避免阻塞其他协程/线程的检查
-            # 添加一点点缓冲时间，避免刚唤醒时毫秒级误差导致再次等待
+                print(f"[RateLimiter-Async] 释放锁 (需等待 {wait_time:.2f}s)")
+
+            # 释放锁后等待
             await asyncio.sleep(wait_time + 0.1)
 
     def acquire_sync(self, tokens: int = 0):
@@ -172,11 +172,17 @@ class RateLimiter:
             return
 
         while True:
+            # print(f"[RateLimiter-Sync] 准备获取锁...")
             with self.lock:
+                print(f"[RateLimiter-Sync] 已加锁 (Checking)")
+
                 wait_time = self._check_and_get_wait_time(tokens)
                 if wait_time <= 0:
                     self._record_usage(tokens)
+                    print(f"[RateLimiter-Sync] 释放锁 (成功获取配额)")
                     return
+
+                print(f"[RateLimiter-Sync] 释放锁 (需等待 {wait_time:.2f}s)")
 
             time.sleep(wait_time + 0.1)
 

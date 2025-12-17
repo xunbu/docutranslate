@@ -129,7 +129,9 @@ class DocxTranslator(AiTranslator):
                 api_key=config.api_key, model_id=config.model_id, temperature=config.temperature,
                 thinking=config.thinking, concurrent=config.concurrent, timeout=config.timeout,
                 logger=self.logger, glossary_dict=config.glossary_dict, retry=config.retry,
-                system_proxy_enable=config.system_proxy_enable, force_json=config.force_json
+                system_proxy_enable=config.system_proxy_enable, force_json=config.force_json,
+                rpm=config.rpm,
+                tpm=config.tpm
             )
             self.translate_agent = SegmentsTranslateAgent(agent_config)
         self.insert_mode = config.insert_mode
