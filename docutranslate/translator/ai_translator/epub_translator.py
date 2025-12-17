@@ -18,7 +18,7 @@ from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTr
 @dataclass
 class EpubTranslatorConfig(AiTranslatorConfig):
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
-    # 建议使用 \n，代码会将其转换为 <br />，更灵活
+    # 建议使用 \n，代码会将其转换为 <br /> 或 <span> 换行，更灵活
     separator: str = "\n"
 
 
@@ -26,8 +26,10 @@ class EpubTranslator(AiTranslator):
     """
     一个用于翻译 EPUB 文件中内容的翻译器。
     【高级版】此版本直接翻译HTML内容，以保留内联格式，并支持表格翻译。
-    【结构化修改版 v2】借鉴 DocxTranslator 的实现，在 append/prepend 模式下，
-    对常规块级元素创建新标签存放译文，对表格单元格则在内部追加内容，以保证文档结构的正确性。
+    【结构化修改版 v3】
+    1. 修复了 BeautifulSoup 自动添加 <html><body> 导致嵌套错误的问题。
+    2. 对 li, div, td, th 采用内部追加模式，保护文档结构。
+    3. 复制标签时自动移除 ID 属性，防止锚点冲突。
     """
 
     def __init__(self, config: EpubTranslatorConfig):
@@ -66,10 +68,12 @@ class EpubTranslator(AiTranslator):
         items_to_translate = []
         original_texts = []
 
+        # 读取 Zip 内容
         with zipfile.ZipFile(BytesIO(document.content), 'r') as zf:
             for filename in zf.namelist():
                 all_files[filename] = zf.read(filename)
 
+        # 解析 container.xml 寻找 OPF
         container_xml = all_files.get('META-INF/container.xml')
         if not container_xml:
             raise ValueError("无效的 EPUB：找不到 META-INF/container.xml")
@@ -78,6 +82,7 @@ class EpubTranslator(AiTranslator):
         opf_path = root.find('cn:rootfiles/cn:rootfile', ns).get('full-path')
         opf_dir = os.path.dirname(opf_path)
 
+        # 解析 OPF 获取文件清单
         opf_xml = all_files.get(opf_path)
         if not opf_xml:
             raise ValueError(f"无效的 EPUB：找不到 {opf_path}")
@@ -91,6 +96,7 @@ class EpubTranslator(AiTranslator):
             full_href = os.path.join(opf_dir, href).replace('\\', '/')
             manifest_items[item_id] = {'href': full_href, 'media_type': item.get('media-type')}
 
+        # 定义需要翻译的标签
         TAGS_TO_TRANSLATE = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'div', 'td', 'th']
 
         for item_id, item_data in manifest_items.items():
@@ -112,6 +118,7 @@ class EpubTranslator(AiTranslator):
 
                 tags_to_process = []
                 for tag in all_potential_tags:
+                    # 仅处理叶子节点块（不包含其他待翻译块的块）
                     contains_other_block = tag.find(
                         lambda child_tag: child_tag in all_potential_tags_set and child_tag is not tag
                     )
@@ -147,34 +154,54 @@ class EpubTranslator(AiTranslator):
             original_html = original_texts[i]
             translated_html = translated_texts[i]
 
-            # --- 关键逻辑：根据标签类型选择不同的处理策略 ---
-            is_table_cell = original_tag.name in ['td', 'th']
+            # --- 核心修复：解析并剥离 HTML/BODY 外壳 ---
+            # BeautifulSoup(html, 'lxml') 会自动补全 <html><body>，必须剥离
+            new_content_soup = BeautifulSoup(translated_html, 'lxml')
 
+            content_nodes = []
+            if new_content_soup.body:
+                content_nodes = list(new_content_soup.body.contents)
+            elif new_content_soup.html:
+                content_nodes = list(new_content_soup.html.contents)
+            else:
+                content_nodes = list(new_content_soup.contents)
+
+            # 策略 A: 替换模式（Replace）
             if self.insert_mode == "replace":
                 original_tag.clear()
-                new_content_soup = BeautifulSoup(translated_html, 'lxml')
-                for node in list(new_content_soup.children):
+                for node in content_nodes:
                     original_tag.append(node.extract())
+                continue
 
-            elif is_table_cell:
-                # --- 表格单元格处理：在标签内部组合内容 ---
+            # 策略 B: 容器型元素 (td, th, li, div) -> 在内部追加
+            # 这样可以保护 ul/ol 结构不被打断，div 布局不被破坏
+            is_container_node = original_tag.name in ['td', 'th', 'li', 'div']
+
+            if is_container_node:
                 original_tag.clear()
 
-                # 解析HTML片段
-                original_nodes = BeautifulSoup(original_html, 'lxml').contents
-                translated_nodes = BeautifulSoup(translated_html, 'lxml').contents
+                # 解析原文 (注意防范原文被解析出多余标签)
+                orig_soup = BeautifulSoup(original_html, 'lxml')
+                original_nodes = list(orig_soup.body.contents) if orig_soup.body else list(orig_soup.contents)
 
-                # 创建分隔符节点
+                # 译文节点使用上面剥离好的 content_nodes
+                translated_nodes = content_nodes
+
+                # 构建分隔符 (容器内部使用 span/br，不使用 p/div 以防破坏行内流)
                 separator_nodes = []
                 if self.separator:
                     lines = self.separator.split('\n')
                     for j, line in enumerate(lines):
                         if line:
-                            separator_nodes.append(NavigableString(line))
+                            sep_span = soup.new_tag('span', attrs={'class': 'translate-separator'})
+                            sep_span.string = line
+                            separator_nodes.append(sep_span)
                         if j < len(lines) - 1:
                             separator_nodes.append(soup.new_tag('br'))
+                    # 额外加一个换行区分原文和译文
+                    separator_nodes.append(soup.new_tag('br'))
 
-                # 根据模式按顺序重新填充
+                # 组装内容
                 if self.insert_mode == "append":
                     nodes_order = [original_nodes, separator_nodes, translated_nodes]
                 else:  # prepend
@@ -182,18 +209,32 @@ class EpubTranslator(AiTranslator):
 
                 for node_list in nodes_order:
                     for node in node_list:
-                        original_tag.append(node.extract() if isinstance(node, Tag) else node)
+                        if node:
+                            original_tag.append(node.extract() if isinstance(node, Tag) else node)
 
+            # 策略 C: 独立文本块 (p, h1-h6) -> 创建兄弟标签
             else:
-                # --- 常规块级元素处理：创建新标签 ---
-                translated_tag = soup.new_tag(original_tag.name, attrs=original_tag.attrs)
-                new_content_soup = BeautifulSoup(translated_html, 'lxml')
-                for node in list(new_content_soup.children):
-                    translated_tag.append(node.extract())
+                # 复制属性，但必须删除 ID 以防冲突
+                new_attrs = dict(original_tag.attrs)
+                if 'id' in new_attrs:
+                    del new_attrs['id']
 
+                translated_tag = soup.new_tag(original_tag.name, attrs=new_attrs)
+
+                # 填充译文
+                for node in content_nodes:
+                    # 额外检查：防止 <p> 里面套 <p>
+                    # 如果译文被识别为 <p>翻译</p>，而外层容器也是 <p>，则只取内部文本
+                    if isinstance(node, Tag) and node.name == original_tag.name and node.name == 'p':
+                        for inner_child in list(node.contents):
+                            translated_tag.append(inner_child.extract())
+                    else:
+                        translated_tag.append(node.extract())
+
+                # 创建块级分隔符
                 separator_tag = None
                 if self.separator:
-                    separator_tag = soup.new_tag('p')
+                    separator_tag = soup.new_tag('div', attrs={'class': 'translate-separator'})
                     lines = self.separator.split('\n')
                     for j, line in enumerate(lines):
                         if line:
@@ -202,16 +243,19 @@ class EpubTranslator(AiTranslator):
                             separator_tag.append(soup.new_tag('br'))
 
                 if self.insert_mode == "append":
+                    # 插入顺序：原文 -> 分隔符 -> 译文
                     current_node = original_tag
                     if separator_tag:
                         current_node.insert_after(separator_tag)
                         current_node = separator_tag
                     current_node.insert_after(translated_tag)
                 elif self.insert_mode == "prepend":
+                    # 插入顺序：译文 -> 分隔符 -> 原文
                     original_tag.insert_before(translated_tag)
                     if separator_tag:
                         translated_tag.insert_after(separator_tag)
 
+        # 重新打包 EPUB
         for file_path, soup in soups.items():
             all_files[file_path] = str(soup).encode('utf-8')
 
