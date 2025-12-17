@@ -337,6 +337,12 @@ class GlossaryAgentConfigPayload(BaseModel):
     force_json: bool = Field(
         default=False, description="强制Agent输出JSON格式的术语表。"
     )
+    rpm: Optional[int] = Field(
+        default=None, description="RPM限制 (Requests Per Minute)"
+    )
+    tpm: Optional[int] = Field(
+        default=None, description="TPM限制 (Tokens Per Minute)"
+    )
 
 
 # 1. 定义所有工作流共享的基础参数
@@ -410,6 +416,12 @@ class BaseWorkflowParams(BaseModel):
     )
     force_json: bool = Field(
         default=False, description="应输出json格式时强制ai输出json"
+    )
+    rpm: Optional[int] = Field(
+        default=None, description="RPM限制 (Requests Per Minute)"
+    )
+    tpm: Optional[int] = Field(
+        default=None, description="TPM限制 (Tokens Per Minute)"
     )
 
     @model_validator(mode="before")
@@ -723,6 +735,8 @@ class TranslateServiceRequest(BaseModel):
                         "mineru_token": "your-mineru-token-if-any",
                         "formula_ocr": True,
                         "model_version": "vlm",
+                        "rpm": 100,
+                        "tpm": 100000,
                     },
                 },
                 {
@@ -1007,6 +1021,8 @@ async def _perform_translation(
                     "retry",
                     "system_proxy_enable",
                     "force_json",
+                    "rpm",
+                    "tpm",
                 },
                 exclude_none=True,
             )
@@ -1072,6 +1088,8 @@ async def _perform_translation(
                     "retry",
                     "system_proxy_enable",
                     "force_json",
+                    "rpm",
+                    "tpm",
                 },
                 exclude_none=True,
             )
@@ -1109,6 +1127,8 @@ async def _perform_translation(
                     "retry",
                     "system_proxy_enable",
                     "force_json",
+                    "rpm",
+                    "tpm",
                 },
                 exclude_none=True,
             )
@@ -1148,6 +1168,8 @@ async def _perform_translation(
                     "retry",
                     "system_proxy_enable",
                     "force_json",
+                    "rpm",
+                    "tpm",
                 },
                 exclude_none=True,
             )
@@ -1186,6 +1208,8 @@ async def _perform_translation(
                     "retry",
                     "system_proxy_enable",
                     "force_json",
+                    "rpm",
+                    "tpm",
                 },
                 exclude_none=True,
             )
@@ -1224,6 +1248,8 @@ async def _perform_translation(
                     "retry",
                     "system_proxy_enable",
                     "force_json",
+                    "rpm",
+                    "tpm",
                 },
                 exclude_none=True,
             )
@@ -1262,6 +1288,8 @@ async def _perform_translation(
                     "retry",
                     "system_proxy_enable",
                     "force_json",
+                    "rpm",
+                    "tpm",
                 },
                 exclude_none=True,
             )
@@ -1301,6 +1329,8 @@ async def _perform_translation(
                     "retry",
                     "system_proxy_enable",
                     "force_json",
+                    "rpm",
+                    "tpm",
                 },
                 exclude_none=True,
             )
@@ -1338,6 +1368,8 @@ async def _perform_translation(
                     "retry",
                     "system_proxy_enable",
                     "force_json",
+                    "rpm",
+                    "tpm",
                 },
                 exclude_none=True,
             )
@@ -1378,6 +1410,8 @@ async def _perform_translation(
                     "retry",
                     "system_proxy_enable",
                     "force_json",
+                    "rpm",
+                    "tpm",
                 },
                 exclude_none=True,
             )
@@ -2507,6 +2541,8 @@ async def temp_translate(
     custom_prompt: Optional[str] = Body(None),
     model_version: Literal["pipeline", "vlm"] = Body("vlm"),
     glossary_dict: Optional[Dict[str, str]] = Body(None),
+    rpm: Optional[int] = Body(None),
+    tpm: Optional[int] = Body(None),
 ):
     file_name = Path(file_name)
     try:
@@ -2530,6 +2566,8 @@ async def temp_translate(
                 chunk_size=chunk_size,
                 concurrent=concurrent,
                 glossary_dict=glossary_dict,
+                rpm=rpm,
+                tpm=tpm,
             ),
             html_exporter_config=MD2HTMLExporterConfig(),
         )
