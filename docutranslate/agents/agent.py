@@ -153,15 +153,15 @@ class RateLimiter:
         while True:
             # print(f"[RateLimiter-Async] 准备获取锁...")
             with self.lock:
-                print(f"[RateLimiter-Async] 已加锁 (Checking)")
+                # print(f"[RateLimiter-Async] 已加锁 (Checking)")
 
                 wait_time = self._check_and_get_wait_time(tokens)
                 if wait_time <= 0:
                     self._record_usage(tokens)
-                    print(f"[RateLimiter-Async] 释放锁 (成功获取配额)")
+                    # print(f"[RateLimiter-Async] 释放锁 (成功获取配额)")
                     return
 
-                print(f"[RateLimiter-Async] 释放锁 (需等待 {wait_time:.2f}s)")
+                # print(f"[RateLimiter-Async] 释放锁 (需等待 {wait_time:.2f}s)")
 
             # 释放锁后等待
             await asyncio.sleep(wait_time + 0.1)
@@ -174,15 +174,15 @@ class RateLimiter:
         while True:
             # print(f"[RateLimiter-Sync] 准备获取锁...")
             with self.lock:
-                print(f"[RateLimiter-Sync] 已加锁 (Checking)")
+                # print(f"[RateLimiter-Sync] 已加锁 (Checking)")
 
                 wait_time = self._check_and_get_wait_time(tokens)
                 if wait_time <= 0:
                     self._record_usage(tokens)
-                    print(f"[RateLimiter-Sync] 释放锁 (成功获取配额)")
+                    # print(f"[RateLimiter-Sync] 释放锁 (成功获取配额)")
                     return
 
-                print(f"[RateLimiter-Sync] 释放锁 (需等待 {wait_time:.2f}s)")
+                # print(f"[RateLimiter-Sync] 释放锁 (需等待 {wait_time:.2f}s)")
 
             time.sleep(wait_time + 0.1)
 
