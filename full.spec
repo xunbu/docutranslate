@@ -6,15 +6,33 @@ import docutranslate
 # 初始化列表
 datas = []
 binaries = []
-hiddenimports = ['markdown.extensions.tables', 'pymdownx.arithmatex',
-                'pymdownx.superfences', 'pymdownx.highlight', 'pygments',
-                'docling_ibm_models',
-                'docling_parse', 'cv2']
 
-# --- 核心修改：在列表中添加 'tiktoken' ---
-# tiktoken: 解决 Unknown encoding cl100k_base 问题
-# easyocr, docling 等: 收集其他依赖
-packages_to_collect = ['easyocr', 'docling', 'pygments', 'docling_ibm_models', 'tiktoken']
+# --- 核心修改 1: 添加 tiktoken_ext.openai_public 到隐式导入 ---
+# 必须显式导入这个模块，否则 tiktoken 找不到 cl100k_base 编码
+hiddenimports = [
+    'markdown.extensions.tables',
+    'pymdownx.arithmatex',
+    'pymdownx.superfences',
+    'pymdownx.highlight',
+    'pygments',
+    'docling_ibm_models',
+    'docling_parse',
+    'cv2',
+    'tiktoken_ext.openai_public'  # <--- 新增：确保编码插件被识别
+]
+
+# --- 核心修改 2: 在列表中添加 'tiktoken_ext' ---
+# tiktoken: 核心库
+# tiktoken_ext: 包含编码定义文件 (解决 Unknown encoding 问题)
+# easyocr, docling 等: 其他依赖
+packages_to_collect = [
+    'easyocr',
+    'docling',
+    'pygments',
+    'docling_ibm_models',
+    'tiktoken',
+    'tiktoken_ext'  # <--- 新增：必须收集扩展包
+]
 
 for package in packages_to_collect:
     try:
@@ -29,6 +47,8 @@ for package in packages_to_collect:
 try:
     datas += copy_metadata('docling-ibm-models') # 这里必须用连字符(pip名)
     datas += copy_metadata('docling-parse')      # 预防性添加
+    # 也可以预防性添加 tiktoken 的元数据，虽然 collect_all 通常已经处理了
+    datas += copy_metadata('tiktoken')
 except Exception as e:
     print(f"Warning: Failed to copy metadata: {e}")
 
