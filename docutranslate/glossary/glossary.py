@@ -8,13 +8,17 @@ from docutranslate.ir.document import Document
 
 
 class Glossary:
-    def __init__(self, glossary_dict: dict[str:str] = None):
-        self.glossary_dict = glossary_dict
+    def __init__(self, glossary_dict: dict[str,str] = None):
+        if glossary_dict:
+            self.glossary_dict = glossary_dict
+        else:
+            self.glossary_dict={}
 
-    def update(self, update_dict: dict[str:str]):
+
+    def update(self, update_dict: dict[str,str]):
         for src, dst in update_dict.items():
-            if src.strip() not in self.glossary_dict:
-                self.glossary_dict[src.strip()] = dst
+            if src.strip().lower() not in self.glossary_dict:
+                self.glossary_dict[src.strip().lower()] = dst
 
     def append_system_prompt(self, text: str):
         flag = False
@@ -23,9 +27,7 @@ class Glossary:
         Here is the reference glossary:
         """
         for src, dst in self.glossary_dict.items():
-            text=re.sub(r'\s+', '', text)#去除所有空白字符
-            src=re.sub(r'\s+', '', src)#去除所有空白字符
-            if src in text:
+            if src.lower() in text.lower():
                 prompt += f"{src}=>{dst}\n"
                 flag = True
         prompt += "Glossary ends\n"
