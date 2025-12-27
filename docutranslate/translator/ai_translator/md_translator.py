@@ -42,7 +42,8 @@ class MDTranslator(AiTranslator):
                                                   retry=config.retry,
                                                   system_proxy_enable=config.system_proxy_enable,
                                                   rpm=config.rpm,
-                                                  tpm=config.tpm
+                                                  tpm=config.tpm,
+                                                  provider=config.provider,
                                                   )
             self.translate_agent = MDTranslateAgent(agent_config)
 

@@ -27,6 +27,7 @@ class AiTranslatorConfig(TranslatorConfig, AgentConfig):
     glossary_agent_config: GlossaryAgentConfig | None = None
     skip_translate: bool = False  # 当skip_translate为False时base_url、model_id为必填项
 
+
 T = TypeVar("T", bound=Document)
 
 
@@ -41,7 +42,7 @@ class AiTranslator(Translator[T]):
         self.glossary_agent = None
         self.glossary_dict_gen = None
         if not self.skip_translate and (
-            config.base_url is None or config.api_key is None or config.model_id is None
+                config.base_url is None or config.api_key is None or config.model_id is None
         ):
             raise ValueError(
                 "skip_translate不为false时，base_url、api_key、model_id为必填项"
@@ -52,23 +53,21 @@ class AiTranslator(Translator[T]):
                 self.glossary_agent = GlossaryAgent(config.glossary_agent_config)
             else:
                 glossary_agent_config = GlossaryAgentConfig(
-                    to_lang=config.to_lang,
-                    base_url=config.base_url,
-                    api_key=config.api_key,
-                    model_id=config.model_id,
-                    temperature=config.temperature,
-                    thinking=config.thinking,
-                    concurrent=config.concurrent,
-                    timeout=config.timeout,
-                    logger=self.logger,
-                    retry=config.retry,
-                    system_proxy_enable=config.system_proxy_enable,
-                    force_json=config.force_json,
+                    to_lang=config.to_lang, base_url=config.base_url,
+                    api_key=config.api_key, model_id=config.model_id, temperature=config.temperature,
+                    thinking=config.thinking, concurrent=config.concurrent, timeout=config.timeout,
+                    logger=self.logger, retry=config.retry,
+                    system_proxy_enable=config.system_proxy_enable, force_json=config.force_json,
+                    rpm=config.rpm,
+                    tpm=config.tpm,
+                    provider=config.provider,
                 )
                 self.glossary_agent = GlossaryAgent(glossary_agent_config)
 
     @abstractmethod
-    def translate(self, document: T) -> Document: ...
+    def translate(self, document: T) -> Document:
+        ...
 
     @abstractmethod
-    async def translate_async(self, document: T) -> Document: ...
+    async def translate_async(self, document: T) -> Document:
+        ...

@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 import httpx
 import tiktoken
 
-from docutranslate.agents.thinking.thinking_factory import get_thinking_mode
+from docutranslate.agents.thinking.thinking_factory import get_thinking_mode, ProviderType
 from docutranslate.logger import global_logger
 from docutranslate.utils.utils import get_httpx_proxies
 
@@ -55,6 +55,7 @@ class AgentConfig:
     force_json: bool = False
     rpm: int | None = None  # 每分钟请求数限制
     tpm: int | None = None  # 每分钟Token数限制
+    provider:ProviderType|None=None
 
 
 class TotalErrorCounter:
@@ -281,7 +282,7 @@ class Agent:
         self.baseurl = config.base_url.strip()
         if self.baseurl.endswith("/"):
             self.baseurl = self.baseurl[:-1]
-        self.domain = urlparse(self.baseurl).netloc
+        self.domain = urlparse(self.baseurl).netloc.strip()
         self.key = config.api_key.strip() if config.api_key else "xx"
         self.model_id = config.model_id.strip()
         self.system_prompt = ""
@@ -301,6 +302,8 @@ class Agent:
         self.rate_limiter = RateLimiter(rpm=config.rpm, tpm=config.tpm)
         # 新增：初始化 encoding 用于估算
         self.encoding = self._get_encoding_for_model(self.model_id)
+
+        self.provider=config.provider if config.provider is not None else self.domain
 
     def _get_encoding_for_model(self, model_name: str):
         """获取 tiktoken encoding，如果失败则使用 cl100k_base 兜底"""
@@ -322,7 +325,7 @@ class Agent:
             return len(text) // 4
 
     def _add_thinking_mode(self, data: dict):
-        thinking_mode_result = get_thinking_mode(self.domain, data.get("model"))
+        thinking_mode_result = get_thinking_mode(self.provider, data.get("model"))
         if thinking_mode_result is None:
             return
         field_thinking, val_enable, val_disable = thinking_mode_result
