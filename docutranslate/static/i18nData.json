@@ -167,7 +167,8 @@
     "preview_bilingual": "双语预览",
     "preview_translatedOnly": "仅译文预览",
     "configImportSuccess": "配置导入成功！",
-    "configImportError": "配置文件解析失败，请检查文件格式。"
+    "configImportError": "配置文件解析失败，请检查文件格式。",
+    "providerLabel": "接口供应商"
   },
   "en": {
     "pageTitle": "DocuTranslate - Interactive Document Translation",
@@ -337,6 +338,7 @@
     "preview_bilingual": "Bilingual Preview",
     "preview_translatedOnly": "Translation Only Preview",
     "configImportSuccess": "Configuration imported successfully!",
-    "configImportError": "Failed to parse config file, please check the file format."
+    "configImportError": "Failed to parse config file, please check the file format.",
+    "providerLabel": "Provider"
   }
 }
