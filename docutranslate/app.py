@@ -19,10 +19,9 @@ from typing import (
     Any,
     Optional,
     Literal,
-    Union,
-    Annotated,
     TYPE_CHECKING,
     Type,
+    TypeAlias,  # Added TypeAlias
 )
 
 import httpx
@@ -36,30 +35,29 @@ from fastapi import (
     UploadFile,
     File,
     Form,
+    Request
 )
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import (
     get_swagger_ui_html,
     get_swagger_ui_oauth2_redirect_html,
     get_redoc_html,
 )
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import (
     BaseModel,
     Field,
-    model_validator,
-    field_validator,  # Added field_validator
-    AliasChoices,
     ConfigDict,
     Json,
-    TypeAdapter,  # Added TypeAdapter
+    TypeAdapter,
 )
 
 from docutranslate import __version__
-from docutranslate.agents.agent import ThinkingMode
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig
-
+from docutranslate.core.schemas import TranslatePayload, MarkdownWorkflowParams, TextWorkflowParams, JsonWorkflowParams, \
+    XlsxWorkflowParams, DocxWorkflowParams, SrtWorkflowParams, EpubWorkflowParams, HtmlWorkflowParams, \
+    AssWorkflowParams, PPTXWorkflowParams
 # --- 核心代码 Imports ---
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
 from docutranslate.workflow.ass_workflow import AssWorkflow, AssWorkflowConfig
@@ -67,8 +65,6 @@ from docutranslate.workflow.base import Workflow
 from docutranslate.workflow.docx_workflow import DocxWorkflow, DocxWorkflowConfig
 from docutranslate.workflow.epub_workflow import EpubWorkflow, EpubWorkflowConfig
 from docutranslate.workflow.html_workflow import HtmlWorkflow, HtmlWorkflowConfig
-# --- 新增的 Import ---
-from docutranslate.workflow.pptx_workflow import PPTXWorkflow, PPTXWorkflowConfig
 # ----------------------
 from docutranslate.workflow.interfaces import DocxExportable, EpubExportable
 from docutranslate.workflow.interfaces import (
@@ -87,6 +83,8 @@ from docutranslate.workflow.md_based_workflow import (
     MarkdownBasedWorkflow,
     MarkdownBasedWorkflowConfig,
 )
+# --- 新增的 Import ---
+from docutranslate.workflow.pptx_workflow import PPTXWorkflow, PPTXWorkflowConfig
 from docutranslate.workflow.srt_workflow import SrtWorkflow, SrtWorkflowConfig
 from docutranslate.workflow.txt_workflow import TXTWorkflow, TXTWorkflowConfig
 from docutranslate.workflow.xlsx_workflow import XlsxWorkflow, XlsxWorkflowConfig
@@ -180,15 +178,15 @@ def _create_default_task_state() -> Dict[str, Any]:
 def get_workflow_type_from_filename(filename: str) -> str:
     """根据文件扩展名自动选择 workflow_type"""
     ext = Path(filename).suffix.lower()
-    if ext in [".pdf",".png",".jpg"]:
+    if ext in [".pdf", ".png", ".jpg"]:
         return "markdown_based"
     elif ext in [".md", ".markdown"]:
         return "markdown_based"
-    elif ext in [".docx",".doc"]:
+    elif ext in [".docx", ".doc"]:
         return "docx"
-    elif ext in [".csv",".xlsx",".xls"]:
+    elif ext in [".csv", ".xlsx", ".xls"]:
         return "xlsx"
-    elif ext in [".pptx","ppt"]:
+    elif ext in [".pptx", "ppt"]:
         return "pptx"
     elif ext in [".json"]:
         return "json"
@@ -315,415 +313,25 @@ service_router = APIRouter(prefix="/service", tags=["Service API"])
 STATIC_DIR = resource_path("static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
-
 # ===================================================================
 # --- Pydantic Models for Service API ---
 # ===================================================================
 
-
-class GlossaryAgentConfigPayload(BaseModel):
-    base_url: str = Field(
-        ...,
-        validation_alias=AliasChoices("base_url", "baseurl"),
-        description="用于术语表生成的Agent的LLM API基础URL。",
-        examples=["https://api.openai.com/v1"],
-    )
-    api_key: str = Field(
-        default="xx",
-        validation_alias=AliasChoices("api_key", "key"),
-        description="用于术语表生成的Agent的LLM API密钥（默认为xx）。",
-        examples=["sk-agent-api-key"],
-    )
-
-    @field_validator("api_key")
-    @classmethod
-    def set_default_glossary_api_key(cls, v: str) -> str:
-        return v if v and v.strip() else "xx"
-
-    model_id: str = Field(
-        ..., description="用于术语表生成的Agent的模型ID。", examples=["gpt-4-turbo"]
-    )
-    to_lang: str = Field(
-        ..., description="术语表生成的目标语言。", examples=["简体中文", "English"]
-    )
-    temperature: float = Field(
-        default=0.7, description="用于术语表生成的Agent的温度参数。"
-    )
-    concurrent: int = Field(default=30, description="Agent的最大并发请求数。")
-    timeout: int = Field(
-        default=default_params["timeout"], description="等待API回复的时间（秒）。"
-    )
-    thinking: ThinkingMode = Field(default="default", description="Agent的思考模式。")
-    retry: int = Field(
-        default=default_params["retry"], description="分块失败后的最大重试次数。"
-    )
-    system_proxy_enable: bool = Field(
-        default=default_params["system_proxy_enable"], description="是否使用系统代理", examples=[True, False]
-    )
-    custom_prompt: Optional[str] = Field(
-        default=None, description="生成术语表的用户自定义提示词"
-    )
-    force_json: bool = Field(
-        default=False, description="强制Agent输出JSON格式的术语表。"
-    )
-    rpm: Optional[int] = Field(
-        default=None, description="RPM限制 (Requests Per Minute)"
-    )
-    tpm: Optional[int] = Field(
-        default=None, description="TPM限制 (Tokens Per Minute)"
-    )
-
-
-# 1. 定义所有工作流共享的基础参数
-class BaseWorkflowParams(BaseModel):
-    skip_translate: bool = Field(
-        default=False,
-        description="是否跳过翻译步骤。如果为True，则仅执行文档解析和格式转换。",
-    )
-    base_url: Optional[str] = Field(
-        default=None,
-        validation_alias=AliasChoices("base_url", "baseurl"),
-        description="LLM API的基础URL。当 `skip_translate` 为 `False` 时必填。",
-        examples=["https://api.openai.com/v1"],
-    )
-    api_key: str = Field(
-        default="xx",
-        validation_alias=AliasChoices("api_key", "key"),
-        description="LLM API的密钥（可选，默认为xx）。",
-        examples=["sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxx"],
-    )
-
-    @field_validator("api_key")
-    @classmethod
-    def set_default_api_key(cls, v: str) -> str:
-        return v if v and v.strip() else "xx"
-
-    model_id: Optional[str] = Field(
-        default=None,
-        description="要使用的LLM模型ID。当 `skip_translate` 为 `False` 时必填。",
-        examples=["gpt-4o"],
-    )
-    to_lang: str = Field(
-        default="中文", description="目标翻译语言。", examples=["简体中文", "English"]
-    )
-    chunk_size: int = Field(
-        default=default_params["chunk_size"], description="文本分割的块大小（字符）。"
-    )
-    concurrent: int = Field(
-        default=default_params["concurrent"], description="并发请求数。"
-    )
-    temperature: float = Field(
-        default=default_params["temperature"], description="LLM温度参数。"
-    )
-    timeout: int = Field(
-        default=default_params["timeout"], description="等待API回复的时间（秒）。"
-    )
-    thinking: ThinkingMode = Field(
-        default=default_params["thinking"],
-        description="Agent的思考模式。",
-        examples=["default", "enable", "disable"],
-    )
-    retry: int = Field(
-        default=default_params["retry"],
-        description="某个分块翻译失败后的最大重试次数。",
-    )
-    system_proxy_enable: bool = Field(
-        default=default_params["system_proxy_enable"], description="是否使用系统代理", examples=[True, False]
-    )
-    custom_prompt: Optional[str] = Field(
-        None, description="用户自定义的翻译Prompt。", alias="custom_prompt"
-    )
-    glossary_dict: Optional[Dict[str, str]] = Field(
-        None, description="术语表字典，key为原文，value为译文。"
-    )
-    glossary_generate_enable: bool = Field(
-        default=False, description="是否开启术语表自动生成。"
-    )
-    glossary_agent_config: Optional[GlossaryAgentConfigPayload] = Field(
-        None,
-        description="用于术语表生成的Agent的配置。如果 `glossary_generate_enable` 为 `True`，此项必填。",
-    )
-    force_json: bool = Field(
-        default=False, description="应输出json格式时强制ai输出json"
-    )
-    rpm: Optional[int] = Field(
-        default=None, description="RPM限制 (Requests Per Minute)"
-    )
-    tpm: Optional[int] = Field(
-        default=None, description="TPM限制 (Tokens Per Minute)"
-    )
-
-    @model_validator(mode="before")
-    @classmethod
-    def check_translation_fields(cls, values):
-        # 修复: 当使用 FastAPI Form + Json 时，Pydantic V2 mode='before' 验证器可能会接收到 JSON 字符串
-        if isinstance(values, str):
-            try:
-                values = json.loads(values)
-            except ValueError:
-                # 无法解析为 JSON，可能是其他字符串，忽略，交由后续逻辑或抛出错误
-                pass
-
-        # 如果不跳过翻译 (值为False或字段不存在)，则验证相关字段必须存在且不为空
-        if isinstance(values, dict):
-            if not values.get("skip_translate"):
-                # Check for standard keys or their aliases
-                if not (values.get("base_url") or values.get("baseurl")):
-                    # Auto 模式在校验前不强制要求 base_url
-                    if values.get("workflow_type") != "auto":
-                        raise ValueError(
-                            "当 `skip_translate` 为 `False` 时, `base_url` 或 `baseurl` 字段是必须的。"
-                        )
-                if not values.get("model_id"):
-                    if values.get("workflow_type") != "auto":
-                        raise ValueError(
-                            "当 `skip_translate` 为 `False` 时, `model_id` 字段是必须的。"
-                        )
-        # 如果跳过翻译，则不进行任何检查，允许 base_url 等字段为空
-        return values
-
-
-# 2. 为每个工作流创建独立的参数模型
-class AutoWorkflowParams(BaseWorkflowParams):
-    workflow_type: Literal["auto"] = Field(..., description="根据文件后缀自动选择工作流。")
-    model_config = ConfigDict(extra='allow')
-
-
-class MarkdownWorkflowParams(BaseWorkflowParams):
-    workflow_type: Literal["markdown_based"] = Field(
-        ..., description="指定使用基于Markdown的翻译工作流。"
-    )
-    convert_engine: Literal["identity", "mineru", "docling", "mineru_deploy"] = Field(
-        "identity",
-        description="选择将文件解析为markdown的引擎。'mineru_deploy' 适用于本地部署的 MinerU 服务。如果输入文件是.md，此项可为`identity`或不传。",
-        examples=["identity", "mineru", "docling", "mineru_deploy"],
-    )
-
-    # --- Engine-Specific Parameters ---
-
-    # -- For "mineru" (Cloud API) --
-    mineru_token: Optional[str] = Field(
-        None, description="[仅当 convert_engine='mineru'] 必填的API令牌。"
-    )
-    model_version: Literal["pipeline", "vlm"] = Field(
-        "vlm", description="[仅当 convert_engine='mineru'] Mineru Cloud模型的版本。"
-    )
-    formula_ocr: bool = Field(
-        True, description="[仅当 convert_engine='mineru' 或 'docling'] 是否对公式进行OCR识别。"
-    )
-
-    # -- For "docling" --
-    code_ocr: bool = Field(
-        True, description="[仅当 convert_engine='docling'] 是否对代码块进行OCR识别。"
-    )
-
-    # -- For "mineru_deploy" (Local Deployment) --
-    mineru_deploy_base_url: Optional[str] = Field(
-        "http://127.0.0.1:8000",
-        description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务地址。",
-    )
-    mineru_deploy_backend: Literal[
-        "pipeline",
-        "vlm-transformers",
-        "vlm-mlx-engine",
-        "vlm-vllm-async-engine",
-        "vlm-lmdeploy-engine",
-        "vlm-http-client"
-    ] = Field(
-        "pipeline",
-        description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务使用的后端。",
-    )
-    mineru_deploy_formula_enable: bool = Field(
-        True,
-        description="[仅当 convert_engine='mineru_deploy'] 本地部署的服务是否启用公式解析。",
-    )
-    mineru_deploy_start_page_id: int = Field(
-        0, description="[仅当 convert_engine='mineru_deploy'] 起始解析页面。"
-    )
-    mineru_deploy_end_page_id: int = Field(
-        99999, description="[仅当 convert_engine='mineru_deploy'] 结束解析页面。"
-    )
-    mineru_deploy_lang_list: Optional[List[str]] = Field(
-        None, description="[仅当 convert_engine='mineru_deploy' 且 backend='pipeline'] 语言列表。"
-    )
-    mineru_deploy_server_url: Optional[str] = Field(
-        None, description="[仅当 convert_engine='mineru_deploy' 且 backend='vlm-http-client'] Server URL."
-    )
-
-    @model_validator(mode="after")
-    def check_engine_params(self):
-        if self.convert_engine == "mineru" and not self.mineru_token:
-            raise ValueError(
-                "当 `convert_engine` 为 'mineru' 时，`mineru_token` 字段是必须的。"
-            )
-        if self.convert_engine == "mineru_deploy" and not self.mineru_deploy_base_url:
-            raise ValueError(
-                "当 `convert_engine` 为 'mineru_deploy' 时，`mineru_deploy_base_url` 字段是必须的。"
-            )
-        return self
-
-
-class TextWorkflowParams(BaseWorkflowParams):
-    workflow_type: Literal["txt"] = Field(
-        ..., description="指定使用纯文本的翻译工作流。"
-    )
-    insert_mode: Literal["replace", "append", "prepend"] = Field(
-        "replace",
-        description="翻译文本的插入模式。'replace'：替换原文，'append'：附加到原文后，'prepend'：附加到原文前。",
-    )
-    separator: str = Field(
-        "\n",
-        description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
-    )
-    segment_mode: Literal["line", "paragraph", "none"] = Field(
-        "line",
-        description="分段模式。'line'：按行分段（每行独立翻译），'paragraph'：按段落分段（连续非空行合并为段落），'none'：不分段（全文视为一个段落）。",
-    )
-
-
-class JsonWorkflowParams(BaseWorkflowParams):
-    workflow_type: Literal["json"] = Field(
-        ..., description="指定使用JSON的翻译工作流。"
-    )
-    json_paths: List[str] = Field(
-        ...,
-        description="一个jsonpath-ng表达式列表，用于指定需要翻译的JSON字段。",
-        examples=[["$.product.name", "$.product.description", "$.features[*]"]],
-    )
-
-
-class XlsxWorkflowParams(BaseWorkflowParams):
-    workflow_type: Literal["xlsx"] = Field(
-        ..., description="指定使用XLSX的翻译工作流。"
-    )
-    insert_mode: Literal["replace", "append", "prepend"] = Field(
-        "replace",
-        description="翻译文本的插入模式。'replace'：替换原文，'append'：附加到原文后，'prepend'：附加到原文前。",
-    )
-    separator: str = Field(
-        "\n",
-        description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
-    )
-    translate_regions: Optional[List[str]] = Field(
-        None,
-        description="指定翻译区域列表。示例: ['Sheet1!A1:B10', 'C:D', 'E5']。如果不指定表名 (如 'C:D')，则应用于所有表。如果为 None，则翻译整个文件中的所有文本。",
-    )
-
-
-class DocxWorkflowParams(BaseWorkflowParams):
-    workflow_type: Literal["docx"] = Field(
-        ..., description="指定使用DOCX的翻译工作流。"
-    )
-    insert_mode: Literal["replace", "append", "prepend"] = Field(
-        "replace",
-        description="翻译文本的插入模式。'replace'：替换原文，'append'：附加到原文后，'prepend'：附加到原文前。",
-    )
-    separator: str = Field(
-        "\n",
-        description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
-    )
-
-
-class SrtWorkflowParams(BaseWorkflowParams):
-    workflow_type: Literal["srt"] = Field(
-        ..., description="指定使用SRT字幕的翻译工作流。"
-    )
-    insert_mode: Literal["replace", "append", "prepend"] = Field(
-        "replace",
-        description="翻译文本的插入模式。'replace'：替换原文，'append'：附加到原文后，'prepend'：附加到原文前。",
-    )
-    separator: str = Field(
-        "\n",
-        description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
-    )
-
-
-class EpubWorkflowParams(BaseWorkflowParams):
-    workflow_type: Literal["epub"] = Field(
-        ..., description="指定使用EPUB的翻译工作流。"
-    )
-    insert_mode: Literal["replace", "append", "prepend"] = Field(
-        "replace",
-        description="翻译文本的插入模式。'replace'：替换原文，'append'：附加到原文后，'prepend'：附加到原文前。",
-    )
-    separator: str = Field(
-        "\n",
-        description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
-    )
-
-
-# --- HTML WORKFLOW PARAMS START ---
-class HtmlWorkflowParams(BaseWorkflowParams):
-    workflow_type: Literal["html"] = Field(
-        ..., description="指定使用HTML的翻译工作流。"
-    )
-    insert_mode: Literal["replace", "append", "prepend"] = Field(
-        "replace",
-        description="翻译文本的插入模式。'replace'：替换原文，'append' :附加到原文后，'prepend'：附加到原文前。",
-    )
-    separator: str = Field(
-        " ",
-        description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
-    )
-
-
-# --- HTML WORKFLOW PARAMS END ---
-
-
-# --- ASS WORKFLOW PARAMS START ---
-class AssWorkflowParams(BaseWorkflowParams):
-    workflow_type: Literal["ass"] = Field(
-        ..., description="指定使用ASS字幕的翻译工作流。"
-    )
-    insert_mode: Literal["replace", "append", "prepend"] = Field(
-        "replace",
-        description="翻译文本的插入模式。'replace'：替换原文，'append'：附加到原文后，'prepend'：附加到原文前。",
-    )
-    separator: str = Field(
-        "\\N",
-        description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。ASS格式通常使用 \\N 作为换行符。",
-    )
-
-
-# --- ASS WORKFLOW PARAMS END ---
-
-
-# --- PPTX WORKFLOW PARAMS START ---
-class PPTXWorkflowParams(BaseWorkflowParams):
-    workflow_type: Literal["pptx"] = Field(
-        ..., description="指定使用PPTX的翻译工作流。"
-    )
-    insert_mode: Literal["replace", "append", "prepend"] = Field(
-        "replace",
-        description="翻译文本的插入模式。'replace'：替换原文，'append'：附加到原文后，'prepend'：附加到原文前。",
-    )
-    separator: str = Field(
-        "\n",
-        description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
-    )
-    # target_cjk_font removed as per request
+ProviderType: TypeAlias = Literal[
+                              "ollama",
+                              "open.bigmodel.cn",
+                              "dashscope.aliyuncs.com",
+                              "ark.cn-beijing.volces.com",
+                              "generativelanguage.googleapis.com",
+                              "api.siliconflow.cn",
+                              "api.302.ai"
+                          ] | str
 
 
 # --- PPTX WORKFLOW PARAMS END ---
 
 
 # 3. 使用可辨识联合类型（Discriminated Union）将它们组合起来
-TranslatePayload = Annotated[
-    Union[
-        AutoWorkflowParams,
-        MarkdownWorkflowParams,
-        TextWorkflowParams,
-        JsonWorkflowParams,
-        XlsxWorkflowParams,
-        DocxWorkflowParams,
-        SrtWorkflowParams,
-        EpubWorkflowParams,
-        HtmlWorkflowParams,
-        AssWorkflowParams,
-        PPTXWorkflowParams,
-    ],
-    Field(discriminator="workflow_type"),
-]
 
 
 # 4. 创建最终的请求体模型
@@ -1072,6 +680,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
+                    "provider",  # Added provider
                 },
                 exclude_none=True,
             )
@@ -1139,6 +748,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
+                    "provider",  # Added provider
                 },
                 exclude_none=True,
             )
@@ -1178,6 +788,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
+                    "provider",  # Added provider
                 },
                 exclude_none=True,
             )
@@ -1219,6 +830,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
+                    "provider",  # Added provider
                 },
                 exclude_none=True,
             )
@@ -1259,6 +871,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
+                    "provider",  # Added provider
                 },
                 exclude_none=True,
             )
@@ -1299,6 +912,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
+                    "provider",  # Added provider
                 },
                 exclude_none=True,
             )
@@ -1339,6 +953,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
+                    "provider",  # Added provider
                 },
                 exclude_none=True,
             )
@@ -1380,6 +995,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
+                    "provider",  # Added provider
                 },
                 exclude_none=True,
             )
@@ -1419,6 +1035,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
+                    "provider",  # Added provider
                 },
                 exclude_none=True,
             )
@@ -1461,6 +1078,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
+                    "provider",  # Added provider
                 },
                 exclude_none=True,
             )
@@ -2566,6 +2184,280 @@ async def service_get_app_version():
     return JSONResponse(content={"version": __version__})
 
 
+@service_router.post(
+    "/flat-translate",
+    summary="直接翻译 (全参数展开/同步等待)",
+    description="""
+    上传文件并直接等待翻译完成，无需轮询状态。
+    所有参数均已扁平化展开，直接通过 Form 表单提交。
+
+    **注意**: 
+    1. 这是一个同步阻塞接口，大文件翻译时间较长，请确保客户端(如Nginx)超时设置足够长。
+    2. 复杂对象(如术语表字典)需以 JSON 字符串格式传入。
+    """,
+    response_model=None
+)
+async def service_flat_translate(
+        request: Request,
+        file: UploadFile = File(..., description="要翻译的文件"),
+        model_id: str = Form("", description="模型ID (例如: gpt-4o, glm-4-air)，当 skip_translate=False 时必填"),
+        base_url: Optional[str] = Form("", description="LLM API 基础 URL (如不填则依赖环境变量或默认值，当 skip_translate=False 时必填)"),
+        api_key: str = Form("xx", description="API Key (默认xx)"),
+        to_lang: str = Form("中文", description="目标翻译语言"),
+        workflow_type: str = Form("auto", description="工作流类型: auto, markdown_based, txt, json, xlsx, docx, srt, epub, html, ass, pptx"),
+        skip_translate: bool = Form(False, description="是否跳过翻译仅进行格式解析"),
+        concurrent: int = Form(default_params["concurrent"], description="并发请求数"),
+        chunk_size: int = Form(default_params["chunk_size"], description="文本分块大小"),
+        temperature: float = Form(default_params["temperature"], description="温度 (0-1)"),
+        timeout: int = Form(default_params["timeout"], description="单次请求超时时间(秒)"),
+        retry: int = Form(default_params["retry"], description="失败重试次数"),
+        thinking: str = Form("default", description="思考模式: default, enable, disable"),
+        custom_prompt: Optional[str] = Form("", description="自定义系统提示词"),
+        system_proxy_enable: bool = Form(default_params["system_proxy_enable"], description="是否启用系统代理"),
+        force_json: bool = Form(False, description="强制 LLM 输出 JSON 格式"),
+        rpm: Optional[int] = Form(None, description="RPM (每分钟请求数) 限制"),
+        tpm: Optional[int] = Form(None, description="TPM (每分钟 Token 数) 限制"),
+        provider: Optional[str] = Form("", description="LLM 提供商标识 (用于特定平台的特殊处理)"),
+        insert_mode: str = Form("replace", description="插入模式: replace(替换), append(追加), prepend(前置)"),
+        separator: str = Form("\n", description="追加/前置时的分隔符"),
+        segment_mode: str = Form("line", description="[Txt专用] 分段模式: line(按行), paragraph(按段), none(全文)"),
+        translate_regions: Optional[List[str]] = Form(None, description="[Xlsx专用] 翻译区域列表, 如 'Sheet1!A1:B10'"),
+        convert_engine: str = Form("", description="[PDF/MD] 解析引擎: mineru, docling, identity (默认根据后缀自动选择)"),
+        mineru_token: Optional[str] = Form("", description="[MinerU Cloud] API Token"),
+        model_version: str = Form("vlm", description="[MinerU Cloud] 模型版本: vlm, pipeline"),
+        formula_ocr: bool = Form(True, description="[PDF] 是否启用公式识别"),
+        code_ocr: bool = Form(True, description="[Docling] 是否启用代码块识别"),
+        mineru_deploy_base_url: str = Form("http://127.0.0.1:8000", description="[MinerU Local] 服务地址"),
+        mineru_deploy_backend: str = Form("pipeline", description="[MinerU Local] 后端类型"),
+        mineru_deploy_formula_enable: bool = Form(True, description="[MinerU Local] 是否启用公式"),
+        mineru_deploy_start_page_id: int = Form(0, description="[MinerU Local] 起始页码"),
+        mineru_deploy_end_page_id: int = Form(99999, description="[MinerU Local] 结束页码"),
+        mineru_deploy_lang_list: Optional[List[str]] = Form(None, description="[MinerU Local] 语言列表"),
+        mineru_deploy_server_url: Optional[str] = Form("", description="[MinerU Local] Server URL (backend='vlm-http-client'时使用)"),
+        json_paths: Optional[List[str]] = Form(None, description="[Json专用] JsonPath 表达式列表, 如 '$.name'"),
+        glossary_generate_enable: bool = Form(False, description="是否开启术语表自动生成"),
+        glossary_dict_json: Optional[str] = Form("", description="术语表字典 JSON 字符串, 格式: {'原文':'译文'}"),
+        glossary_agent_config_json: Optional[str] = Form("", description="术语表 Agent 配置 JSON 字符串 (包含 base_url, model_id 等)")
+):
+    # -----------------------------------------------------------
+    # 步骤 1: 初始化基础环境与文件读取
+    # -----------------------------------------------------------
+    task_id = uuid.uuid4().hex[:8]
+
+    try:
+        file_contents = await file.read()
+        original_filename = file.filename or "uploaded_file"
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"文件读取失败: {e}")
+
+    # -----------------------------------------------------------
+    # 步骤 2: 参数预处理与 JSON 字段解析
+    # -----------------------------------------------------------
+
+    # 2.1 自动工作流检测
+    if workflow_type == "auto":
+        # 假设这里有获取后缀的逻辑，或者引用外部函数
+        ext = Path(original_filename).suffix.lower().lstrip(".")
+        # 简单的映射逻辑，实际建议复用 auto_workflow 中的逻辑
+        if ext in ["md", "pdf"]: workflow_type = "markdown_based"
+        elif ext == "txt": workflow_type = "txt"
+        elif ext == "json": workflow_type = "json"
+        elif ext == "xlsx": workflow_type = "xlsx"
+        elif ext == "docx": workflow_type = "docx"
+        elif ext == "srt": workflow_type = "srt"
+        elif ext == "epub": workflow_type = "epub"
+        elif ext in ["html", "htm"]: workflow_type = "html"
+        elif ext == "ass": workflow_type = "ass"
+        elif ext == "pptx": workflow_type = "pptx"
+        else: workflow_type = "txt" # 默认回退
+
+    # 2.2 解析 glossary_dict_json
+    parsed_glossary_dict = None
+    if glossary_dict_json and glossary_dict_json.strip():
+        try:
+            parsed_glossary_dict = json.loads(glossary_dict_json)
+            if not isinstance(parsed_glossary_dict, dict):
+                raise ValueError("必须是字典")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"glossary_dict_json 解析失败: {e}")
+
+    # 2.3 解析 glossary_agent_config_json
+    parsed_glossary_agent = None
+    if glossary_agent_config_json and glossary_agent_config_json.strip():
+        try:
+            parsed_glossary_agent = json.loads(glossary_agent_config_json)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"glossary_agent_config_json 解析失败: {e}")
+
+    # -----------------------------------------------------------
+    # 步骤 3: 构建 Payload 字典
+    # -----------------------------------------------------------
+    payload_dict = {
+        # --- 基础参数 ---
+        "workflow_type": workflow_type,
+        "base_url": base_url,
+        "api_key": api_key,
+        "model_id": model_id,
+        "to_lang": to_lang,
+        "skip_translate": skip_translate,
+
+        # --- 控制参数 ---
+        "concurrent": concurrent,
+        "chunk_size": chunk_size,
+        "temperature": temperature,
+        "timeout": timeout,
+        "retry": retry,
+        "thinking": thinking,
+        "custom_prompt": custom_prompt,
+        "system_proxy_enable": system_proxy_enable,
+        "force_json": force_json,
+        "rpm": rpm,
+        "tpm": tpm,
+        "provider": provider,
+
+        # --- 格式参数 ---
+        "insert_mode": insert_mode,
+        "separator": separator,
+        "segment_mode": segment_mode,
+        "translate_regions": translate_regions,
+
+        # --- 引擎参数 ---
+        "convert_engine": convert_engine,
+        "mineru_token": mineru_token,
+        "model_version": model_version,
+        "formula_ocr": formula_ocr,
+        "code_ocr": code_ocr,
+
+        # --- MinerU 本地部署参数 ---
+        "mineru_deploy_base_url": mineru_deploy_base_url,
+        "mineru_deploy_backend": mineru_deploy_backend,
+        "mineru_deploy_formula_enable": mineru_deploy_formula_enable,
+        "mineru_deploy_start_page_id": mineru_deploy_start_page_id,
+        "mineru_deploy_end_page_id": mineru_deploy_end_page_id,
+        "mineru_deploy_lang_list": mineru_deploy_lang_list,
+        "mineru_deploy_server_url": mineru_deploy_server_url,
+
+        # --- 特殊参数 ---
+        "json_paths": json_paths,
+        "glossary_generate_enable": glossary_generate_enable,
+        "glossary_dict": parsed_glossary_dict,
+        "glossary_agent_config": parsed_glossary_agent
+    }
+
+    # -----------------------------------------------------------
+    # 步骤 4: 智能填充与清理
+    # -----------------------------------------------------------
+
+    # 4.1 清理空值：移除 None 和空字符串 ""
+    # 这是关键步骤：Form 表单为了 Swagger 美观默认给了 ""，但 Pydantic 模型可能期待 None 以触发其内部逻辑
+    payload_dict = {
+        k: v for k, v in payload_dict.items()
+        if v is not None and (not isinstance(v, str) or v != "")
+    }
+
+    # 4.2 特殊默认值处理
+    # 如果是 JSON 类型但没传 path，默认全选
+    if workflow_type == "json" and not payload_dict.get("json_paths"):
+        payload_dict["json_paths"] = ["$..*"]
+
+    # 4.3 引擎自动选择 (针对 PDF/MD)
+    if workflow_type == "markdown_based" and "convert_engine" not in payload_dict:
+        ext = Path(original_filename).suffix.lower()
+        if ext == ".pdf":
+            # 需要确保 DOCLING_EXIST 变量在当前作用域可用
+            payload_dict["convert_engine"] = "mineru" if not DOCLING_EXIST else "docling"
+        else:
+            payload_dict["convert_engine"] = "identity"
+
+    # -----------------------------------------------------------
+    # 步骤 5: 转换为 Pydantic Payload 对象 (严格校验)
+    # -----------------------------------------------------------
+    try:
+        # 使用 TypeAdapter 进行多态校验，将扁平字典转为嵌套的 TranslatePayload 对象
+        payload_obj = TypeAdapter(TranslatePayload).validate_python(payload_dict)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"参数配置校验失败: {str(e)}")
+
+    # -----------------------------------------------------------
+    # 步骤 6: 初始化任务状态 (复用 Global State)
+    # -----------------------------------------------------------
+    if task_id not in tasks_state:
+        tasks_state[task_id] = _create_default_task_state()
+        tasks_log_queues[task_id] = asyncio.Queue()
+        tasks_log_histories[task_id] = []
+
+    raw_stem = Path(original_filename).stem
+    safe_stem = raw_stem[:50] if len(raw_stem) > 50 else raw_stem
+
+    tasks_state[task_id].update({
+        "is_processing": True,
+        "status_message": "任务初始化中 (同步模式)...",
+        "error_flag": False,
+        "download_ready": False,
+        "original_filename_stem": safe_stem,
+        "original_filename": original_filename,
+        "task_start_time": time.time(),
+        "task_end_time": 0,
+    })
+
+    # -----------------------------------------------------------
+    # 步骤 7: 执行翻译 (Await 等待完成)
+    # -----------------------------------------------------------
+    try:
+        await _perform_translation(
+            task_id=task_id,
+            payload=payload_obj,
+            file_contents=file_contents,
+            original_filename=original_filename
+        )
+    except Exception as e:
+        # 异常时的资源清理
+        tasks_state.pop(task_id, None)
+        tasks_log_queues.pop(task_id, None)
+        tasks_log_histories.pop(task_id, None)
+        raise HTTPException(status_code=500, detail=f"内部翻译错误: {str(e)}")
+
+    # -----------------------------------------------------------
+    # 步骤 8: 检查结果并构造响应
+    # -----------------------------------------------------------
+    task_state = tasks_state.get(task_id)
+
+    if not task_state:
+        raise HTTPException(status_code=500, detail="任务状态丢失")
+
+    if task_state.get("error_flag"):
+        error_msg = task_state.get("status_message", "未知错误")
+        temp_dir = task_state.get("temp_dir")
+        if temp_dir and os.path.isdir(temp_dir):
+            shutil.rmtree(temp_dir)
+        tasks_state.pop(task_id, None)
+        raise HTTPException(status_code=500, detail=f"翻译任务失败: {error_msg}")
+
+    # 构造下载链接
+    base_url_str = str(request.base_url).rstrip("/")
+    downloads = {}
+    if task_state.get("download_ready") and task_state.get("downloadable_files"):
+        for file_type, info in task_state["downloadable_files"].items():
+            downloads[file_type] = f"{base_url_str}/service/download/{task_id}/{file_type}"
+
+    attachments = {}
+    if task_state.get("download_ready") and task_state.get("attachment_files"):
+        for identifier in task_state["attachment_files"]:
+            attachments[identifier] = f"{base_url_str}/service/attachment/{task_id}/{identifier}"
+
+    duration = task_state.get("task_end_time", 0) - task_state.get("task_start_time", 0)
+
+    # 返回结果 (任务资源保留在内存中以供下载)
+    return JSONResponse(content={
+        "status": "success",
+        "task_id": task_id,
+        "message": task_state.get("status_message"),
+        "duration": round(duration, 2),
+        "downloads": downloads,
+        "attachments": attachments
+    })
+
+
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 async def main_page():
     index_path = Path(STATIC_DIR) / "index.html"
@@ -2615,63 +2507,6 @@ async def redoc_html():
         title=app.title + " - ReDoc",
         redoc_js_url="/static/redoc/redoc.js",
     )
-
-
-@app.post("/temp/translate", tags=["Temp"])
-async def temp_translate(
-        base_url: str = Body(...),
-        api_key: str = Body("xx"),
-        model_id: str = Body(...),
-        mineru_token: Optional[str] = Body(None),
-        file_name: str = Body(...),
-        file_content: str = Body(...),
-        to_lang: str = Body("中文"),
-        concurrent: int = Body(default_params["concurrent"]),
-        temperature: float = Body(default_params["temperature"]),
-        thinking: ThinkingMode = Body(default_params["thinking"]),
-        chunk_size: int = Body(default_params["chunk_size"]),
-        custom_prompt: Optional[str] = Body(None),
-        model_version: Literal["pipeline", "vlm"] = Body("vlm"),
-        glossary_dict: Optional[Dict[str, str]] = Body(None),
-        rpm: Optional[int] = Body(None),
-        tpm: Optional[int] = Body(None),
-):
-    file_name = Path(file_name)
-    try:
-        decoded_content = base64.b64decode(file_content)
-    except (ValueError, binascii.Error):
-        decoded_content = file_content.encode("utf-8")
-    try:
-        workflow_config = MarkdownBasedWorkflowConfig(
-            convert_engine="mineru",
-            converter_config=ConverterMineruConfig(
-                mineru_token=mineru_token, model_version=model_version
-            ),
-            translator_config=MDTranslatorConfig(
-                base_url=base_url,
-                api_key=api_key,
-                model_id=model_id,
-                to_lang=to_lang,
-                custom_prompt=custom_prompt,
-                temperature=temperature,
-                thinking=thinking,
-                chunk_size=chunk_size,
-                concurrent=concurrent,
-                glossary_dict=glossary_dict,
-                rpm=rpm,
-                tpm=tpm,
-            ),
-            html_exporter_config=MD2HTMLExporterConfig(),
-        )
-        workflow = MarkdownBasedWorkflow(workflow_config)
-        workflow.read_bytes(
-            content=decoded_content, stem=file_name.stem, suffix=file_name.suffix
-        )
-        await workflow.translate_async()
-        return {"success": True, "content": workflow.export_to_markdown()}
-    except Exception as e:
-        global_logger.error(f"临时翻译接口出现错误：{e.__repr__()}", exc_info=True)
-        return {"success": False, "reason": e.__repr__()}
 
 
 app.include_router(service_router)

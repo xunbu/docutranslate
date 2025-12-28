@@ -528,7 +528,7 @@ class Agent:
         tpm_info = f", TPM:{self.rate_limiter.tpm}" if self.rate_limiter.tpm else ""
 
         self.logger.info(
-            f"base-url:{self.baseurl},model-id:{self.model_id},concurrent:{max_concurrent}{rpm_info}{tpm_info},temperature:{self.temperature},system_proxy:{self.system_proxy_enable},json_output:{force_json}"
+            f"provider:{self.provider},base-url:{self.baseurl},model-id:{self.model_id},concurrent:{max_concurrent}{rpm_info}{tpm_info},temperature:{self.temperature},system_proxy:{self.system_proxy_enable},json_output:{force_json}"
         )
         self.logger.info(f"预计发送{total}个请求")
 
@@ -775,7 +775,7 @@ class Agent:
         tpm_info = f", TPM:{self.rate_limiter.tpm}" if self.rate_limiter.tpm else ""
 
         self.logger.info(
-            f"base-url:{self.baseurl},model-id:{self.model_id},concurrent:{self.max_concurrent}{rpm_info}{tpm_info},temperature:{self.temperature},system_proxy:{self.system_proxy_enable},json_output:{json_format}"
+            f"provider:{self.provider},base-url:{self.baseurl},model-id:{self.model_id},concurrent:{self.max_concurrent}{rpm_info}{tpm_info},temperature:{self.temperature},system_proxy:{self.system_proxy_enable},json_output:{json_format}"
         )
         self.logger.info(
             f"预计发送{len(prompts)}个请求"
