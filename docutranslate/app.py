@@ -1,5 +1,6 @@
 # SPDX-FileCopyrightText: 2025 QinHan
 # SPDX-License-Identifier: MPL-2.0
+# docutranslate.app.py
 import asyncio
 import base64
 import binascii

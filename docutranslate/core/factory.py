@@ -1,4 +1,6 @@
-# --- 新增: 通用 Workflow 工厂函数 ---
+# SPDX-FileCopyrightText: 2025 QinHan
+# SPDX-License-Identifier: MPL-2.0
+# docutranslate.core.factory.py
 
 import logging
 
