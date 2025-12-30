@@ -317,18 +317,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # ===================================================================
 # --- Pydantic Models for Service API ---
-# ===================================================================
-
-ProviderType: TypeAlias = Literal[
-                              "ollama",
-                              "open.bigmodel.cn",
-                              "dashscope.aliyuncs.com",
-                              "ark.cn-beijing.volces.com",
-                              "generativelanguage.googleapis.com",
-                              "api.siliconflow.cn",
-                              "api.302.ai"
-                          ] | str
-
+# =================================================================
 
 
 # 4. 创建最终的请求体模型

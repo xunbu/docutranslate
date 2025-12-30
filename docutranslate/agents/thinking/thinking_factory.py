@@ -1,13 +1,14 @@
 from typing import TypeAlias, Literal, Any
 
-ProviderType: TypeAlias = Literal["ollama", "open.bigmodel.cn", "dashscope.aliyuncs.com", "ark.cn-beijing.volces.com", "generativelanguage.googleapis.com", "api.siliconflow.cn", "api.302.ai","api.openai.com"]|str
+from docutranslate.agents.provider import ProviderType
+
 ModeType: TypeAlias = Literal["ollama", "bigmodel", "aliyun", "volces", "google", "siliconflow", "default"]
 ThinkingField: TypeAlias = str
 EnableValueType: TypeAlias = str | dict[str,Any] | bool
 DisableValueType: TypeAlias =  str | dict[str,Any] | bool
 ThinkingConfig: TypeAlias= tuple[ThinkingField, EnableValueType, DisableValueType]
 
-thinking_mode: dict[ModeType,ThinkingConfig] = {
+thinking_mode: dict[ProviderType,ThinkingConfig] = {
     "ollama": ("reasoning_effort", "medium", "none"),
     "bigmodel": ("thinking", {"type": "enabled"}, {"type": "disabled"}),
     "aliyun": (
@@ -53,18 +54,16 @@ def get_thinking_mode_by_model_id(model_id: str) -> ThinkingConfig :
 
 def get_thinking_mode(provider: ProviderType, model_id: str) -> ThinkingConfig :
     provider = provider
-    if provider == "open.bigmodel.cn":
+    if provider == "bigmodel":
         return thinking_mode["bigmodel"]
-    elif provider == "dashscope.aliyuncs.com":
+    elif provider == "aliyun":
         return thinking_mode["aliyun"]
-    elif provider == "ark.cn-beijing.volces.com":
+    elif provider == "volces":
         return thinking_mode["volces"]
-    elif provider == "generativelanguage.googleapis.com":
+    elif provider == "google":
         return thinking_mode["google"]
-    elif provider == "api.siliconflow.cn":
+    elif provider == "siliconflow":
         return thinking_mode["siliconflow"]
-    elif provider == "api.302.ai":
-        return get_thinking_mode_by_model_id(model_id)
     elif provider == "ollama":
         return thinking_mode["ollama"]
-    return thinking_mode["default"]
+    return get_thinking_mode_by_model_id(model_id)

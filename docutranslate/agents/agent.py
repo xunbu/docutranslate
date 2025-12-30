@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 import httpx
 import tiktoken
 
+from docutranslate.agents.provider import get_provider_by_domain
 from docutranslate.agents.thinking.thinking_factory import get_thinking_mode, ProviderType
 from docutranslate.logger import global_logger
 from docutranslate.utils.utils import get_httpx_proxies
@@ -303,7 +304,7 @@ class Agent:
         # 新增：初始化 encoding 用于估算
         self.encoding = self._get_encoding_for_model(self.model_id)
 
-        self.provider=config.provider if config.provider is not None else self.domain
+        self.provider=config.provider if config.provider is not None else get_provider_by_domain(self.domain)
 
     def _get_encoding_for_model(self, model_name: str):
         """获取 tiktoken encoding，如果失败则使用 cl100k_base 兜底"""
