@@ -59,6 +59,7 @@ from docutranslate.agents.glossary_agent import GlossaryAgentConfig
 from docutranslate.core.schemas import TranslatePayload, MarkdownWorkflowParams, TextWorkflowParams, JsonWorkflowParams, \
     XlsxWorkflowParams, DocxWorkflowParams, SrtWorkflowParams, EpubWorkflowParams, HtmlWorkflowParams, \
     AssWorkflowParams, PPTXWorkflowParams
+from docutranslate.exporter.md.types import ConvertEngineType
 # --- 核心代码 Imports ---
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
 from docutranslate.workflow.ass_workflow import AssWorkflow, AssWorkflowConfig
@@ -328,11 +329,6 @@ ProviderType: TypeAlias = Literal[
                               "api.302.ai"
                           ] | str
 
-
-# --- PPTX WORKFLOW PARAMS END ---
-
-
-# 3. 使用可辨识联合类型（Discriminated Union）将它们组合起来
 
 
 # 4. 创建最终的请求体模型
@@ -996,7 +992,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
-                    "provider",  # Added provider
+                    "provider",
                 },
                 exclude_none=True,
             )
@@ -2187,7 +2183,7 @@ async def service_get_app_version():
 
 @service_router.post(
     "/flat-translate",
-    summary="直接翻译 (全参数展开/同步等待)",
+    summary="translate(sync)",
     description="""
     上传文件并直接等待翻译完成，无需轮询状态。
     所有参数均已扁平化展开，直接通过 Form 表单提交。
@@ -2223,13 +2219,13 @@ async def service_flat_translate(
         separator: str = Form("\n", description="追加/前置时的分隔符"),
         segment_mode: str = Form("line", description="[Txt专用] 分段模式: line(按行), paragraph(按段), none(全文)"),
         translate_regions: Optional[List[str]] = Form(None, description="[Xlsx专用] 翻译区域列表, 如 'Sheet1!A1:B10'"),
-        convert_engine: str = Form("", description="[PDF/MD] 解析引擎: mineru, docling, identity (默认根据后缀自动选择)"),
+        convert_engine: Optional[ConvertEngineType] = Form("mineru", description="[PDF/MD] 解析引擎: mineru, docling, identity,mineru_deploy"),
         mineru_token: Optional[str] = Form("", description="[MinerU Cloud] API Token"),
         model_version: str = Form("vlm", description="[MinerU Cloud] 模型版本: vlm, pipeline"),
         formula_ocr: bool = Form(True, description="[PDF] 是否启用公式识别"),
         code_ocr: bool = Form(True, description="[Docling] 是否启用代码块识别"),
         mineru_deploy_base_url: str = Form("http://127.0.0.1:8000", description="[MinerU Local] 服务地址"),
-        mineru_deploy_backend: str = Form("pipeline", description="[MinerU Local] 后端类型"),
+        mineru_deploy_backend: str = Form("VLM", description="[MinerU Local] 后端类型"),
         mineru_deploy_formula_enable: bool = Form(True, description="[MinerU Local] 是否启用公式"),
         mineru_deploy_start_page_id: int = Form(0, description="[MinerU Local] 起始页码"),
         mineru_deploy_end_page_id: int = Form(99999, description="[MinerU Local] 结束页码"),
