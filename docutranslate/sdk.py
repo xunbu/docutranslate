@@ -10,23 +10,13 @@ from typing import Optional, Literal, Dict, Any, List, Union
 
 from pydantic import TypeAdapter
 
-from docutranslate.core.schemas import TranslatePayload, GlossaryAgentConfigPayload
+from docutranslate.agents.agent import ThinkingMode
+from docutranslate.agents.provider import ProviderType
+
+from docutranslate.core.schemas import TranslatePayload, GlossaryAgentConfigPayload, WorkflowType, InsertMode
 from docutranslate.core.factory import create_workflow_from_payload
 from docutranslate.translator import default_params
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
-
-# --- 类型定义 ---
-WorkflowType = Literal[
-    "auto", "markdown_based", "txt", "json", "xlsx", "docx",
-    "srt", "epub", "html", "ass", "pptx"
-]
-ThinkingMode = Literal["default", "enable", "disable"]
-InsertMode = Literal["replace", "append", "prepend"]
-ProviderType = Literal[
-    "ollama", "open.bigmodel.cn", "dashscope.aliyuncs.com",
-    "ark.cn-beijing.volces.com", "generativelanguage.googleapis.com",
-    "api.siliconflow.cn", "api.302.ai"
-]
 
 # --- 映射配置 ---
 _WORKFLOW_MAPPINGS = {
@@ -92,7 +82,7 @@ class TranslationResult:
         return self._workflow
 
 
-class DocuTranslate:
+class Client:
     """
     DocuTranslate SDK。
     """

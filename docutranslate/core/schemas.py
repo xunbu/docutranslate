@@ -25,6 +25,13 @@ from docutranslate.agents.agent import ThinkingMode
 from docutranslate.agents.thinking.thinking_factory import ProviderType
 from docutranslate.translator import default_params
 
+# --- 公共类型定义 ---
+WorkflowType = Literal[
+    "auto", "markdown_based", "txt", "json", "xlsx", "docx",
+    "srt", "epub", "html", "ass", "pptx"
+]
+InsertMode = Literal["replace", "append", "prepend"]
+
 
 class GlossaryAgentConfigPayload(BaseModel):
     base_url: str = Field(
