@@ -188,7 +188,7 @@ def get_workflow_type_from_filename(filename: str) -> str:
         return "docx"
     elif ext in [".csv", ".xlsx", ".xls"]:
         return "xlsx"
-    elif ext in [".pptx", "ppt"]:
+    elif ext in [".pptx", ".ppt"]:
         return "pptx"
     elif ext in [".json"]:
         return "json"
