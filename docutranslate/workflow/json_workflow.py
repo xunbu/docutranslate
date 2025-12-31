@@ -61,7 +61,7 @@ class JsonWorkflow(Workflow[JsonWorkflowConfig, Document, Document], HTMLExporta
         return docu.content.decode()
 
     def save_as_html(self, name: str = None, output_dir: Path | str = "./output",
-                     config: Json2HTMLExporter | None = None) -> Self:
+                     config: Json2HTMLExporterConfig | None = None) -> Self:
         config = config or self.config.html_exporter_config
         self._save(exporter=Json2HTMLExporter(config), name=name, output_dir=output_dir)
         return self

@@ -64,7 +64,7 @@ class DocxWorkflow(Workflow[DocxWorkflowConfig, Document, Document], HTMLExporta
         return docu.content
 
     def save_as_html(self, name: str = None, output_dir: Path | str = "./output",
-                     config: Docx2HTMLExporter | None = None) -> Self:
+                     config: Docx2HTMLExporterConfig | None = None) -> Self:
         config = config or self.config.html_exporter_config
         self._save(exporter=Docx2HTMLExporter(config), name=name, output_dir=output_dir)
         return self

@@ -64,7 +64,7 @@ class PPTXWorkflow(Workflow[PPTXWorkflowConfig, Document, Document], HTMLExporta
         return docu.content
 
     def save_as_html(self, name: str = None, output_dir: Path | str = "./output",
-                     config: PPTX2HTMLExporter | None = None) -> Self:
+                     config: PPTX2HTMLExporterConfig | None = None) -> Self:
         config = config or self.config.html_exporter_config
         self._save(exporter=PPTX2HTMLExporter(config), name=name, output_dir=output_dir)
         return self
