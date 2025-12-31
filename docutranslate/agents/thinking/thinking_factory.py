@@ -2,7 +2,7 @@ from typing import TypeAlias, Literal, Any
 
 from docutranslate.agents.provider import ProviderType
 
-ModeType: TypeAlias = Literal["ollama", "bigmodel", "aliyun", "volces", "google", "siliconflow", "default"]
+ModeType: TypeAlias = Literal["ollama", "bigmodel", "aliyuncs", "volces", "google", "siliconflow", "default"]
 ThinkingField: TypeAlias = str
 EnableValueType: TypeAlias = str | dict[str,Any] | bool
 DisableValueType: TypeAlias =  str | dict[str,Any] | bool
@@ -11,7 +11,7 @@ ThinkingConfig: TypeAlias= tuple[ThinkingField, EnableValueType, DisableValueTyp
 thinking_mode: dict[ProviderType,ThinkingConfig] = {
     "ollama": ("reasoning_effort", "medium", "none"),
     "bigmodel": ("thinking", {"type": "enabled"}, {"type": "disabled"}),
-    "aliyun": (
+    "aliyuncs": (
         "extra_body",
         {"enable_thinking": True},
         {"enable_thinking": False},
@@ -44,7 +44,7 @@ def get_thinking_mode_by_model_id(model_id: str) -> ThinkingConfig :
     if "glm-4.5" in model_id:
         return thinking_mode["bigmodel"]
     elif "qwen3" in model_id:
-        return thinking_mode["aliyun"]
+        return thinking_mode["aliyuncs"]
     elif "seed-1-6" in model_id:
         return thinking_mode["volces"]
     elif "gemini" in model_id:
@@ -56,8 +56,8 @@ def get_thinking_mode(provider: ProviderType, model_id: str) -> ThinkingConfig :
     provider = provider
     if provider == "bigmodel":
         return thinking_mode["bigmodel"]
-    elif provider == "aliyun":
-        return thinking_mode["aliyun"]
+    elif provider == "aliyuncs":
+        return thinking_mode["aliyuncs"]
     elif provider == "volces":
         return thinking_mode["volces"]
     elif provider == "google":
