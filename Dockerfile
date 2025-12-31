@@ -33,7 +33,8 @@ EXPOSE 8010
 ENTRYPOINT ["uv", "run", "docutranslate", "-i"]
 
 
-#docker build --build-arg DOC_VERSION=1.5.1 -t xunbu/docutranslate:v1.5.1 .
-#docker push xunbu/docutranslate:v1.5.1
-#docker run -d -p 8010:8010 xunbu/docutranslate:v1.5.4
-#docker run -it -p 8010:8010 xunbu/docutranslate:v1.5.4
+#docker build --build-arg DOC_VERSION=1.6.0 -t xunbu/docutranslate:v1.6.0 -t xunbu/docutranslate:latest .
+#docker push xunbu/docutranslate:v1.6.0
+#docker push xunbu/docutranslate:latest
+#docker run -d -p 8010:8010 xunbu/docutranslate:v1.6.0
+#docker run -it -p 8010:8010 xunbu/docutranslate:v1.6.0
