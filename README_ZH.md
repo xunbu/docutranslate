@@ -240,24 +240,60 @@ async def translate_multiple():
 asyncio.run(translate_multiple())
 ```
 
-### 可用工作流（使用 Workflow API）
+### 使用 Workflow API（高级控制）
 
-如果您需要更精细的控制，可以直接使用 Workflow API。以下是可用的工作流：
+如需更精细的控制，可直接使用 Workflow API。所有工作流遵循相同模式：
 
-| 工作流                         | 适用场景                                                    | 输入格式                                     | 输出格式                   | 核心配置类                         |
-|:----------------------------|:--------------------------------------------------------|:-----------------------------------------|:-----------------------|:------------------------------|
-| **`MarkdownBasedWorkflow`** | 处理富文本文档，如PDF、Word、图片等。流程为：`文件 -> Markdown -> 翻译 -> 导出`。 | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` 等 | `.md`, `.zip`, `.html` | `MarkdownBasedWorkflowConfig` |
-| **`TXTWorkflow`**           | 处理纯文本文档。流程为：`txt -> 翻译 -> 导出`。                          | `.txt` 及其他纯文本格式                          | `.txt`, `.html`        | `TXTWorkflowConfig`           |
-| **`JsonWorkflow`**          | 处理json文件。流程为：`json -> 翻译 -> 导出`。                        | `.json`                                  | `.json`, `.html`       | `JsonWorkflowConfig`          |
-| **`DocxWorkflow`**          | 处理docx文件。流程为：`docx -> 翻译 -> 导出`。                        | `.docx`                                  | `.docx`, `.html`       | `docxWorkflowConfig`          |
-| **`XlsxWorkflow`**          | 处理xlsx文件。流程为：`xlsx -> 翻译 -> 导出`。                        | `.xlsx`、`.csv`                           | `.xlsx`, `.html`       | `XlsxWorkflowConfig`          |
-| **`SrtWorkflow`**           | 处理srt文件。流程为：`srt -> 翻译 -> 导出`。                          | `.srt`                                   | `.srt`, `.html`        | `SrtWorkflowConfig`           |
-| **`EpubWorkflow`**          | 处理epub文件。流程为：`epub -> 翻译 -> 导出`。                        | `.epub`                                  | `.epub`, `.html`       | `EpubWorkflowConfig`          |
-| **`HtmlWorkflow`**          | 处理html文件。流程为：`html -> 翻译 -> 导出`。                        | `.html`, `.htm`                          | `.html`                | `HtmlWorkflowConfig`          |
+```python
+# 模式:
+# 1. 创建 TranslatorConfig（LLM 设置）
+# 2. 创建 WorkflowConfig（工作流设置）
+# 3. 创建 Workflow 实例
+# 4. workflow.read_path(文件)
+# 5. await workflow.translate_async()
+# 6. workflow.save_as_*(name=...) 或 export_to_*(...)
+```
 
-> 在交互式界面中可以导出pdf格式
+#### 可用工作流及输出方法
 
-### 示例 1: 翻译一个 PDF 文件 (使用 `MarkdownBasedWorkflow`)
+| 工作流 | 输入格式 | save_as_* | export_to_* | 关键配置选项 |
+|:---|:---|:---|:---|:---|
+| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip` | `html`, `markdown`, `markdown_zip` | `convert_engine`, `translator_config` |
+| **TXTWorkflow** | `.txt` | `txt`, `html` | `txt`, `html` | `translator_config` |
+| **JsonWorkflow** | `.json` | `json`, `html` | `json`, `html` | `translator_config`, `json_paths` |
+| **DocxWorkflow** | `.docx` | `docx`, `html` | `docx`, `html` | `translator_config`, `insert_mode` |
+| **XlsxWorkflow** | `.xlsx`, `.csv` | `xlsx`, `html` | `xlsx`, `html` | `translator_config`, `insert_mode` |
+| **SrtWorkflow** | `.srt` | `srt`, `html` | `srt`, `html` | `translator_config` |
+| **EpubWorkflow** | `.epub` | `epub`, `html` | `epub`, `html` | `translator_config`, `insert_mode` |
+| **HtmlWorkflow** | `.html`, `.htm` | `html` | `html` | `translator_config`, `insert_mode` |
+| **AssWorkflow** | `.ass` | `ass`, `html` | `ass`, `html` | `translator_config` |
+
+#### 关键配置选项
+
+**通用 TranslatorConfig 选项：**
+
+| 选项 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `base_url` | `str` | - | AI 平台基础 URL |
+| `api_key` | `str` | - | AI 平台 API 密钥 |
+| `model_id` | `str` | - | 模型 ID |
+| `to_lang` | `str` | - | 目标语言 |
+| `chunk_size` | `int` | 3000 | 文本分块大小 |
+| `concurrent` | `int` | 10 | 并发请求数 |
+| `temperature` | `float` | 0.3 | LLM 温度 |
+| `timeout` | `int` | 60 | 请求超时（秒） |
+| `retry` | `int` | 3 | 重试次数 |
+
+**格式特定选项：**
+
+| 选项 | 适用工作流 | 说明 |
+|:---|:---|:---|
+| `insert_mode` | Docx, Xlsx, Html, Epub | `"replace"`（默认）, `"append"`, `"prepend"` |
+| `json_paths` | Json | JSONPath 表达式（如 `["$.*", "$.name"]`） |
+| `separator` | Docx, Xlsx, Html, Epub | append/prepend 模式的文本分隔符 |
+| `convert_engine` | MarkdownBased | `"mineru"`（默认）, `"docling"`, `"mineru_deploy"` |
+
+#### 示例 1: 翻译一个 PDF 文件 (使用 `MarkdownBasedWorkflow`)
 
 这是最常见的用例。我们将使用 `minerU` 引擎将 PDF 转换为 Markdown，然后使用 LLM 进行翻译。这里以异步方式为例。
 

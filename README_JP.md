@@ -239,24 +239,60 @@ async def translate_multiple():
 asyncio.run(translate_multiple())
 ```
 
-### 利用可能なワークフロー（Workflow API を使用）
+### Workflow API の使用（高度な制御）
 
-より精细な制御が必要な場合は、Workflow API を直接使用してください。以下は利用可能なワークフローです：
+より精细な制御が必要な場合は、Workflow API を直接使用してください。すべてのワークフローは同じパターンに従います：
 
-| ワークフロー | 適用シナリオ | 入力形式 | 出力形式 | コア設定クラス |
+```python
+# パターン:
+# 1. TranslatorConfig を作成（LLM設定）
+# 2. WorkflowConfig を作成（ワークフロー設定）
+# 3. Workflow インスタンスを作成
+# 4. workflow.read_path(ファイル)
+# 5. await workflow.translate_async()
+# 6. workflow.save_as_*(name=...) または export_to_*(...)
+```
+
+#### 利用可能なワークフローと出力メソッド
+
+| ワークフロー | 入力形式 | save_as_* | export_to_* | 主要設定オプション |
 |:---|:---|:---|:---|:---|
-| **`MarkdownBasedWorkflow`** | PDF、Word、画像などのリッチテキストドキュメントを処理。フロー：`ファイル -> Markdown -> 翻訳 -> エクスポート`。 | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` 等 | `.md`, `.zip`, `.html` | `MarkdownBasedWorkflowConfig` |
-| **`TXTWorkflow`** | プレーンテキストドキュメントを処理。フロー：`txt -> 翻訳 -> エクスポート`。 | `.txt` およびその他のテキスト形式 | `.txt`, `.html` | `TXTWorkflowConfig` |
-| **`JsonWorkflow`** | JSONファイルを処理。フロー：`json -> 翻訳 -> エクスポート`。 | `.json` | `.json`, `.html` | `JsonWorkflowConfig` |
-| **`DocxWorkflow`** | docxファイルを処理。フロー：`docx -> 翻訳 -> エクスポート`。 | `.docx` | `.docx`, `.html` | `docxWorkflowConfig` |
-| **`XlsxWorkflow`** | xlsxファイルを処理。フロー：`xlsx -> 翻訳 -> エクスポート`。 | `.xlsx`, `.csv` | `.xlsx`, `.html` | `XlsxWorkflowConfig` |
-| **`SrtWorkflow`** | srtファイルを処理。フロー：`srt -> 翻訳 -> エクスポート`。 | `.srt` | `.srt`, `.html` | `SrtWorkflowConfig` |
-| **`EpubWorkflow`** | epubファイルを処理。フロー：`epub -> 翻訳 -> エクスポート`。 | `.epub` | `.epub`, `.html` | `EpubWorkflowConfig` |
-| **`HtmlWorkflow`** | htmlファイルを処理。フロー：`html -> 翻訳 -> エクスポート`。 | `.html`, `.htm` | `.html` | `HtmlWorkflowConfig` |
+| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip` | `html`, `markdown`, `markdown_zip` | `convert_engine`, `translator_config` |
+| **TXTWorkflow** | `.txt` | `txt`, `html` | `txt`, `html` | `translator_config` |
+| **JsonWorkflow** | `.json` | `json`, `html` | `json`, `html` | `translator_config`, `json_paths` |
+| **DocxWorkflow** | `.docx` | `docx`, `html` | `docx`, `html` | `translator_config`, `insert_mode` |
+| **XlsxWorkflow** | `.xlsx`, `.csv` | `xlsx`, `html` | `xlsx`, `html` | `translator_config`, `insert_mode` |
+| **SrtWorkflow** | `.srt` | `srt`, `html` | `srt`, `html` | `translator_config` |
+| **EpubWorkflow** | `.epub` | `epub`, `html` | `epub`, `html` | `translator_config`, `insert_mode` |
+| **HtmlWorkflow** | `.html`, `.htm` | `html` | `html` | `translator_config`, `insert_mode` |
+| **AssWorkflow** | `.ass` | `ass`, `html` | `ass`, `html` | `translator_config` |
 
-> インタラクティブ画面ではPDF形式でのエクスポートも可能です。
+#### 主要設定オプション
 
-### 例 1: PDFファイルの翻訳 (`MarkdownBasedWorkflow` を使用)
+**共通 TranslatorConfig オプション:**
+
+| オプション | タイプ | デフォルト | 説明 |
+|:---|:---|:---|:---|
+| `base_url` | `str` | - | AI プラットフォームベース URL |
+| `api_key` | `str` | - | AI プラットフォーム API キー |
+| `model_id` | `str` | - | モデル ID |
+| `to_lang` | `str` | - | ターゲット言語 |
+| `chunk_size` | `int` | 3000 | テキストチャンクサイズ |
+| `concurrent` | `int` | 10 | 同時リクエスト数 |
+| `temperature` | `float` | 0.3 | LLM 温度 |
+| `timeout` | `int` | 60 | リクエストタイムアウト（秒） |
+| `retry` | `int` | 3 | 再試行回数 |
+
+**フォーマット固有オプション:**
+
+| オプション | 適用ワークフロー | 説明 |
+|:---|:---|:---|
+| `insert_mode` | Docx, Xlsx, Html, Epub | `"replace"`（デフォルト）, `"append"`, `"prepend"` |
+| `json_paths` | Json | JSONPath 式（例: `["$.*", "$.name"]`） |
+| `separator` | Docx, Xlsx, Html, Epub | append/prepend モードのテキスト区切り文字 |
+| `convert_engine` | MarkdownBased | `"mineru"`（デフォルト）, `"docling"`, `"mineru_deploy"` |
+
+#### 例 1: PDFファイルの翻訳 (`MarkdownBasedWorkflow` を使用)
 
 これが最も一般的なユースケースです。`minerU` エンジンを使用して PDF を Markdown に変換し、その後 LLM を使用して翻訳します。ここでは非同期方式を例にします。
 

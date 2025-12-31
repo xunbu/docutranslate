@@ -239,24 +239,60 @@ async def translate_multiple():
 asyncio.run(translate_multiple())
 ```
 
-### Available Workflows (For Workflow API)
+### Using Workflow API (For Advanced Control)
 
-If you prefer more control, use the Workflow API directly. Here are the available workflows:
+For more control, use the Workflow API directly. Each workflow follows the same pattern:
 
-| Workflow | Applicable Scenarios | Input Formats | Output Formats | Core Configuration Class |
+```python
+# Pattern:
+# 1. Create TranslatorConfig (LLM settings)
+# 2. Create WorkflowConfig (workflow settings)
+# 3. Create Workflow instance
+# 4. workflow.read_path(file)
+# 5. await workflow.translate_async()
+# 6. workflow.save_as_*(name=...) or export_to_*(...)
+```
+
+#### Available Workflows and Output Methods
+
+| Workflow | Inputs | save_as_* | export_to_* | Key Config Options |
 |:---|:---|:---|:---|:---|
-| **`MarkdownBasedWorkflow`** | Handles rich text documents like PDF, Word, images, etc. Flow: `File -> Markdown -> Translate -> Export`. | `.pdf`, `.docx`, `.md`, `.png`, `.jpg`, etc. | `.md`, `.zip`, `.html` | `MarkdownBasedWorkflowConfig` |
-| **`TXTWorkflow`** | Handles plain text documents. Flow: `txt -> Translate -> Export`. | `.txt` and other plain text formats | `.txt`, `.html` | `TXTWorkflowConfig` |
-| **`JsonWorkflow`** | Handles JSON files. Flow: `json -> Translate -> Export`. | `.json` | `.json`, `.html` | `JsonWorkflowConfig` |
-| **`DocxWorkflow`** | Handles docx files. Flow: `docx -> Translate -> Export`. | `.docx` | `.docx`, `.html` | `docxWorkflowConfig` |
-| **`XlsxWorkflow`** | Handles xlsx files. Flow: `xlsx -> Translate -> Export`. | `.xlsx`, `.csv` | `.xlsx`, `.html` | `XlsxWorkflowConfig` |
-| **`SrtWorkflow`** | Handles srt files. Flow: `srt -> Translate -> Export`. | `.srt` | `.srt`, `.html` | `SrtWorkflowConfig` |
-| **`EpubWorkflow`** | Handles epub files. Flow: `epub -> Translate -> Export`. | `.epub` | `.epub`, `.html` | `EpubWorkflowConfig` |
-| **`HtmlWorkflow`** | Handles html files. Flow: `html -> Translate -> Export`. | `.html`, `.htm` | `.html` | `HtmlWorkflowConfig` |
+| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip` | `html`, `markdown`, `markdown_zip` | `convert_engine`, `translator_config` |
+| **TXTWorkflow** | `.txt` | `txt`, `html` | `txt`, `html` | `translator_config` |
+| **JsonWorkflow** | `.json` | `json`, `html` | `json`, `html` | `translator_config`, `json_paths` |
+| **DocxWorkflow** | `.docx` | `docx`, `html` | `docx`, `html` | `translator_config`, `insert_mode` |
+| **XlsxWorkflow** | `.xlsx`, `.csv` | `xlsx`, `html` | `xlsx`, `html` | `translator_config`, `insert_mode` |
+| **SrtWorkflow** | `.srt` | `srt`, `html` | `srt`, `html` | `translator_config` |
+| **EpubWorkflow** | `.epub` | `epub`, `html` | `epub`, `html` | `translator_config`, `insert_mode` |
+| **HtmlWorkflow** | `.html`, `.htm` | `html` | `html` | `translator_config`, `insert_mode` |
+| **AssWorkflow** | `.ass` | `ass`, `html` | `ass`, `html` | `translator_config` |
 
-> In the interactive interface, you can also export to PDF format.
+#### Key Configuration Options
 
-### Example 1: Translate a PDF File (Using `MarkdownBasedWorkflow`)
+**Common TranslatorConfig Options:**
+
+| Option | Type | Default | Description |
+|:---|:---|:---|:---|
+| `base_url` | `str` | - | AI platform base URL |
+| `api_key` | `str` | - | AI platform API key |
+| `model_id` | `str` | - | Model ID |
+| `to_lang` | `str` | - | Target language |
+| `chunk_size` | `int` | 3000 | Text chunk size |
+| `concurrent` | `int` | 10 | Concurrent requests |
+| `temperature` | `float` | 0.3 | LLM temperature |
+| `timeout` | `int` | 60 | Request timeout (seconds) |
+| `retry` | `int` | 3 | Retry attempts |
+
+**Format-Specific Options:**
+
+| Option | Applicable Workflows | Description |
+|:---|:---|:---|
+| `insert_mode` | Docx, Xlsx, Html, Epub | `"replace"` (default), `"append"`, `"prepend"` |
+| `json_paths` | Json | JSONPath expressions (e.g., `["$.*", "$.name"]`) |
+| `separator` | Docx, Xlsx, Html, Epub | Text separator for append/prepend modes |
+| `convert_engine` | MarkdownBased | `"mineru"` (default), `"docling"`, `"mineru_deploy"` |
+
+#### Example 1: Translate a PDF File (Using `MarkdownBasedWorkflow`)
 
 This is the most common use case. We will use the `minerU` engine to convert the PDF to Markdown, and then translate it using an LLM. This example uses asynchronous execution.
 
