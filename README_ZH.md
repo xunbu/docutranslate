@@ -49,9 +49,8 @@
 对于希望快速上手的用户，我们在 [GitHub Releases](https://github.com/xunbu/docutranslate/releases) 上提供整合包。您只需下载、解压，并填入您的
 AI 平台 API-Key 即可开始使用。
 
-- **DocuTranslate**: 标准版，使用在线的 `minerU` 引擎解析PDF文档，如果不需要本地解析pdf选这个版本（推荐）。
-- **DocuTranslate_full**: 完整版，内置 `docling` 本地PDF解析引擎，需要本地解析pdf选这个版本。
-> 1.5.1版本以后支持调用本地部署的mineru服务
+- **DocuTranslate**: 标准版，使用 `minerU`（在线或本地部署）解析PDF文档，支持调用本地部署的 minerU API。（推荐）
+- **DocuTranslate_full**: 完整版，内置 `docling` 本地PDF解析引擎，无需 minerU 即可进行离线PDF解析时选择此版本。
 
 ## 安装
 
@@ -100,33 +99,13 @@ docker run -d -p 8010:8010 xunbu/docutranslate:latest
 
 ## 核心概念：工作流 (Workflow)
 
-新版 DocuTranslate 的核心是 **工作流 (Workflow)**。每个工作流都是一个专门为特定类型文件设计的、完整的端到端翻译管道。您不再与一个庞大的类交互，而是根据您的文件类型选择并配置一个合适的工作流。
+DocuTranslate 使用 **工作流 (Workflow)** 系统，每个工作流都是针对特定文件类型的完整翻译管道。
 
-**基本使用流程如下：**
-
-1. **选择工作流**：根据您的输入文件类型（例如，PDF/Word 或 TXT）选择一个工作流，如 `MarkdownBasedWorkflow` 或 `TXTWorkflow`。
-2. **构建配置**：为所选工作流创建相应的配置对象（如 `MarkdownBasedWorkflowConfig`）。此配置对象包含了所有需要的子配置，例如：
-    * **转换器配置 (Converter Config)**: 定义如何将原始文件（如PDF）转换为 Markdown。
-    * **翻译器配置 (Translator Config)**: 定义使用哪个 LLM、API-Key、目标语言等。
-    * **导出器配置 (Exporter Config)**: 定义输出格式（如HTML）的特定选项。
-3. **实例化工作流**：使用配置对象创建工作流实例。
-4. **执行翻译**：调用工作流的 `.read_*()` 和 `.translate()` / `.translate_async()` 方法。
-5. **导出/保存结果**：调用 `.export_to_*()` 或 `.save_as_*()` 方法获取或保存翻译结果。
-
-## 可用工作流
-
-| 工作流                         | 适用场景                                                    | 输入格式                                     | 输出格式                   | 核心配置类                         |
-|:----------------------------|:--------------------------------------------------------|:-----------------------------------------|:-----------------------|:------------------------------|
-| **`MarkdownBasedWorkflow`** | 处理富文本文档，如PDF、Word、图片等。流程为：`文件 -> Markdown -> 翻译 -> 导出`。 | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` 等 | `.md`, `.zip`, `.html` | `MarkdownBasedWorkflowConfig` |
-| **`TXTWorkflow`**           | 处理纯文本文档。流程为：`txt -> 翻译 -> 导出`。                          | `.txt` 及其他纯文本格式                          | `.txt`, `.html`        | `TXTWorkflowConfig`           |
-| **`JsonWorkflow`**          | 处理json文件。流程为：`json -> 翻译 -> 导出`。                        | `.json`                                  | `.json`, `.html`       | `JsonWorkflowConfig`          |
-| **`DocxWorkflow`**          | 处理docx文件。流程为：`docx -> 翻译 -> 导出`。                        | `.docx`                                  | `.docx`, `.html`       | `docxWorkflowConfig`          |
-| **`XlsxWorkflow`**          | 处理xlsx文件。流程为：`xlsx -> 翻译 -> 导出`。                        | `.xlsx`、`.csv`                           | `.xlsx`, `.html`       | `XlsxWorkflowConfig`          |
-| **`SrtWorkflow`**           | 处理srt文件。流程为：`srt -> 翻译 -> 导出`。                          | `.srt`                                   | `.srt`, `.html`        | `SrtWorkflowConfig`           |
-| **`EpubWorkflow`**          | 处理epub文件。流程为：`epub -> 翻译 -> 导出`。                        | `.epub`                                  | `.epub`, `.html`       | `EpubWorkflowConfig`          |
-| **`HtmlWorkflow`**          | 处理html文件。流程为：`html -> 翻译 -> 导出`。                        | `.html`, `.htm`                          | `.html`                | `HtmlWorkflowConfig`          |
-
-> 在交互式界面中可以导出pdf格式
+**基本流程：**
+1. 根据文件类型选择工作流
+2. 配置工作流（LLM、解析引擎、输出格式）
+3. 执行翻译
+4. 保存结果
 
 ## 启动 Web UI 和 API 服务
 
@@ -154,6 +133,129 @@ docutranslate -i
 - **API 文档**: 完整的 API 文档（Swagger UI）位于 `http://127.0.0.1:8010/docs`。
 
 ## 使用方式
+
+### 使用简单的 Client SDK (推荐)
+
+使用 `Client` 类是开始翻译最简单的方式，它提供了简洁直观的 API：
+
+```python
+from docutranslate.sdk import Client
+
+# 使用您的 AI 平台设置初始化客户端
+client = Client(
+    api_key="YOUR_OPENAI_API_KEY",  # 或其他 AI 平台 API key
+    base_url="https://api.openai.com/v1/",
+    model_id="gpt-4o",
+    to_lang="中文",
+    concurrent=10,  # 并发请求数
+)
+
+# 翻译单个文件 (自动检测文件类型)
+result = client.translate("path/to/your/document.pdf")
+
+# 使用默认格式保存 (PDF -> markdown with embedded images)
+print(f"翻译完成！保存位置: {result.save()}")
+
+# 或显式指定输出格式
+# PDF/markdown_based 支持:
+#   - "markdown": Markdown 格式，内嵌 base64 图片 (默认)
+#   - "markdown_zip": Markdown 格式，图片分离存储 (ZIP 压缩包)
+#   - "html": HTML 格式
+# docx 支持: "docx"
+# xlsx 支持: "xlsx"
+result.save(fmt="html")  # 保存为 HTML
+result.save(fmt="markdown")  # 保存为 Markdown（内嵌图片）
+result.save(fmt="markdown_zip")  # 保存为 ZIP（图片分离）
+
+# 保存到自定义位置
+result.save(output_dir="./my_translations", name="my_document.html")
+
+# 导出为 Base64 编码字符串
+base64_content = result.export(fmt="html")
+print(f"导出内容长度: {len(base64_content)}")
+
+# 您还可以访问底层工作流以进行高级操作
+# workflow = result.workflow
+```
+
+**Client 功能特点:**
+- **自动检测**: 自动检测文件类型并选择合适的工作流
+- **灵活配置**: 可在每次翻译调用时覆盖默认设置
+- **多种输出选项**: 保存到磁盘或导出为 Base64 字符串
+- **异步支持**: 使用 `translate_async()` 进行并发翻译任务
+
+#### Client SDK 参数说明
+
+| 参数 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| **api_key** | `str` | - | AI 平台 API 密钥 |
+| **base_url** | `str` | - | AI 平台基础 URL（如 `https://api.openai.com/v1/`） |
+| **model_id** | `str` | - | 翻译使用的模型 ID |
+| **to_lang** | `str` | - | 目标语言（如 `"中文"`、`"English"`、`"日本語"`） |
+| **concurrent** | `int` | 10 | 并发 LLM 请求数 |
+| **convert_engine** | `str` | `"mineru"` | PDF 解析引擎：`"mineru"`、`"docling"`、`"mineru_deploy"` |
+| **mineru_deploy_base_url** | `str` | - | 本地 minerU API 地址（当 `convert_engine="mineru_deploy"` 时） |
+| **mineru_token** | `str` | - | minerU API Token（使用在线 minerU 时） |
+| **skip_translate** | `bool` | `False` | 跳过翻译，仅解析文档 |
+| **output_dir** | `str` | `"./output"` | `save()` 方法的默认输出目录 |
+| **chunk_size** | `int` | 3000 | LLM 处理的文本分块大小 |
+| **temperature** | `float` | 0.3 | LLM 温度参数 |
+| **timeout** | `int` | 60 | 请求超时时间（秒） |
+| **retry** | `int` | 3 | 失败重试次数 |
+| **provider** | `str` | `"auto"` | AI 提供商类型（auto、openai、azure 等） |
+| **force_json** | `bool` | `False` | 强制 JSON 输出模式 |
+| **rpm** | `int` | - | 每分钟请求数限制 |
+| **tpm** | `int` | - | 每分钟 Token 数限制 |
+
+#### Result 方法说明
+
+| 方法 | 参数 | 说明 |
+|:---|:---|:---|
+| **save()** | `output_dir`, `name`, `fmt` | 将翻译结果保存到磁盘 |
+| **export()** | `fmt` | 导出为 Base64 编码的字符串 |
+| **supported_formats** | - | 获取支持的输出格式列表 |
+| **workflow** | - | 访问底层工作流对象 |
+
+```python
+import asyncio
+from docutranslate.sdk import Client
+
+async def translate_multiple():
+    client = Client(
+        api_key="YOUR_API_KEY",
+        base_url="https://api.openai.com/v1/",
+        model_id="gpt-4o",
+        to_lang="中文",
+    )
+
+    # 并发翻译多个文件
+    files = ["doc1.pdf", "doc2.docx", "notes.txt"]
+    results = await asyncio.gather(
+        *[client.translate_async(f) for f in files]
+    )
+
+    for r in results:
+        print(f"保存位置: {r.save()}")
+
+asyncio.run(translate_multiple())
+```
+
+### 可用工作流（使用 Workflow API）
+
+如果您需要更精细的控制，可以直接使用 Workflow API。以下是可用的工作流：
+
+| 工作流                         | 适用场景                                                    | 输入格式                                     | 输出格式                   | 核心配置类                         |
+|:----------------------------|:--------------------------------------------------------|:-----------------------------------------|:-----------------------|:------------------------------|
+| **`MarkdownBasedWorkflow`** | 处理富文本文档，如PDF、Word、图片等。流程为：`文件 -> Markdown -> 翻译 -> 导出`。 | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` 等 | `.md`, `.zip`, `.html` | `MarkdownBasedWorkflowConfig` |
+| **`TXTWorkflow`**           | 处理纯文本文档。流程为：`txt -> 翻译 -> 导出`。                          | `.txt` 及其他纯文本格式                          | `.txt`, `.html`        | `TXTWorkflowConfig`           |
+| **`JsonWorkflow`**          | 处理json文件。流程为：`json -> 翻译 -> 导出`。                        | `.json`                                  | `.json`, `.html`       | `JsonWorkflowConfig`          |
+| **`DocxWorkflow`**          | 处理docx文件。流程为：`docx -> 翻译 -> 导出`。                        | `.docx`                                  | `.docx`, `.html`       | `docxWorkflowConfig`          |
+| **`XlsxWorkflow`**          | 处理xlsx文件。流程为：`xlsx -> 翻译 -> 导出`。                        | `.xlsx`、`.csv`                           | `.xlsx`, `.html`       | `XlsxWorkflowConfig`          |
+| **`SrtWorkflow`**           | 处理srt文件。流程为：`srt -> 翻译 -> 导出`。                          | `.srt`                                   | `.srt`, `.html`        | `SrtWorkflowConfig`           |
+| **`EpubWorkflow`**          | 处理epub文件。流程为：`epub -> 翻译 -> 导出`。                        | `.epub`                                  | `.epub`, `.html`       | `EpubWorkflowConfig`          |
+| **`HtmlWorkflow`**          | 处理html文件。流程为：`html -> 翻译 -> 导出`。                        | `.html`, `.htm`                          | `.html`                | `HtmlWorkflowConfig`          |
+
+> 在交互式界面中可以导出pdf格式
 
 ### 示例 1: 翻译一个 PDF 文件 (使用 `MarkdownBasedWorkflow`)
 
@@ -194,22 +296,6 @@ async def main():
         translator_config=translator_config,  # 传入翻译器配置
         html_exporter_config=MD2HTMLExporterConfig(cdn=True)  # HTML 导出配置
     )
-    
-    # 使用本地部署mineru服务
-    # from docutranslate.converter.x2md.converter_mineru_deploy import ConverterMineruDeployConfig
-    # converter_config = ConverterMineruDeployConfig(
-    #     base_url = "http://127.0.0.1:8000",
-    #     output_dir= "./output",#受mineru限制，解析后的文件会保存到output_dir下，需要定期清理
-    #     backend= "pipeline",
-    #     start_page_id = 0,
-    #     end_page_id = 99999,
-    # )
-    # workflow_config = MarkdownBasedWorkflowConfig(
-    #     convert_engine="mineru_deploy",  # 指定解析引擎
-    #     converter_config=converter_config,  # 传入转换器配置
-    #     translator_config=translator_config,  # 传入翻译器配置
-    #     html_exporter_config=MD2HTMLExporterConfig(cdn=True)  # HTML 导出配置
-    # )
 
     # 4. 实例化工作流
     workflow = MarkdownBasedWorkflow(config=workflow_config)
@@ -238,255 +324,25 @@ if __name__ == "__main__":
     asyncio.run(main())
 ```
 
-### 示例 2: 翻译一个 TXT 文件 (使用 `TXTWorkflow`)
+### 其他工作流
 
-对于纯文本文件，流程更简单，因为它不需要文档解析（转换）步骤。这里以异步方式为例。
-
-```python
-import asyncio
-from docutranslate.workflow.txt_workflow import TXTWorkflow, TXTWorkflowConfig
-from docutranslate.translator.ai_translator.txt_translator import TXTTranslatorConfig
-from docutranslate.exporter.txt.txt2html_exporter import TXT2HTMLExporterConfig
-
-
-async def main():
-    # 1. 构建翻译器配置
-    translator_config = TXTTranslatorConfig(
-        base_url="https://api.openai.com/v1/",
-        api_key="YOUR_OPENAI_API_KEY",
-        model_id="gpt-4o",
-        to_lang="中文",
-    )
-
-    # 2. 构建主工作流配置
-    workflow_config = TXTWorkflowConfig(
-        translator_config=translator_config,
-        html_exporter_config=TXT2HTMLExporterConfig(cdn=True)
-    )
-
-    # 3. 实例化工作流
-    workflow = TXTWorkflow(config=workflow_config)
-
-    # 4. 读取文件并执行翻译
-    workflow.read_path("path/to/your/notes.txt")
-    await workflow.translate_async()
-    # 或者使用同步的方法
-    # workflow.translate()
-
-    # 5. 保存结果
-    workflow.save_as_txt(name="translated_notes.txt")
-    print("TXT 文件已保存。")
-
-    # 也可以导出翻译后的纯文本
-    text = workflow.export_to_txt()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-### 示例 3: 翻译一个 json 文件 (使用 `JsonWorkflow`)
-
-这里以异步方式为例。其中JsonTranslatorConfig的json_paths项需要指明要翻译的json路径(满足jsonpath-ng语法规范)
-，仅与json路径匹配的值会被翻译。
+所有工作流都遵循相同的模式。导入对应的配置和工作流，然后进行配置：
 
 ```python
-import asyncio
-
-from docutranslate.exporter.js.json2html_exporter import Json2HTMLExporterConfig
-from docutranslate.translator.ai_translator.json_translator import JsonTranslatorConfig
-from docutranslate.workflow.json_workflow import JsonWorkflowConfig, JsonWorkflow
-
-
-async def main():
-    # 1. 构建翻译器配置
-    translator_config = JsonTranslatorConfig(
-        base_url="https://api.openai.com/v1/",
-        api_key="YOUR_OPENAI_API_KEY",
-        model_id="gpt-4o",
-        to_lang="中文",
-        json_paths=["$.*", "$.name"]  # 满足jsonpath-ng路径语法,匹配路径的值都会被翻译
-    )
-
-    # 2. 构建主工作流配置
-    workflow_config = JsonWorkflowConfig(
-        translator_config=translator_config,
-        html_exporter_config=Json2HTMLExporterConfig(cdn=True)
-    )
-
-    # 3. 实例化工作流
-    workflow = JsonWorkflow(config=workflow_config)
-
-    # 4. 读取文件并执行翻译
-    workflow.read_path("path/to/your/notes.json")
-    await workflow.translate_async()
-    # 或者使用同步的方法
-    # workflow.translate()
-
-    # 5. 保存结果
-    workflow.save_as_json(name="translated_notes.json")
-    print("json文件已保存。")
-
-    # 也可以导出翻译后的json文本
-    text = workflow.export_to_json()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+# TXT: from docutranslate.workflow.txt_workflow import TXTWorkflow, TXTWorkflowConfig
+# JSON: from docutranslate.workflow.json_workflow import JsonWorkflow, JsonWorkflowConfig
+# DOCX: from docutranslate.workflow.docx_workflow import DocxWorkflow, DocxWorkflowConfig
+# XLSX: from docutranslate.workflow.xlsx_workflow import XlsxWorkflow, XlsxWorkflowConfig
+# EPUB: from docutranslate.workflow.epub_workflow import EpubWorkflow, EpubWorkflowConfig
+# HTML: from docutranslate.workflow.html_workflow import HtmlWorkflow, HtmlWorkflowConfig
+# SRT:  from docutranslate.workflow.srt_workflow import SrtWorkflow, SrtWorkflowConfig
+# ASS:   from docutranslate.workflow.ass_workflow import AssWorkflow, AssWorkflowConfig
 ```
 
-### 示例 4: 翻译一个 docx 文件 (使用 `DocxWorkflow`)
-
-这里以异步方式为例。
-
-```python
-import asyncio
-
-from docutranslate.exporter.docx.docx2html_exporter import Docx2HTMLExporterConfig
-from docutranslate.translator.ai_translator.docx_translator import DocxTranslatorConfig
-from docutranslate.workflow.docx_workflow import DocxWorkflowConfig, DocxWorkflow
-
-
-async def main():
-    # 1. 构建翻译器配置
-    translator_config = DocxTranslatorConfig(
-        base_url="https://api.openai.com/v1/",
-        api_key="YOUR_OPENAI_API_KEY",
-        model_id="gpt-4o",
-        to_lang="中文",
-        insert_mode="replace",  # 备选项 "replace", "append", "prepend"
-        separator="\n",  # "append", "prepend"模式时使用的分隔符
-    )
-
-    # 2. 构建主工作流配置
-    workflow_config = DocxWorkflowConfig(
-        translator_config=translator_config,
-        html_exporter_config=Docx2HTMLExporterConfig(cdn=True)
-    )
-
-    # 3. 实例化工作流
-    workflow = DocxWorkflow(config=workflow_config)
-
-    # 4. 读取文件并执行翻译
-    workflow.read_path("path/to/your/notes.docx")
-    await workflow.translate_async()
-    # 或者使用同步的方法
-    # workflow.translate()
-
-    # 5. 保存结果
-    workflow.save_as_docx(name="translated_notes.docx")
-    print("docx文件已保存。")
-
-    # 也可以导出翻译后的docx的二进制
-    text_bytes = workflow.export_to_docx()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-### 示例 5: 翻译一个 xlsx 文件 (使用 `XlsxWorkflow`)
-
-这里以异步方式为例。
-
-```python
-import asyncio
-
-from docutranslate.exporter.xlsx.xlsx2html_exporter import Xlsx2HTMLExporterConfig
-from docutranslate.translator.ai_translator.xlsx_translator import XlsxTranslatorConfig
-from docutranslate.workflow.xlsx_workflow import XlsxWorkflowConfig, XlsxWorkflow
-
-
-async def main():
-    # 1. 构建翻译器配置
-    translator_config = XlsxTranslatorConfig(
-        base_url="https://api.openai.com/v1/",
-        api_key="YOUR_OPENAI_API_KEY",
-        model_id="gpt-4o",
-        to_lang="中文",
-        insert_mode="replace",  # 备选项 "replace", "append", "prepend"
-        separator="\n",  # "append", "prepend"模式时使用的分隔符
-    )
-
-    # 2. 构建主工作流配置
-    workflow_config = XlsxWorkflowConfig(
-        translator_config=translator_config,
-        html_exporter_config=Xlsx2HTMLExporterConfig(cdn=True)
-    )
-
-    # 3. 实例化工作流
-    workflow = XlsxWorkflow(config=workflow_config)
-
-    # 4. 读取文件并执行翻译
-    workflow.read_path("path/to/your/notes.xlsx")
-    await workflow.translate_async()
-    # 或者使用同步的方法
-    # workflow.translate()
-
-    # 5. 保存结果
-    workflow.save_as_xlsx(name="translated_notes.xlsx")
-    print("xlsx文件已保存。")
-
-    # 也可以导出翻译后的xlsx的二进制
-    text_bytes = workflow.export_to_xlsx()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-### 示例 5: 其它workflow的配置项(使用 `HtmlWorkflow`、`EpubWorkflow`)
-
-这里以异步方式为例。
-
-```python
-# HtmlWorkflow
-from docutranslate.translator.ai_translator.html_translator import HtmlTranslatorConfig
-from docutranslate.workflow.html_workflow import HtmlWorkflowConfig, HtmlWorkflow
-
-
-async def html():
-    # 1. 构建翻译器配置
-    translator_config = HtmlTranslatorConfig(
-        base_url="https://api.openai.com/v1/",
-        api_key="YOUR_OPENAI_API_KEY",
-        model_id="gpt-4o",
-        to_lang="中文",
-        insert_mode="replace",  # 备选项 "replace", "append", "prepend"
-        separator="\n",  # "append", "prepend"模式时使用的分隔符
-    )
-
-    # 2. 构建主工作流配置
-    workflow_config = HtmlWorkflowConfig(
-        translator_config=translator_config,
-    )
-    workflow_html = HtmlWorkflow(config=workflow_config)
-
-
-# EpubWorkflow
-from docutranslate.exporter.epub.epub2html_exporter import Epub2HTMLExporterConfig
-from docutranslate.translator.ai_translator.epub_translator import EpubTranslatorConfig
-from docutranslate.workflow.epub_workflow import EpubWorkflowConfig, EpubWorkflow
-
-
-async def epub():
-    # 1. 构建翻译器配置
-    translator_config = EpubTranslatorConfig(
-        base_url="https://api.openai.com/v1/",
-        api_key="YOUR_OPENAI_API_KEY",
-        model_id="gpt-4o",
-        to_lang="中文",
-        insert_mode="replace",  # 备选项 "replace", "append", "prepend"
-        separator="\n",  # "append", "prepend"模式时使用的分隔符
-    )
-
-    # 2. 构建主工作流配置
-    workflow_config = EpubWorkflowConfig(
-        translator_config=translator_config,
-        html_exporter_config=Epub2HTMLExporterConfig(cdn=True),
-    )
-    workflow_epub = EpubWorkflow(config=workflow_config)
-```
+主要配置选项：
+- **insert_mode**: `"replace"`, `"append"`, `"prepend"` (用于 docx/xlsx/html/epub)
+- **json_paths**: JSONPath 表达式用于 JSON 翻译 (例如 `["$.*", "$.name"]`)
+- **separator**: 用于 `"append"` / `"prepend"` 模式的文本分隔符
 
 ## 前置条件与配置详解
 
@@ -565,33 +421,47 @@ converter_config = ConverterDoclingConfig(
 )
 ```
 
+### 2.3. 本地部署 MinerU 服务
+
+在离线或内网环境中，推荐使用本地部署的 `minerU`，性能更好且无 API 限制。设置 `mineru_deploy_base_url` 为您的 minerU API 地址。
+
+**Client SDK:**
+```python
+from docutranslate.sdk import Client
+
+client = Client(
+    api_key="YOUR_LLM_API_KEY",
+    model_id="llama3",
+    to_lang="中文",
+    convert_engine="mineru_deploy",
+    mineru_deploy_base_url="http://127.0.0.1:8000",  # 您的 minerU API 地址
+)
+result = client.translate("document.pdf")
+result.save(fmt="markdown")
+```
+
 ## FAQ
 
-**Q: 为什么翻译出来的还是原文**  
-A: 查看一下日志报了什么错，一般是AI平台欠费或网络有问题（查看是否需要开启系统代理）。
+**Q: 翻译出来的还是原文？**
+A: 查看日志报错，通常是 AI 平台欠费或网络问题。
 
-**Q: 8010 端口被占用了怎么办？**  
-A: 使用 `-p` 参数指定一个新端口，或设置 `DOCUTRANSLATE_PORT` 环境变量。
+**Q: 8010 端口被占用？**
+A: 使用 `docutranslate -i -p 8011` 或设置 `DOCUTRANSLATE_PORT=8011`。
 
-**Q: 支持PDF扫描件的翻译吗？**  
-A: 支持。请使用 `mineru` 解析引擎，它具备强大的 OCR 能力。
+**Q: 支持 PDF 扫描件？**
+A: 支持，使用 `mineru` 引擎具备 OCR 能力。
 
-**Q: 第一次翻译PDF为什么很慢？**  
-A: 如果您使用 `docling` 引擎，它首次运行时需要从 Hugging Face 下载模型。请参考上文的“网络问题解决方案”来加速此过程。
+**Q: 第一次翻译 PDF 很慢？**
+A: `docling` 首次需要下载模型。使用 Hugging Face 镜像或预下载 artifact。
 
-**Q: 如何在内网（离线）环境使用？**  
-A: 完全可以。您需要满足以下条件：
+**Q: 内网/离线环境使用？**
+A: 可以。使用本地 LLM（Ollama/LM Studio）和本地 minerU 或 docling。
 
-1. **本地 LLM**: 使用 [Ollama](https://ollama.com/) 或 [LM Studio](https://lmstudio.ai/) 等工具在本地部署语言模型，并在
-   `TranslatorConfig` 中填入本地模型的 `base_url`。
-2. **本地PDF解析引擎**（仅解析pdf需要）: 使用 `docling` 引擎，并按照上文“离线使用”的指引提前下载模型包。
+**Q: PDF 缓存机制？**
+A: `MarkdownBasedWorkflow` 在内存中缓存解析结果（最近 10 次）。可通过 `DOCUTRANSLATE_CACHE_NUM` 配置。
 
-**Q: PDF解析缓存机制是如何工作的？**  
-A: `MarkdownBasedWorkflow` 会自动缓存文档解析（文件到Markdown的转换）的结果，以避免重复解析消耗时间和资源。缓存默认保存在内存中，并会记录最近的10次解析。您可以通过
-`DOCUTRANSLATE_CACHE_NUM` 环境变量来修改缓存数量。
-
-**Q: 如何让软件可以经过代理**  
-A: 软件默认不使用系统代理，可以在`TranslatorConfig中令system_proxy_enable=True` 启用系统代理
+**Q: 启用代理？**
+A: 在 TranslatorConfig 中设置 `system_proxy_enable=True`。
 
 ## Star History
 

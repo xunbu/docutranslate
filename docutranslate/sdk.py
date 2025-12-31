@@ -19,17 +19,28 @@ from docutranslate.translator import default_params
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
 
 # --- 映射配置 ---
+# 格式说明: {workflow_type: {save_type: (method_name, default_suffix)}}
+# 注意: 第一个格式为默认格式
 _WORKFLOW_MAPPINGS = {
-    "markdown_based": {"save": "save_as_markdown_zip", "export": "export_to_markdown_zip"},
-    "docx": {"save": "save_as_docx", "export": "export_to_docx"},
-    "xlsx": {"save": "save_as_xlsx", "export": "export_to_xlsx"},
-    "pptx": {"save": "save_as_pptx", "export": "export_to_pptx"},
-    "epub": {"save": "save_as_epub", "export": "export_to_epub"},
-    "txt": {"save": "save_as_txt", "export": "export_to_txt"},
-    "json": {"save": "save_as_json", "export": "export_to_json"},
-    "srt": {"save": "save_as_srt", "export": "export_to_srt"},
-    "ass": {"save": "save_as_ass", "export": "export_to_ass"},
-    "html": {"save": "save_as_html", "export": "export_to_html"},
+    "markdown_based": {
+        "markdown": ("save_as_markdown", "md"),  # 默认格式: 内嵌 base64 图片
+        "markdown_zip": ("save_as_markdown_zip", "zip"),  # 非内嵌图片，分离存储
+        "html": ("save_as_html", "html"),
+    },
+    "docx": {"docx": ("save_as_docx", "docx")},
+    "xlsx": {"xlsx": ("save_as_xlsx", "xlsx")},
+    "pptx": {"pptx": ("save_as_pptx", "pptx")},
+    "epub": {"epub": ("save_as_epub", "epub")},
+    "txt": {"txt": ("save_as_txt", "txt")},
+    "json": {"json": ("save_as_json", "json")},
+    "srt": {"srt": ("save_as_srt", "srt")},
+    "ass": {"ass": ("save_as_ass", "ass")},
+    "html": {"html": ("save_as_html", "html")},
+}
+
+# 每种工作流支持的输出格式列表
+_WORKFLOW_SUPPORTED_FORMATS = {
+    wf: list(formats.keys()) for wf, formats in _WORKFLOW_MAPPINGS.items()
 }
 
 
@@ -41,40 +52,94 @@ class TranslationResult:
     def __init__(self, workflow: Any, workflow_type: str, original_filename: str):
         self._workflow = workflow
         self._workflow_type = workflow_type
+        self._original_filename = original_filename
         self._mapping = _WORKFLOW_MAPPINGS.get(workflow_type)
+        self._supported_formats = _WORKFLOW_SUPPORTED_FORMATS.get(workflow_type, [])
 
-    def save(self, output_dir: str = "./output", name: Optional[str] = None) -> str:
+    @property
+    def supported_formats(self) -> List[str]:
+        """获取当前工作流支持的输出格式"""
+        return self._supported_formats
+
+    def save(
+            self,
+            output_dir: str = "./output",
+            name: Optional[str] = None,
+            fmt: Optional[str] = None
+    ) -> str:
         """
         保存结果到文件系统。
+
         :param output_dir: 输出目录。
-        :param name: 文件名 (如 'result.docx')。若为 None，使用默认后缀命名。
+        :param name: 文件名 (如 'result.html')。若为 None，使用原文件名 + 对应后缀。
+        :param fmt: 输出格式 (如 'html', 'markdown', 'markdown_zip')。
+                    若为 None，使用工作流默认格式。
         :return: 保存文件的完整路径 (仅供参考)。
         """
         if not self._mapping:
             raise ValueError(f"工作流 {self._workflow_type} 不支持自动保存")
 
+        # 确定使用的格式
+        if fmt:
+            if fmt not in self._mapping:
+                raise ValueError(
+                    f"格式 '{fmt}' 不支持。可用格式: {self._supported_formats}"
+                )
+            method_name, default_suffix = self._mapping[fmt]
+        else:
+            # 使用默认第一个格式
+            fmt = self._supported_formats[0]
+            method_name, default_suffix = self._mapping[fmt]
+
+        # 生成文件名
+        if not name:
+            base_name = os.path.splitext(self._original_filename)[0]
+            name = f"{base_name}.{default_suffix}"
+
         Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-        method = self._mapping["save"]
-        if hasattr(self._workflow, method):
-            getattr(self._workflow, method)(name=name, output_dir=output_dir)
-            return os.path.join(output_dir, name) if name else f"{output_dir} (Auto named)"
-        raise AttributeError(f"Workflow 缺少方法 {method}")
+        method = getattr(self._workflow, method_name, None)
+        if method:
+            method(name=name, output_dir=output_dir)
+            return os.path.join(output_dir, name)
+        raise AttributeError(f"Workflow 缺少方法 {method_name}")
 
-    def export(self) -> str:
+    def export(self, fmt: Optional[str] = None) -> str:
         """
         导出为 Base64 编码的字符串 (用于 API 传输或无需落盘的场景)。
+
+        :param fmt: 输出格式。若为 None，使用工作流默认格式。
+        :return: Base64 编码的结果。
         """
         if not self._mapping:
             raise ValueError(f"工作流 {self._workflow_type} 不支持导出")
 
-        method = self._mapping["export"]
-        if hasattr(self._workflow, method):
-            content = getattr(self._workflow, method)()
+        # 确定使用的格式
+        if fmt:
+            if fmt not in self._mapping:
+                raise ValueError(
+                    f"格式 '{fmt}' 不支持。可用格式: {self._supported_formats}"
+                )
+            export_key = fmt
+        else:
+            # 使用默认第一个格式
+            fmt = self._supported_formats[0]
+            export_key = fmt
+
+        method_name = f"export_to_{export_key.replace('markdown_zip', 'markdown_zip')}"
+        # 特殊处理 markdown_zip -> export_to_markdown_zip
+        if export_key == "markdown_zip":
+            method_name = "export_to_markdown_zip"
+        elif export_key in ["html", "markdown"]:
+            method_name = f"export_to_{export_key}"
+
+        method = getattr(self._workflow, method_name, None)
+        if method:
+            content = method()
             if isinstance(content, str):
                 content = content.encode('utf-8')
             return base64.b64encode(content).decode('utf-8')
-        raise AttributeError(f"Workflow 缺少方法 {method}")
+        raise AttributeError(f"Workflow 缺少方法 {method_name}")
 
     @property
     def workflow(self):
@@ -283,7 +348,10 @@ class Client:
 
         # 8. 执行逻辑
         workflow.read_path(str(path_obj))
-        await workflow.translate_async()
+
+        # 仅当 skip_translate 为 False 时才执行翻译
+        if not payload.skip_translate:
+            await workflow.translate_async()
 
         return TranslationResult(workflow, final_params["workflow_type"], path_obj.name)
 
