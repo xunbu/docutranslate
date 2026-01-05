@@ -276,4 +276,5 @@ class SegmentsTranslateAgent(Agent):
         if self.glossary_dict is None:
             self.glossary_dict = {}
         if update_dict is not None:
-            self.glossary_dict = update_dict | self.glossary_dict
+            # 以用户上传的术语表为主，自动生成的术语表只添加用户没有的术语
+            self.glossary_dict = self.glossary_dict | update_dict

@@ -39,16 +39,20 @@ class TXTWorkflow(Workflow[TXTWorkflowConfig, Document, Document], HTMLExportabl
     def translate(self) -> Self:
         document, translator=self._pre_translate(self.document_original)
         translator.translate(document)
-        if translator.glossary_dict_gen:
-            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary_dict_gen))
+        # 使用合并后的术语表（用户上传 + 自动生成）
+        merged_glossary = getattr(translator.translate_agent, 'glossary_dict', None) or translator.glossary_dict_gen
+        if merged_glossary:
+            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(merged_glossary))
         self.document_translated = document
         return self
 
     async def translate_async(self) -> Self:
         document, translator = self._pre_translate(self.document_original)
         await translator.translate_async(document)
-        if translator.glossary_dict_gen:
-            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary_dict_gen))
+        # 使用合并后的术语表（用户上传 + 自动生成）
+        merged_glossary = getattr(translator.translate_agent, 'glossary_dict', None) or translator.glossary_dict_gen
+        if merged_glossary:
+            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(merged_glossary))
         self.document_translated = document
         return self
 

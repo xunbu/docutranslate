@@ -62,8 +62,10 @@ class XlsxWorkflow(Workflow[XlsxWorkflowConfig, Document, Document], HTMLExporta
         document_xlsx = self._get_document_xlsx(self.document_original)
         document, translator = self._pre_translate(document_xlsx)
         translator.translate(document)
-        if translator.glossary_dict_gen:
-            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary_dict_gen))
+        # 使用合并后的术语表（用户上传 + 自动生成）
+        merged_glossary = getattr(translator.translate_agent, 'glossary_dict', None) or translator.glossary_dict_gen
+        if merged_glossary:
+            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(merged_glossary))
         self.document_translated = document
         return self
 
@@ -71,8 +73,10 @@ class XlsxWorkflow(Workflow[XlsxWorkflowConfig, Document, Document], HTMLExporta
         document_xlsx = await asyncio.to_thread(self._get_document_xlsx, self.document_original)
         document, translator = self._pre_translate(document_xlsx)
         await translator.translate_async(document)
-        if translator.glossary_dict_gen:
-            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary_dict_gen))
+        # 使用合并后的术语表（用户上传 + 自动生成）
+        merged_glossary = getattr(translator.translate_agent, 'glossary_dict', None) or translator.glossary_dict_gen
+        if merged_glossary:
+            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(merged_glossary))
         self.document_translated = document
         return self
 
