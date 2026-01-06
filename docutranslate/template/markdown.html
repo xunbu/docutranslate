@@ -19,8 +19,8 @@
         }
 
         @media print {
-            #toc-btn, #toc-sidebar { display: none !important; }
             html, main { padding: 0 !important; }
+            #toc-panel, #toc-btn { display: none !important; }
         }
 
         html { font-size: 15px; }
@@ -28,126 +28,154 @@
 
         /* 目录按钮 */
         #toc-btn {
-            position: fixed; left: 10px; top: 50%; transform: translateY(-50%);
-            width: 30px; height: 50px;
-            background: #f8f8f8; border: 1px solid #ddd; border-radius: 0 4px 4px 0;
-            cursor: pointer; z-index: 1000;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 14px; color: #666;
-            opacity: 0; transition: left 0.3s ease, opacity 0.2s;
+            position: fixed;
+            left: 10px;
+            top: 10px;
+            width: 32px;
+            height: 32px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: #666;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        #toc-btn:hover { background: #eee; }
-        #toc-btn.visible { opacity: 1; }
-        #toc-btn.open { left: 270px; }
+        #toc-btn:hover { background: #f5f5f5; }
 
-        /* 侧边栏 */
-        #toc-sidebar {
-            position: fixed; left: -260px; top: 0; width: 260px; height: 100vh;
-            background: #fafafa; border-right: 1px solid #ddd;
-            z-index: 999; transition: left 0.3s ease;
-            padding: 15px; box-sizing: border-box;
+        /* 目录面板 */
+        #toc-panel {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 240px;
+            height: 100vh;
+            background: #fff;
+            border-right: 1px solid #ddd;
+            z-index: 9999;
+            padding: 50px 15px 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            transform: translateX(-100%);
+            transition: transform 0.2s ease;
         }
-        #toc-sidebar.open { left: 0; }
+        #toc-panel.show { transform: translateX(0); }
 
-        #toc-sidebar h3 {
-            margin: 0 0 15px;
-            font-size: 16px;
-            color: #333;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        #toc-list { list-style: none; padding: 0; margin: 0; }
-        #toc-list li { margin: 2px 0; }
-        #toc-list li a {
+        .toc-item { margin: 2px 0; }
+        .toc-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
             color: #555;
             text-decoration: none;
-            display: block;
-            padding: 6px 10px;
-            border-radius: 4px;
-            font-size: 14px;
-            transition: background 0.15s;
+            font-size: 13px;
+            border-radius: 3px;
+            cursor: pointer;
         }
-        #toc-list li a:hover {
-            background: #e8e8e8;
-            color: #0066cc;
+        .toc-link:hover { background: #f5f5f5; }
+        .toc-link.active { background: #007bff; color: #fff; }
+
+        .toc-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .toc-expander {
+            width: 18px;
+            height: 18px;
+            line-height: 16px;
+            text-align: center;
+            font-size: 12px;
+            color: #999;
+            cursor: pointer;
+            flex-shrink: 0;
         }
-        #toc-list .toc-h1 {
-            font-weight: 600;
-            font-size: 15px;
-            margin-top: 8px;
-        }
-        #toc-list .toc-h1 > a { color: #333; }
-        #toc-list .toc-h2 { margin-left: 0; }
-        #toc-list .toc-h2 > a { padding-left: 24px; font-size: 14px; }
-        #toc-list .toc-h3 { margin-left: 0; }
-        #toc-list .toc-h3 > a { padding-left: 36px; font-size: 13px; color: #666; }
-        #toc-list .toc-h4 { margin-left: 0; }
-        #toc-list .toc-h4 > a { padding-left: 48px; font-size: 12px; color: #888; }
-        #toc-list .toc-h5 > a { padding-left: 60px; font-size: 12px; color: #888; }
-        #toc-list .toc-h6 > a { padding-left: 72px; font-size: 12px; color: #888; }
+        .toc-expander:hover { color: #333; }
+
+        .toc-children { display: none; padding-left: 12px; }
+        .toc-children.expanded { display: block; }
+
+        .toc-item[data-level="1"] > .toc-link { font-weight: 500; }
+        .toc-item[data-level="2"] > .toc-link { padding-left: 20px; }
+        .toc-item[data-level="3"] > .toc-link { padding-left: 30px; }
+        .toc-item[data-level="4"] > .toc-link { padding-left: 40px; }
+        .toc-item[data-level="5"] > .toc-link { padding-left: 50px; }
     </style>
 </head>
 <body>
-
-<!-- 目录按钮 -->
-<div id="toc-btn" title="目录">☰</div>
-<!-- 侧边栏 -->
-<div id="toc-sidebar">
-    <h3>目录</h3>
-    <ul id="toc-list"></ul>
-</div>
-
+<div id="toc-panel"><ul class="toc-list" id="toc-list"></ul></div>
+<button id="toc-btn" onclick="toggleToc()">☰</button>
 <main>{{markdown}}</main>
-
 </body>
 {{renderMathInElement}}
 {{mermaid}}
 <script>
-(function(){
-    const btn = document.getElementById('toc-btn');
-    const sidebar = document.getElementById('toc-sidebar');
+(function() {
+    const panel = document.getElementById('toc-panel');
     const list = document.getElementById('toc-list');
-    const main = document.querySelector('main');
+    let headings = [];
 
-    // 生成目录
-    const headings = main.querySelectorAll('h1, h2, h3, h4');
-    if (headings.length === 0) { btn.style.display = 'none'; return; }
+    function init() {
+        headings = Array.from(document.querySelectorAll('main h1, main h2, main h3, main h4, main h5, main h6'));
+        if (headings.length === 0) return;
 
-    headings.forEach((h, i) => {
-        if (!h.id) h.id = 'h-' + i;
-        const li = document.createElement('li');
-        li.className = 'toc-' + h.tagName.toLowerCase();
-        li.innerHTML = '<a href="#' + h.id + '">' + h.textContent + '</a>';
-        list.appendChild(li);
-    });
+        headings.forEach((h, i) => { if (!h.id) h.id = 'h-' + i; });
 
-    // 切换目录
-    function toggleTOC() {
-        const open = sidebar.classList.toggle('open');
-        btn.classList.toggle('open', open);
-        btn.textContent = open ? '✕' : '☰';
+        const root = { level: 0, children: [] };
+        const stack = [root];
+        headings.forEach(h => {
+            const level = parseInt(h.tagName[1]);
+            const item = { id: h.id, text: h.textContent.trim(), level, children: [] };
+            while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop();
+            stack[stack.length - 1].children.push(item);
+            stack.push(item);
+        });
+        render(root.children, list);
     }
-    btn.onclick = toggleTOC;
 
-    // 左侧滑动/悬停检测
-    let touchStartX = 0;
+    function render(items, parent) {
+        items.forEach(item => {
+            const li = document.createElement('li');
+            li.className = 'toc-item';
+            li.dataset.level = item.level;
 
-    document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
-    document.addEventListener('touchmove', e => {
-        const x = e.touches[0].clientX;
-        if (touchStartX > 30 && x < 50 && !sidebar.classList.contains('open')) {
-            btn.classList.add('visible');
-        }
+            let html = `<a class="toc-link" href="#${item.id}">
+                <span class="toc-text">${item.text}</span>`;
+            if (item.children.length) {
+                html += `<span class="toc-expander" onclick="event.stopPropagation(); toggle(this)">+</span>`;
+            }
+            html += `</a>`;
+            li.innerHTML = html;
+
+            if (item.children.length) {
+                const ul = document.createElement('ul');
+                ul.className = 'toc-children';
+                render(item.children, ul);
+                li.appendChild(ul);
+                if (item.level === 1) { ul.classList.add('expanded'); li.querySelector('.toc-expander').textContent = '-'; }
+            }
+            parent.appendChild(li);
+        });
+    }
+
+    function toggle(btn) {
+        const ul = btn.closest('li').querySelector('.toc-children');
+        ul.classList.toggle('expanded');
+        btn.textContent = ul.classList.contains('expanded') ? '-' : '+';
+    }
+
+    window.toggleToc = function() { panel.classList.toggle('show'); };
+
+    document.querySelectorAll('.toc-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const id = this.getAttribute('href').slice(1);
+            document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+        });
     });
 
-    document.addEventListener('mousemove', e => {
-        if (e.clientX < 50 && !sidebar.classList.contains('open')) {
-            btn.classList.add('visible');
-        } else {
-            btn.classList.remove('visible');
-        }
-    });
+    init();
 })();
 
 setTimeout(() => {
