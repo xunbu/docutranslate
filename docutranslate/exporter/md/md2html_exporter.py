@@ -23,16 +23,69 @@ class MD2HTMLExporter(MDExporter):
 
     def export(self, document: MarkdownDocument) -> Document:
         cdn = self.cdn
-        # language=html
-        pico = f'<style>{resource_path("static/pico.css").read_text(encoding="utf-8")}</style>' if not cdn else r'<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/picocss/2.1.1/pico.min.css" integrity="sha512-+4kjFgVD0n6H3xt19Ox84B56MoS7srFn60tgdWFuO4hemtjhySKyW4LnftYZn46k3THUEiTTsbVjrHai+0MOFw==" crossorigin="anonymous" referrerpolicy="no-referrer" />'
         html_template = resource_path("template/markdown.html").read_text(encoding="utf-8")
-        katex_css = f'<link rel="stylesheet" href="/static/katex/katex.css"/>' if not cdn else r"""<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/katex.min.css" integrity="sha512-fHwaWebuwA7NSF5Qg/af4UeDx9XqUpYpOGgubo3yWu+b2IQR4UeQwbb42Ti7gVAjNtVoI/I9TEoYeu9omwcC6g==" crossorigin="anonymous" referrerpolicy="no-referrer" />"""
-        katex_js = f'<script src="/static/katex/katex.js"></script>' if not cdn else r"""<script src="https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/katex.min.js" integrity="sha512-LQNxIMR5rXv7o+b1l8+N1EZMfhG7iFZ9HhnbJkTp4zjNr5Wvst75AqUeFDxeRUa7l5vEDyUiAip//r+EFLLCyA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>"""
-        auto_render = f'<script>{resource_path("static/autoRender.js").read_text(encoding="utf-8")}</script>' if not cdn else r"""<script src="https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js" integrity="sha512-iWiuBS5nt6r60fCz26Nd0Zqe0nbk1ZTIQbl3Kv7kYsX+yKMUFHzjaH2+AnM6vp2Xs+gNmaBAVWJjSmuPw76Efg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>"""
 
-        # 这是正确且推荐的 JS 配置，它与 pymdownx.arithmatex 配合工作
-        # 它只寻找 arithmatex 生成的 \(...\) 和 \[...\]
-        # language=javascript
+        # CDN 基础 URL
+        cdn_base = "https://s4.zstatic.net/ajax/libs"
+
+        def fetch_text(url_or_path: str) -> str:
+            """从 URL 或本地文件获取文本内容"""
+            try:
+                if url_or_path.startswith("http"):
+                    import httpx
+                    response = httpx.get(url_or_path, timeout=10.0)
+                    response.raise_for_status()
+                    return response.text
+                else:
+                    return resource_path(url_or_path).read_text(encoding="utf-8")
+            except Exception as e:
+                print(f"Warning: Failed to fetch {url_or_path}: {e}")
+                return ""
+
+        # 辅助函数：将 CSS 中的字体 URL 替换为 CDN 链接
+        def replace_font_urls(css_content: str) -> str:
+            """将 CSS 中的 url(fonts/xxx) 替换为 CDN URL"""
+            def replace(match):
+                url_path = match.group(1)
+                if 'fonts/' in url_path:
+                    font_filename = url_path.split('/')[-1]
+                    return f'url({cdn_base}/KaTeX/0.16.9/fonts/{font_filename})'
+                return match.group(0)
+            return re.sub(r'url\(([^)]*fonts/[^)]*)\)', replace, css_content)
+
+        # 辅助函数：包装为 style/script 标签
+        def tag(content: str, tag_type: str) -> str:
+            if tag_type == "style":
+                return f"<style>\n{content}\n</style>"
+            return f"<script>\n{content}\n</script>"
+
+        # Pico CSS
+        pico_url = f"{cdn_base}/picocss/2.1.1/pico.min.css"
+        pico = tag(fetch_text(pico_url), "style")
+
+        # KaTeX CSS (字体使用 CDN)
+        katex_css_url = f"{cdn_base}/KaTeX/0.16.9/katex.min.css"
+        katex_css_content = fetch_text(katex_css_url)
+        katex_css_content = replace_font_urls(katex_css_content)
+        katex_css = tag(katex_css_content, "style")
+
+        # KaTeX JS
+        katex_js_url = f"{cdn_base}/KaTeX/0.16.9/katex.min.js"
+        katex_js = tag(fetch_text(katex_js_url), "script")
+
+        # copy-tex CSS
+        copy_tex_css_url = f"{cdn_base}/KaTeX/0.16.9/contrib/copy-tex.min.css"
+        copy_tex_css = tag(fetch_text(copy_tex_css_url), "style")
+
+        # copy-tex JS
+        copy_tex_js_url = f"{cdn_base}/KaTeX/0.16.9/contrib/copy-tex.min.js"
+        copy_tex_js = tag(fetch_text(copy_tex_js_url), "script")
+
+        # auto-render JS
+        auto_render_url = f"{cdn_base}/KaTeX/0.16.9/contrib/auto-render.min.js"
+        auto_render = tag(fetch_text(auto_render_url), "script")
+
+        # renderMathInElement 配置
         render_math_in_element = r"""
         <script>
             document.addEventListener("DOMContentLoaded", function () {
@@ -52,9 +105,11 @@ class MD2HTMLExporter(MDExporter):
             });
         </script>"""
 
-        mermaid = f'<script>{resource_path("static/mermaid.js").read_text(encoding="utf-8")}</script>'
+        # mermaid JS
+        mermaid_url = f"{cdn_base}/mermaid/10.6.1/mermaid.min.js"
+        mermaid = tag(fetch_text(mermaid_url), "script")
 
-        # 扩展配置保持不变，我们仍然使用 arithmatex
+        # 扩展配置
         extensions = [
             'markdown.extensions.tables',
             'pymdownx.arithmatex',
@@ -97,6 +152,8 @@ class MD2HTMLExporter(MDExporter):
             pico=pico,
             katexCss=katex_css,
             katexJs=katex_js,
+            copyTexCss=copy_tex_css,
+            copyTexJs=copy_tex_js,
             autoRender=auto_render,
             markdown=html_content,
             renderMathInElement=render_math_in_element,
@@ -106,9 +163,6 @@ class MD2HTMLExporter(MDExporter):
 
 if __name__ == '__main__':
     from pathlib import Path
-
-    # d = Document.from_path(r"C:\Users\jxgm\Desktop\mcp文件夹\学习笔记\互联网认证授权机制\互联网认证授权机制.md")
-    # d = Document.from_path(r"C:\Users\jxgm\Desktop\matrixcalc_translated.md")
     d = Document.from_path(r"C:\Users\jxgm\Desktop\full_translated.md")
     exporter = MD2HTMLExporter()
     d1 = exporter.export(d)
