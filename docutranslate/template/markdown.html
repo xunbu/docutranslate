@@ -12,203 +12,148 @@
     <style>
         @page {
             margin: 1.5cm 1cm 1.5cm 2cm;
-            @top-left {
-                content: "{{title}}";
-                font-size: 10pt;
-                color: #666;
-            }
-            @top-right {
-                content: counter(page);
-                font-size: 10pt;
-                color: #666;
-            }
-            @bottom-left {
-                content: "Powered by DocuTranslate";
-                font-size: 8pt;
-                color: #999;
-            }
-            @bottom-right {
-                content: counter(page) " / " counter(pages);
-                font-size: 10pt;
-                color: #666;
-            }
+            @top-left { content: "{{title}}"; font-size: 10pt; color: #666; }
+            @top-right { content: counter(page); font-size: 10pt; color: #666; }
+            @bottom-left { content: "Powered by DocuTranslate"; font-size: 8pt; color: #999; }
+            @bottom-right { content: counter(page) " / " counter(pages); font-size: 10pt; color: #666; }
         }
 
         @media print {
-            #toc-toggle, #toc-sidebar {
-                display: none !important;
-            }
-            html {
-                padding: 0 !important;
-            }
-            main {
-                padding: 0 !important;
-            }
+            #toc-btn, #toc-sidebar { display: none !important; }
+            html, main { padding: 0 !important; }
         }
 
-        html {
-            font-size: 15px;
-        }
+        html { font-size: 15px; }
+        main { padding: 2vh 10vw; }
 
-        main {
-            padding: 2vh 10vw;
+        /* 目录按钮 */
+        #toc-btn {
+            position: fixed; left: 10px; top: 50%; transform: translateY(-50%);
+            width: 30px; height: 50px;
+            background: #f8f8f8; border: 1px solid #ddd; border-radius: 0 4px 4px 0;
+            cursor: pointer; z-index: 1000;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; color: #666;
+            opacity: 0; transition: left 0.3s ease, opacity 0.2s;
         }
+        #toc-btn:hover { background: #eee; }
+        #toc-btn.visible { opacity: 1; }
+        #toc-btn.open { left: 270px; }
 
-        #toc-toggle {
-            position: fixed;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 30px;
-            height: 60px;
-            background: #f0f0f0;
-            border: 1px solid #ddd;
-            border-radius: 0 5px 5px 0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            color: #666;
-            z-index: 1000;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-
-        #toc-toggle:hover {
-            background: #e0e0e0;
-        }
-
-        body:hover #toc-toggle {
-            opacity: 1;
-        }
-
+        /* 侧边栏 */
         #toc-sidebar {
-            position: fixed;
-            left: -280px;
-            top: 0;
-            width: 280px;
-            height: 100vh;
-            background: #fafafa;
-            border-right: 1px solid #ddd;
-            overflow-y: auto;
-            z-index: 999;
-            transition: left 0.3s ease;
-            padding: 20px;
-            box-sizing: border-box;
+            position: fixed; left: -260px; top: 0; width: 260px; height: 100vh;
+            background: #fafafa; border-right: 1px solid #ddd;
+            z-index: 999; transition: left 0.3s ease;
+            padding: 15px; box-sizing: border-box;
         }
-
-        #toc-sidebar.open {
-            left: 0;
-        }
+        #toc-sidebar.open { left: 0; }
 
         #toc-sidebar h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
+            margin: 0 0 15px;
             font-size: 16px;
             color: #333;
-            border-bottom: 1px solid #ddd;
             padding-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
         }
 
-        #toc-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        #toc-list li {
-            margin: 5px 0;
-            font-size: 13px;
-        }
-
+        #toc-list { list-style: none; padding: 0; margin: 0; }
+        #toc-list li { margin: 2px 0; }
         #toc-list li a {
             color: #555;
             text-decoration: none;
             display: block;
-            padding: 3px 0;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: background 0.15s;
         }
-
         #toc-list li a:hover {
-            color: #007bff;
+            background: #e8e8e8;
+            color: #0066cc;
         }
-
-        #toc-list .toc-h1 { margin-left: 0; font-weight: 600; }
-        #toc-list .toc-h2 { margin-left: 15px; }
-        #toc-list .toc-h3 { margin-left: 30px; font-size: 12px; }
-        #toc-list .toc-h4 { margin-left: 45px; font-size: 12px; }
-        #toc-list .toc-h5 { margin-left: 60px; font-size: 11px; color: #888; }
-        #toc-list .toc-h6 { margin-left: 75px; font-size: 11px; color: #888; }
+        #toc-list .toc-h1 {
+            font-weight: 600;
+            font-size: 15px;
+            margin-top: 8px;
+        }
+        #toc-list .toc-h1 > a { color: #333; }
+        #toc-list .toc-h2 { margin-left: 0; }
+        #toc-list .toc-h2 > a { padding-left: 24px; font-size: 14px; }
+        #toc-list .toc-h3 { margin-left: 0; }
+        #toc-list .toc-h3 > a { padding-left: 36px; font-size: 13px; color: #666; }
+        #toc-list .toc-h4 { margin-left: 0; }
+        #toc-list .toc-h4 > a { padding-left: 48px; font-size: 12px; color: #888; }
+        #toc-list .toc-h5 > a { padding-left: 60px; font-size: 12px; color: #888; }
+        #toc-list .toc-h6 > a { padding-left: 72px; font-size: 12px; color: #888; }
     </style>
 </head>
 <body>
 
-<!-- Toggle Button -->
-<div id="toc-toggle" title="目录">☰</div>
-
-<!-- Sidebar TOC -->
+<!-- 目录按钮 -->
+<div id="toc-btn" title="目录">☰</div>
+<!-- 侧边栏 -->
 <div id="toc-sidebar">
     <h3>目录</h3>
     <ul id="toc-list"></ul>
 </div>
 
-<!-- Main Content -->
-<main>
-{{markdown}}
-</main>
+<main>{{markdown}}</main>
 
 </body>
 {{renderMathInElement}}
 {{mermaid}}
 <script>
-    // Generate TOC from headings
-    function generateTOC() {
-        const main = document.querySelector('main');
-        const headings = main.querySelectorAll('h1, h2, h3, h4, h5, h6');
-        const tocList = document.getElementById('toc-list');
+(function(){
+    const btn = document.getElementById('toc-btn');
+    const sidebar = document.getElementById('toc-sidebar');
+    const list = document.getElementById('toc-list');
+    const main = document.querySelector('main');
 
-        if (headings.length === 0) {
-            document.getElementById('toc-toggle').style.display = 'none';
-            return;
-        }
+    // 生成目录
+    const headings = main.querySelectorAll('h1, h2, h3, h4');
+    if (headings.length === 0) { btn.style.display = 'none'; return; }
 
-        headings.forEach((heading, index) => {
-            if (!heading.id) {
-                heading.id = 'heading-' + index;
-            }
-
-            const level = heading.tagName.toLowerCase();
-            const text = heading.textContent;
-            const li = document.createElement('li');
-            li.className = 'toc-' + level;
-            li.innerHTML = `<a href="#${heading.id}">${text}</a>`;
-            tocList.appendChild(li);
-        });
-    }
-
-    // Toggle sidebar
-    function toggleTOC() {
-        const sidebar = document.getElementById('toc-sidebar');
-        sidebar.classList.toggle('open');
-    }
-
-    document.getElementById('toc-toggle').addEventListener('click', toggleTOC);
-
-    // Generate TOC after content loads
-    generateTOC();
-
-    setTimeout(() => {
-        const KatexErrors = document.getElementsByClassName("katex-error")
-        for (const katexError of KatexErrors) {
-            katexError.innerHTML = katexError.title
-        }
-    }, 200)
-</script>
-<script>
-    mermaid.initialize({
-        securityLevel: 'loose',
-        startOnLoad: true
+    headings.forEach((h, i) => {
+        if (!h.id) h.id = 'h-' + i;
+        const li = document.createElement('li');
+        li.className = 'toc-' + h.tagName.toLowerCase();
+        li.innerHTML = '<a href="#' + h.id + '">' + h.textContent + '</a>';
+        list.appendChild(li);
     });
-</script>
 
+    // 切换目录
+    function toggleTOC() {
+        const open = sidebar.classList.toggle('open');
+        btn.classList.toggle('open', open);
+        btn.textContent = open ? '✕' : '☰';
+    }
+    btn.onclick = toggleTOC;
+
+    // 左侧滑动/悬停检测
+    let touchStartX = 0;
+
+    document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+    document.addEventListener('touchmove', e => {
+        const x = e.touches[0].clientX;
+        if (touchStartX > 30 && x < 50 && !sidebar.classList.contains('open')) {
+            btn.classList.add('visible');
+        }
+    });
+
+    document.addEventListener('mousemove', e => {
+        if (e.clientX < 50 && !sidebar.classList.contains('open')) {
+            btn.classList.add('visible');
+        } else {
+            btn.classList.remove('visible');
+        }
+    });
+})();
+
+setTimeout(() => {
+    for (const e of document.getElementsByClassName('katex-error')) e.innerHTML = e.title;
+}, 200);
+
+mermaid.initialize({ securityLevel: 'loose', startOnLoad: true });
+</script>
 </html>

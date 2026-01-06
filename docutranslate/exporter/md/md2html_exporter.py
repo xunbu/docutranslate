@@ -1,6 +1,5 @@
 # SPDX-FileCopyrightText: 2025 QinHan
 # SPDX-License-Identifier: MPL-2.0
-import re  # <--- 步骤 1: 导入 re 模块
 from dataclasses import dataclass
 import jinja2
 import markdown
@@ -15,6 +14,17 @@ class MD2HTMLExporterConfig(MDExporterConfig):
     cdn: bool = True
 
 
+# 预读取本地静态文件（加速）
+_LOCAL_CACHE = {}
+
+
+def _get_local_content(path: str) -> str:
+    """从本地读取文件内容，使用缓存加速"""
+    if path not in _LOCAL_CACHE:
+        _LOCAL_CACHE[path] = resource_path(path).read_text(encoding="utf-8")
+    return _LOCAL_CACHE[path]
+
+
 class MD2HTMLExporter(MDExporter):
     def __init__(self, config: MD2HTMLExporterConfig = None):
         config = config or MD2HTMLExporterConfig()
@@ -22,70 +32,38 @@ class MD2HTMLExporter(MDExporter):
         self.cdn = config.cdn
 
     def export(self, document: MarkdownDocument) -> Document:
-        cdn = self.cdn
         html_template = resource_path("template/markdown.html").read_text(encoding="utf-8")
 
-        # CDN 基础 URL
         cdn_base = "https://s4.zstatic.net/ajax/libs"
 
-        def fetch_text(url_or_path: str) -> str:
-            """从 URL 或本地文件获取文本内容"""
+        # 检测 CDN 是否可用
+        def can_access_cdn(url: str) -> bool:
             try:
-                if url_or_path.startswith("http"):
-                    import httpx
-                    response = httpx.get(url_or_path, timeout=10.0)
-                    response.raise_for_status()
-                    return response.text
-                else:
-                    return resource_path(url_or_path).read_text(encoding="utf-8")
-            except Exception as e:
-                print(f"Warning: Failed to fetch {url_or_path}: {e}")
-                return ""
+                import httpx
+                response = httpx.get(url, timeout=2.0)
+                return response.status_code == 200
+            except:
+                return False
 
-        # 辅助函数：将 CSS 中的字体 URL 替换为 CDN 链接
-        def replace_font_urls(css_content: str) -> str:
-            """将 CSS 中的 url(fonts/xxx) 替换为 CDN URL"""
-            def replace(match):
-                url_path = match.group(1)
-                if 'fonts/' in url_path:
-                    font_filename = url_path.split('/')[-1]
-                    return f'url({cdn_base}/KaTeX/0.16.9/fonts/{font_filename})'
-                return match.group(0)
-            return re.sub(r'url\(([^)]*fonts/[^)]*)\)', replace, css_content)
+        # CDN 可用时直接用链接
+        if self.cdn and can_access_cdn(f"{cdn_base}/KaTeX/0.16.9/katex.min.js"):
+            pico = r'<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/picocss/2.1.1/pico.min.css" />'
+            katex_css = r'<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/katex.min.css" />'
+            katex_js = r'<script src="https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>'
+            copy_tex_css = r'<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/contrib/copy-tex.min.css" />'
+            copy_tex_js = r'<script src="https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/contrib/copy-tex.min.js"></script>'
+            auto_render = r'<script src="https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>'
+            mermaid = r'<script src="https://s4.zstatic.net/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>'
+        else:
+            # CDN 不可用时，嵌入本地文件
+            pico = f'<style>{_get_local_content("static/pico.css")}</style>'
+            katex_css = f'<style>{_get_local_content("static/katex/katex.css")}</style>'
+            katex_js = f'<script>{_get_local_content("static/katex/katex.js")}</script>'
+            copy_tex_css = f'<style>{_get_local_content("static/katex/copy-tex.min.css")}</style>'
+            copy_tex_js = f'<script>{_get_local_content("static/katex/copy-tex.min.js")}</script>'
+            auto_render = f'<script>{_get_local_content("static/autoRender.js")}</script>'
+            mermaid = f'<script>{_get_local_content("static/mermaid.js")}</script>'
 
-        # 辅助函数：包装为 style/script 标签
-        def tag(content: str, tag_type: str) -> str:
-            if tag_type == "style":
-                return f"<style>\n{content}\n</style>"
-            return f"<script>\n{content}\n</script>"
-
-        # Pico CSS
-        pico_url = f"{cdn_base}/picocss/2.1.1/pico.min.css"
-        pico = tag(fetch_text(pico_url), "style")
-
-        # KaTeX CSS (字体使用 CDN)
-        katex_css_url = f"{cdn_base}/KaTeX/0.16.9/katex.min.css"
-        katex_css_content = fetch_text(katex_css_url)
-        katex_css_content = replace_font_urls(katex_css_content)
-        katex_css = tag(katex_css_content, "style")
-
-        # KaTeX JS
-        katex_js_url = f"{cdn_base}/KaTeX/0.16.9/katex.min.js"
-        katex_js = tag(fetch_text(katex_js_url), "script")
-
-        # copy-tex CSS
-        copy_tex_css_url = f"{cdn_base}/KaTeX/0.16.9/contrib/copy-tex.min.css"
-        copy_tex_css = tag(fetch_text(copy_tex_css_url), "style")
-
-        # copy-tex JS
-        copy_tex_js_url = f"{cdn_base}/KaTeX/0.16.9/contrib/copy-tex.min.js"
-        copy_tex_js = tag(fetch_text(copy_tex_js_url), "script")
-
-        # auto-render JS
-        auto_render_url = f"{cdn_base}/KaTeX/0.16.9/contrib/auto-render.min.js"
-        auto_render = tag(fetch_text(auto_render_url), "script")
-
-        # renderMathInElement 配置
         render_math_in_element = r"""
         <script>
             document.addEventListener("DOMContentLoaded", function () {
@@ -96,20 +74,13 @@ class MD2HTMLExporter(MDExporter):
                     ],
                     throwOnError: false,
                     errorColor: '#F5CF27',
-                    macros: {
-                        "\\f": "#1f(#2)"
-                    },
+                    macros: { "\\f": "#1f(#2)" },
                     trust: true,
                     strict: false
                 })
             });
         </script>"""
 
-        # mermaid JS
-        mermaid_url = f"{cdn_base}/mermaid/10.6.1/mermaid.min.js"
-        mermaid = tag(fetch_text(mermaid_url), "script")
-
-        # 扩展配置
         extensions = [
             'markdown.extensions.tables',
             'pymdownx.arithmatex',
