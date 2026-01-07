@@ -252,17 +252,27 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
         "http://127.0.0.1:8000",
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务地址。",
     )
+    # --- UPDATED BACKEND LIST ---
     mineru_deploy_backend: Literal[
         "pipeline",
-        "vlm-transformers",
-        "vlm-mlx-engine",
-        "vlm-vllm-async-engine",
-        "vlm-lmdeploy-engine",
+        "vlm-auto-engine",
         "vlm-http-client",
+        "hybrid-auto-engine",
+        "hybrid-http-client"
     ] = Field(
-        "pipeline",
+        "hybrid-auto-engine",
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务使用的后端。",
     )
+    # --- NEW PARAMETERS START ---
+    mineru_deploy_parse_method: Literal["auto", "txt", "ocr"] = Field(
+        "auto",
+        description="[仅当 convert_engine='mineru_deploy'] 解析方法: auto, txt, ocr"
+    )
+    mineru_deploy_table_enable: bool = Field(
+        True,
+        description="[仅当 convert_engine='mineru_deploy'] 本地部署的服务是否启用表格解析。",
+    )
+    # --- NEW PARAMETERS END ---
     mineru_deploy_formula_enable: bool = Field(
         True,
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的服务是否启用公式解析。",
@@ -275,13 +285,13 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
     )
     mineru_deploy_lang_list: Optional[List[str]] = Field(
         None,
-        description="[仅当 convert_engine='mineru_deploy' 且 backend='pipeline'] 语言列表。",
-        examples=[None],
+        description="[仅当 convert_engine='mineru_deploy'] 语言列表, 默认 ['ch']。",
+        examples=[["ch", "en"]],
     )
     # 修改: 默认值改为 ""
     mineru_deploy_server_url: Optional[str] = Field(
         default="",
-        description="[仅当 convert_engine='mineru_deploy' 且 backend='vlm-http-client'] Server URL.",
+        description="[仅当 convert_engine='mineru_deploy' 且 backend为http-client相关时] Server URL.",
     )
 
     @model_validator(mode="after")
@@ -311,10 +321,6 @@ class TextWorkflowParams(BaseWorkflowParams):
     separator: str = Field(
         "\n",
         description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
-    )
-    segment_mode: Literal["line", "paragraph", "none"] = Field(
-        "line",
-        description="分段模式。'line'：按行分段（每行独立翻译），'paragraph'：按段落分段（连续非空行合并为段落），'none'：不分段（全文视为一个段落）。",
     )
 
 

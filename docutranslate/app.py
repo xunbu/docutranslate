@@ -337,7 +337,7 @@ class TranslateServiceRequest(BaseModel):
         ],
     )
     file_content: str = Field(
-        ..., description="Base64编码的文件内容。", examples=["JVBERi0xLjQK..."]
+        ..., description="Base64编码的文件内容。", examples=["JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PC9..."]
     )
     payload: TranslatePayload = Field(
         ..., description="包含工作流类型和相应参数的载荷。"
@@ -666,7 +666,7 @@ async def _perform_translation(
                     "force_json",
                     "rpm",
                     "tpm",
-                    "provider",  # Added provider
+                    "provider",
                 },
                 exclude_none=True,
             )
@@ -688,7 +688,9 @@ async def _perform_translation(
                 converter_config = ConverterMineruDeployConfig(
                     base_url=payload.mineru_deploy_base_url,
                     backend=payload.mineru_deploy_backend,
+                    parse_method=payload.mineru_deploy_parse_method,
                     formula_enable=payload.mineru_deploy_formula_enable,
+                    table_enable=payload.mineru_deploy_table_enable,
                     start_page_id=payload.mineru_deploy_start_page_id,
                     end_page_id=payload.mineru_deploy_end_page_id,
                     lang_list=payload.mineru_deploy_lang_list,
@@ -2214,8 +2216,10 @@ async def service_flat_translate(
         formula_ocr: bool = Form(True, description="[PDF] 是否启用公式识别"),
         code_ocr: bool = Form(True, description="[Docling] 是否启用代码块识别"),
         mineru_deploy_base_url: str = Form("http://127.0.0.1:8000", description="[MinerU Local] 服务地址"),
-        mineru_deploy_backend: str = Form("VLM", description="[MinerU Local] 后端类型"),
+        mineru_deploy_backend: str = Form("hybrid-auto-engine", description="[MinerU Local] 后端类型: hybrid-auto-engine, pipeline 等"),
+        mineru_deploy_parse_method: str = Form("auto", description="[MinerU Local] 解析方法: auto, txt, ocr"),
         mineru_deploy_formula_enable: bool = Form(True, description="[MinerU Local] 是否启用公式"),
+        mineru_deploy_table_enable: bool = Form(True, description="[MinerU Local] 是否启用表格"),
         mineru_deploy_start_page_id: int = Form(0, description="[MinerU Local] 起始页码"),
         mineru_deploy_end_page_id: int = Form(99999, description="[MinerU Local] 结束页码"),
         mineru_deploy_lang_list: Optional[List[str]] = Form(None, description="[MinerU Local] 语言列表"),
@@ -2317,7 +2321,9 @@ async def service_flat_translate(
         # --- MinerU 本地部署参数 ---
         "mineru_deploy_base_url": mineru_deploy_base_url,
         "mineru_deploy_backend": mineru_deploy_backend,
+        "mineru_deploy_parse_method": mineru_deploy_parse_method,
         "mineru_deploy_formula_enable": mineru_deploy_formula_enable,
+        "mineru_deploy_table_enable": mineru_deploy_table_enable,
         "mineru_deploy_start_page_id": mineru_deploy_start_page_id,
         "mineru_deploy_end_page_id": mineru_deploy_end_page_id,
         "mineru_deploy_lang_list": mineru_deploy_lang_list,
