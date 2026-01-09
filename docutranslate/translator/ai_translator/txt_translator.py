@@ -219,9 +219,11 @@ class TXTTranslator(AiTranslator):
         texts_to_translate = [text for text in original_segments if text.strip()]
 
         if self.glossary_agent and texts_to_translate:
-            self.glossary_dict_gen = self.glossary_agent.send_segments(texts_to_translate, self.chunk_size)
+            glossary_dict_gen = self.glossary_agent.send_segments(texts_to_translate, self.chunk_size)
+            if self.glossary:
+                self.glossary.update(glossary_dict_gen)
             if self.translate_agent:
-                self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
+                self.translate_agent.update_glossary_dict(glossary_dict_gen)
 
         translated_texts_map = {}
         if self.translate_agent and texts_to_translate:
@@ -247,9 +249,11 @@ class TXTTranslator(AiTranslator):
         texts_to_translate = [text for text in original_segments if text.strip()]
 
         if self.glossary_agent and texts_to_translate:
-            self.glossary_dict_gen = await self.glossary_agent.send_segments_async(texts_to_translate, self.chunk_size)
+            glossary_dict_gen = await self.glossary_agent.send_segments_async(texts_to_translate, self.chunk_size)
+            if self.glossary:
+                self.glossary.update(glossary_dict_gen)
             if self.translate_agent:
-                self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
+                self.translate_agent.update_glossary_dict(glossary_dict_gen)
 
         translated_texts_map = {}
         if self.translate_agent and texts_to_translate:

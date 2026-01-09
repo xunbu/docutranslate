@@ -108,10 +108,9 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
         convert_engine, convert_config, translator_config, translator = self._pre_translate(self.document_original)
         document_md = self._get_document_md(convert_engine, convert_config)
         translator.translate(document_md)
-        # 使用合并后的术语表（用户上传 + 自动生成）
-        merged_glossary = getattr(translator.translate_agent, 'glossary_dict', None) or translator.glossary_dict_gen
-        if merged_glossary:
-            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(merged_glossary))
+        # 直接从 translator.glossary 获取术语表
+        if translator.glossary.glossary_dict:
+            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary.glossary_dict))
         self.document_translated = document_md
         return self
 
@@ -119,10 +118,9 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
         convert_engine, convert_config, translator_config, translator = self._pre_translate(self.document_original)
         document_md = await asyncio.to_thread(self._get_document_md, convert_engine, convert_config)
         await translator.translate_async(document_md)
-        # 使用合并后的术语表（用户上传 + 自动生成）
-        merged_glossary = getattr(translator.translate_agent, 'glossary_dict', None) or translator.glossary_dict_gen
-        if merged_glossary:
-            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(merged_glossary))
+        # 直接从 translator.glossary 获取术语表
+        if translator.glossary.glossary_dict:
+            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary.glossary_dict))
         self.document_translated = document_md
         return self
 

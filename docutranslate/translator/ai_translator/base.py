@@ -6,6 +6,7 @@ from typing import TypeVar
 
 from docutranslate.agents.agent import AgentConfig
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig, GlossaryAgent
+from docutranslate.glossary.glossary import Glossary
 from docutranslate.ir.document import Document
 from docutranslate.translator.base import Translator, TranslatorConfig
 
@@ -22,7 +23,7 @@ class AiTranslatorConfig(TranslatorConfig, AgentConfig):
     to_lang: str = "简体中文"
     custom_prompt: str | None = None
     chunk_size: int = 3000
-    glossary_dict: dict[str:str] | None = field(default=None)
+    glossary: Glossary | None = None
     glossary_generate_enable: bool = False
     glossary_agent_config: GlossaryAgentConfig | None = None
     skip_translate: bool = False  # 当skip_translate为False时base_url、model_id为必填项
@@ -39,8 +40,8 @@ class AiTranslator(Translator[T]):
     def __init__(self, config: AiTranslatorConfig):
         super().__init__(config=config)
         self.skip_translate = config.skip_translate
+        self.glossary = config.glossary if config.glossary else Glossary()
         self.glossary_agent = None
-        self.glossary_dict_gen = None
         if not self.skip_translate and (
                 config.base_url is None or config.api_key is None or config.model_id is None
         ):

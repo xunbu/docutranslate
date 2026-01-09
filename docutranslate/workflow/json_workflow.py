@@ -38,20 +38,18 @@ class JsonWorkflow(Workflow[JsonWorkflowConfig, Document, Document], HTMLExporta
     def translate(self) -> Self:
         document, translator = self._pre_translate(self.document_original)
         translator.translate(document)
-        # 使用合并后的术语表（用户上传 + 自动生成）
-        merged_glossary = getattr(translator.translate_agent, 'glossary_dict', None) or translator.glossary_dict_gen
-        if merged_glossary:
-            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(merged_glossary))
+        # 直接从 translator.glossary 获取术语表
+        if translator.glossary.glossary_dict:
+            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary.glossary_dict))
         self.document_translated = document
         return self
 
     async def translate_async(self) -> Self:
         document, translator = self._pre_translate(self.document_original)
         await translator.translate_async(document)
-        # 使用合并后的术语表（用户上传 + 自动生成）
-        merged_glossary = getattr(translator.translate_agent, 'glossary_dict', None) or translator.glossary_dict_gen
-        if merged_glossary:
-            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(merged_glossary))
+        # 直接从 translator.glossary 获取术语表
+        if translator.glossary.glossary_dict:
+            self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary.glossary_dict))
         self.document_translated = document
         return self
 

@@ -279,9 +279,11 @@ class EpubTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
-            self.glossary_dict_gen = self.glossary_agent.send_segments(original_texts, self.chunk_size)
+            glossary_dict_gen = self.glossary_agent.send_segments(original_texts, self.chunk_size)
+            if self.glossary:
+                self.glossary.update(glossary_dict_gen)
             if self.translate_agent:
-                self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
+                self.translate_agent.update_glossary_dict(glossary_dict_gen)
         if self.translate_agent:
             translated_texts = self.translate_agent.send_segments(original_texts, self.chunk_size)
         else:
@@ -301,9 +303,11 @@ class EpubTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
-            self.glossary_dict_gen = await self.glossary_agent.send_segments_async(original_texts, self.chunk_size)
+            glossary_dict_gen = await self.glossary_agent.send_segments_async(original_texts, self.chunk_size)
+            if self.glossary:
+                self.glossary.update(glossary_dict_gen)
             if self.translate_agent:
-                self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
+                self.translate_agent.update_glossary_dict(glossary_dict_gen)
         if self.translate_agent:
             translated_texts = await self.translate_agent.send_segments_async(
                 original_texts, self.chunk_size

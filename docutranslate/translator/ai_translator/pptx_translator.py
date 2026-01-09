@@ -40,12 +40,13 @@ class PPTXTranslator(AiTranslator):
         super().__init__(config=config)
         self.chunk_size = config.chunk_size
         self.translate_agent = None
+        glossary_dict = self.glossary.glossary_dict if self.glossary else None
         if not self.skip_translate:
             agent_config = SegmentsTranslateAgentConfig(
                 custom_prompt=config.custom_prompt, to_lang=config.to_lang, base_url=config.base_url,
                 api_key=config.api_key, model_id=config.model_id, temperature=config.temperature,
                 thinking=config.thinking, concurrent=config.concurrent, timeout=config.timeout,
-                logger=self.logger, glossary_dict=config.glossary_dict, retry=config.retry,
+                logger=self.logger, glossary_dict=glossary_dict, retry=config.retry,
                 system_proxy_enable=config.system_proxy_enable, force_json=config.force_json,
                 rpm=config.rpm,
                 tpm=config.tpm,
@@ -314,9 +315,11 @@ class PPTXTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
-            self.glossary_dict_gen = self.glossary_agent.send_segments(originals, self.chunk_size)
+            glossary_dict_gen = self.glossary_agent.send_segments(originals, self.chunk_size)
+            if self.glossary:
+                self.glossary.update(glossary_dict_gen)
             if self.translate_agent:
-                self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
+                self.translate_agent.update_glossary_dict(glossary_dict_gen)
 
         translated = self.translate_agent.send_segments(originals,
                                                         self.chunk_size) if self.translate_agent else originals
@@ -331,9 +334,11 @@ class PPTXTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
-            self.glossary_dict_gen = await self.glossary_agent.send_segments_async(originals, self.chunk_size)
+            glossary_dict_gen = await self.glossary_agent.send_segments_async(originals, self.chunk_size)
+            if self.glossary:
+                self.glossary.update(glossary_dict_gen)
             if self.translate_agent:
-                self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
+                self.translate_agent.update_glossary_dict(glossary_dict_gen)
 
         translated = await self.translate_agent.send_segments_async(originals,
                                                                     self.chunk_size) if self.translate_agent else originals

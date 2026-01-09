@@ -25,6 +25,7 @@ class AssTranslator(AiTranslator):
         super().__init__(config=config)
         self.chunk_size = config.chunk_size
         self.translate_agent = None
+        glossary_dict = self.glossary.glossary_dict if self.glossary else None
         if not self.skip_translate:
             agent_config = SegmentsTranslateAgentConfig(
                 custom_prompt=config.custom_prompt,
@@ -37,7 +38,7 @@ class AssTranslator(AiTranslator):
                 concurrent=config.concurrent,
                 timeout=config.timeout,
                 logger=self.logger,
-                glossary_dict=config.glossary_dict,
+                glossary_dict=glossary_dict,
                 retry=config.retry,
                 system_proxy_enable=config.system_proxy_enable,
                 force_json=config.force_json,
@@ -106,9 +107,11 @@ class AssTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
-            self.glossary_dict_gen = self.glossary_agent.send_segments(original_texts, self.chunk_size)
+            glossary_dict_gen = self.glossary_agent.send_segments(original_texts, self.chunk_size)
+            if self.glossary:
+                self.glossary.update(glossary_dict_gen)
             if self.translate_agent:
-                self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
+                self.translate_agent.update_glossary_dict(glossary_dict_gen)
 
         if self.translate_agent:
             translated_texts = self.translate_agent.send_segments(original_texts, self.chunk_size)
@@ -126,9 +129,11 @@ class AssTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
-            self.glossary_dict_gen = await self.glossary_agent.send_segments_async(original_texts, self.chunk_size)
+            glossary_dict_gen = await self.glossary_agent.send_segments_async(original_texts, self.chunk_size)
+            if self.glossary:
+                self.glossary.update(glossary_dict_gen)
             if self.translate_agent:
-                self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
+                self.translate_agent.update_glossary_dict(glossary_dict_gen)
 
         if self.translate_agent:
             translated_texts = await self.translate_agent.send_segments_async(original_texts, self.chunk_size)

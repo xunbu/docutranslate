@@ -27,6 +27,7 @@ class MDTranslator(AiTranslator):
         super().__init__(config=config)
         self.chunk_size = config.chunk_size
         self.translate_agent = None
+        glossary_dict = self.glossary.glossary_dict if self.glossary else None
         if not self.skip_translate:
             agent_config = MDTranslateAgentConfig(custom_prompt=config.custom_prompt,
                                                   to_lang=config.to_lang,
@@ -38,7 +39,7 @@ class MDTranslator(AiTranslator):
                                                   concurrent=config.concurrent,
                                                   timeout=config.timeout,
                                                   logger=self.logger,
-                                                  glossary_dict=config.glossary_dict,
+                                                  glossary_dict=glossary_dict,
                                                   retry=config.retry,
                                                   system_proxy_enable=config.system_proxy_enable,
                                                   rpm=config.rpm,
@@ -66,9 +67,11 @@ class MDTranslator(AiTranslator):
                     translate_chunks.append(chunk)
 
             if self.glossary_agent and translate_chunks:
-                self.glossary_dict_gen = self.glossary_agent.send_segments(translate_chunks, self.chunk_size)
+                glossary_dict_gen = self.glossary_agent.send_segments(translate_chunks, self.chunk_size)
+                if self.glossary:
+                    self.glossary.update(glossary_dict_gen)
                 if self.translate_agent:
-                    self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
+                    self.translate_agent.update_glossary_dict(glossary_dict_gen)
 
             self.logger.info(f"markdown分为{len(chunks)}块 (其中需翻译{len(translate_chunks)}块)")
 
@@ -105,10 +108,12 @@ class MDTranslator(AiTranslator):
                     translate_chunks.append(chunk)
 
             if self.glossary_agent and translate_chunks:
-                self.glossary_dict_gen = await self.glossary_agent.send_segments_async(translate_chunks,
+                glossary_dict_gen = await self.glossary_agent.send_segments_async(translate_chunks,
                                                                                        self.chunk_size)
+                if self.glossary:
+                    self.glossary.update(glossary_dict_gen)
                 if self.translate_agent:
-                    self.translate_agent.update_glossary_dict(self.glossary_dict_gen)
+                    self.translate_agent.update_glossary_dict(glossary_dict_gen)
 
             self.logger.info(f"markdown分为{len(chunks)}块 (其中需翻译{len(translate_chunks)}块)")
 
