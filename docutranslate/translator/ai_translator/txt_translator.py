@@ -59,6 +59,7 @@ class TXTTranslator(AiTranslator):
         super().__init__(config=config)
         self.chunk_size = config.chunk_size
         self.translate_agent = None
+        glossary_dict = self.glossary.glossary_dict if self.glossary else None
         if not self.skip_translate:
             agent_config = SegmentsTranslateAgentConfig(
                 custom_prompt=config.custom_prompt,
@@ -71,7 +72,7 @@ class TXTTranslator(AiTranslator):
                 concurrent=config.concurrent,
                 timeout=config.timeout,
                 logger=self.logger,
-                glossary_dict=config.glossary_dict,
+                glossary_dict=glossary_dict,
                 retry=config.retry,
                 system_proxy_enable=config.system_proxy_enable,
                 force_json=config.force_json,
