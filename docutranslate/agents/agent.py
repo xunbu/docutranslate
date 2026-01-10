@@ -278,7 +278,18 @@ PreSendHandlerType = Callable[[str, str], tuple[str, str]]
 ResultHandlerType = Callable[[str, str, logging.Logger], Any]
 ErrorResultHandlerType = Callable[[str, logging.Logger], Any]
 
-_CJK_PATTERN = re.compile(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]')
+# _CJK_PATTERN = re.compile(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]')
+# 扩展正则范围，包含：
+# CJK (中日韩): \u2e80-\u9fff
+# 西里尔 (俄语等): \u0400-\u04ff
+# 阿拉伯语: \u0600-\u06ff
+# 泰语: \u0e00-\u0e7f
+# 梵文 (印地语等): \u0900-\u097f
+# 标点和特殊符号范围较广，这里主要抓取非拉丁体系的主要语言
+_COMPLEX_SCRIPT_PATTERN = re.compile(
+    r'[\u2e80-\u9fff\u0400-\u04ff\u0600-\u06ff\u0e00-\u0e7f\u0900-\u097f]'
+)
+
 class Agent:
 
     def __init__(self, config: AgentConfig):
@@ -308,23 +319,28 @@ class Agent:
 
     def _estimate_tokens(self, text: str) -> int:
         """
-        纯 Python 估算 Token 数量 (替代 tiktoken)。
-        策略:
-        - CJK (中日韩) 字符: 约 1.0 Token/Char (保守估计)
-        - ASCII/其他字符: 约 0.3 Token/Char (英文约 3-4 字符/Token)
-        这种方式运算速度快，且对 TPM 限流来说精度足够。
+        改进的纯 Python 估算，适配更多语言。
         """
         if not text:
             return 0
 
-        cjk_count = len(_CJK_PATTERN.findall(text))
         total_len = len(text)
-        other_count = total_len - cjk_count
 
-        # 计算加权总和 (保留一位小数后向上取整，或直接转int)
-        estimated = (cjk_count * 1.0) + (other_count * 0.3)
+        # 统计复杂字符数量 (CJK, 俄语, 阿拉伯语等)
+        complex_char_count = len(_COMPLEX_SCRIPT_PATTERN.findall(text))
 
-        return int(estimated) if estimated > 0 else 1
+        # 简单的 ASCII 或拉丁字符
+        simple_char_count = total_len - complex_char_count
+
+        # 权重设定：
+        # 复杂字符：保守估计 1.0 (GPT-4o 对中文优化很好，约为0.6-0.7，但为了限流安全，建议设高一点)
+        # 简单字符：0.3 (英文平均 1个token ≈ 3.5字符)
+        # 额外：加上消息的固定开销 (Message Overhead)，通常每条消息有 3-4 个 token 的系统开销
+
+        estimated = (complex_char_count * 1.0) + (simple_char_count * 0.3)
+
+        # 向上取整
+        return int(estimated) + 1
 
     def _add_thinking_mode(self, data: dict):
         thinking_mode_result = get_thinking_mode(self.provider, data.get("model"))
