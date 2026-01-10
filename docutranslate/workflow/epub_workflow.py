@@ -8,7 +8,6 @@ from docutranslate.exporter.base import ExporterConfig
 from docutranslate.exporter.epub.epub2epub_exporter import Epub2EpubExporter
 from docutranslate.exporter.epub.epub2html_exporter import Epub2HTMLExporterConfig, Epub2HTMLExporter
 from docutranslate.glossary.glossary import Glossary
-
 from docutranslate.ir.document import Document
 from docutranslate.translator.ai_translator.epub_translator import EpubTranslatorConfig, EpubTranslator
 from docutranslate.workflow.base import Workflow, WorkflowConfig
@@ -64,7 +63,7 @@ class EpubWorkflow(Workflow[EpubWorkflowConfig, Document, Document], HTMLExporta
         return docu.content
 
     def save_as_html(self, name: str = None, output_dir: Path | str = "./output",
-                     config: Epub2HTMLExporter | None = None) -> Self:
+                     config: Epub2HTMLExporterConfig | None = None) -> Self:
         config = config or self.config.html_exporter_config
         self._save(exporter=Epub2HTMLExporter(config), name=name, output_dir=output_dir)
         return self
