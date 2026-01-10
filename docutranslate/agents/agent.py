@@ -5,6 +5,7 @@ import asyncio
 import itertools
 import json
 import logging
+import re  # 新增：用于正则估算
 import time
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
@@ -14,7 +15,6 @@ from typing import Literal, Callable, Any
 from urllib.parse import urlparse
 
 import httpx
-import tiktoken
 
 from docutranslate.agents.provider import get_provider_by_domain
 from docutranslate.agents.thinking.thinking_factory import get_thinking_mode, ProviderType
@@ -58,7 +58,7 @@ class AgentConfig:
     force_json: bool = False
     rpm: int | None = None  # 每分钟请求数限制
     tpm: int | None = None  # 每分钟Token数限制
-    provider:ProviderType|None=None
+    provider: ProviderType | None = None
 
 
 class TotalErrorCounter:
@@ -278,7 +278,7 @@ PreSendHandlerType = Callable[[str, str], tuple[str, str]]
 ResultHandlerType = Callable[[str, str, logging.Logger], Any]
 ErrorResultHandlerType = Callable[[str, logging.Logger], Any]
 
-
+_CJK_PATTERN = re.compile(r'[\u4e00-\u9fff\u3040-\u30ff\uac00-\ud7af]')
 class Agent:
 
     def __init__(self, config: AgentConfig):
@@ -303,29 +303,28 @@ class Agent:
 
         # 新增：初始化速率限制器
         self.rate_limiter = RateLimiter(rpm=config.rpm, tpm=config.tpm)
-        # 新增：初始化 encoding 用于估算
-        self.encoding = self._get_encoding_for_model(self.model_id)
 
-        self.provider=config.provider if config.provider is not None else get_provider_by_domain(self.domain)
-
-    def _get_encoding_for_model(self, model_name: str):
-        """获取 tiktoken encoding，如果失败则使用 cl100k_base 兜底"""
-        try:
-            return tiktoken.encoding_for_model(model_name)
-        except KeyError:
-            # 对于未知模型或自定义模型ID，使用 GPT-4 的默认编码器
-            return tiktoken.get_encoding("cl100k_base")
+        self.provider = config.provider if config.provider is not None else get_provider_by_domain(self.domain)
 
     def _estimate_tokens(self, text: str) -> int:
-        """估算文本的 Token 数量"""
+        """
+        纯 Python 估算 Token 数量 (替代 tiktoken)。
+        策略:
+        - CJK (中日韩) 字符: 约 1.0 Token/Char (保守估计)
+        - ASCII/其他字符: 约 0.3 Token/Char (英文约 3-4 字符/Token)
+        这种方式运算速度快，且对 TPM 限流来说精度足够。
+        """
         if not text:
             return 0
-        try:
-            # 这是一个近似值，不包含特殊 token 格式的开销，但用于限流足够了
-            return len(self.encoding.encode(text))
-        except Exception:
-            # 极端兜底：每4个字符算1个token
-            return len(text) // 4
+
+        cjk_count = len(_CJK_PATTERN.findall(text))
+        total_len = len(text)
+        other_count = total_len - cjk_count
+
+        # 计算加权总和 (保留一位小数后向上取整，或直接转int)
+        estimated = (cjk_count * 1.0) + (other_count * 0.3)
+
+        return int(estimated) if estimated > 0 else 1
 
     def _add_thinking_mode(self, data: dict):
         thinking_mode_result = get_thinking_mode(self.provider, data.get("model"))
@@ -381,14 +380,16 @@ class Agent:
         最多继续获取 MAX_CONTINUE_FETCHES 次，防止无限循环。
         """
         if continue_count >= MAX_CONTINUE_FETCHES:
-            self.logger.warning(f"已达到最大继续获取次数 ({MAX_CONTINUE_FETCHES})，返回已累计结果 ({len(accumulated_result)} 字符)")
+            self.logger.warning(
+                f"已达到最大继续获取次数 ({MAX_CONTINUE_FETCHES})，返回已累计结果 ({len(accumulated_result)} 字符)")
             return (
                 accumulated_result
                 if result_handler is None
                 else result_handler(accumulated_result, prompt, self.logger)
             )
 
-        self.logger.info(f"继续获取剩余内容 (已累计 {len(accumulated_result)} 字符, 第 {continue_count + 1}/{MAX_CONTINUE_FETCHES} 次)...")
+        self.logger.info(
+            f"继续获取剩余内容 (已累计 {len(accumulated_result)} 字符, 第 {continue_count + 1}/{MAX_CONTINUE_FETCHES} 次)...")
 
         # 构造继续请求的提示
         # 关键：告知模型我们已经获取了部分内容，请继续完成
@@ -710,7 +711,6 @@ class Agent:
         async with httpx.AsyncClient(
                 trust_env=False, mounts=proxies, verify=False, limits=limits
         ) as client:
-
             async def send_with_semaphore(p_text: str):
                 async with semaphore:
                     # 注意：我们在 semaphore 内部调用 send_async
@@ -769,14 +769,16 @@ class Agent:
         最多继续获取 MAX_CONTINUE_FETCHES 次，防止无限循环。
         """
         if continue_count >= MAX_CONTINUE_FETCHES:
-            self.logger.warning(f"已达到最大继续获取次数 ({MAX_CONTINUE_FETCHES})，返回已累计结果 ({len(accumulated_result)} 字符)")
+            self.logger.warning(
+                f"已达到最大继续获取次数 ({MAX_CONTINUE_FETCHES})，返回已累计结果 ({len(accumulated_result)} 字符)")
             return (
                 accumulated_result
                 if result_handler is None
                 else result_handler(accumulated_result, prompt, self.logger)
             )
 
-        self.logger.info(f"继续获取剩余内容 (已累计 {len(accumulated_result)} 字符, 第 {continue_count + 1}/{MAX_CONTINUE_FETCHES} 次)...")
+        self.logger.info(
+            f"继续获取剩余内容 (已累计 {len(accumulated_result)} 字符, 第 {continue_count + 1}/{MAX_CONTINUE_FETCHES} 次)...")
 
         # 构造继续请求的提示
         continue_prompt = f"{prompt}\n\n[系统提示：请继续完成之前的响应。之前已输出内容为：\n---\n{accumulated_result}\n---\n请从中断处继续输出剩余内容。]"
