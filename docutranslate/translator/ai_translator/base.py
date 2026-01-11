@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import TypeVar
+from typing import TypeVar, Dict
 
 from docutranslate.agents.agent import AgentConfig
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig, GlossaryAgent
@@ -24,6 +24,7 @@ class AiTranslatorConfig(TranslatorConfig, AgentConfig):
     custom_prompt: str | None = None
     chunk_size: int = 3000
     glossary: Glossary | None = None
+    glossary_dict: Dict[str, str] | None = None
     glossary_generate_enable: bool = False
     glossary_agent_config: GlossaryAgentConfig | None = None
     skip_translate: bool = False  # 当skip_translate为False时base_url、model_id为必填项
@@ -40,25 +41,38 @@ class AiTranslator(Translator[T]):
     def __init__(self, config: AiTranslatorConfig):
         super().__init__(config=config)
         self.skip_translate = config.skip_translate
-        self.glossary = config.glossary if config.glossary else Glossary()
+
+
+        if config.glossary:
+            self.glossary = config.glossary
+        elif config.glossary_dict:
+            self.glossary = Glossary(glossary_dict=config.glossary_dict)
+        else:
+            self.glossary = Glossary()
+
         self.glossary_agent = None
         if not self.skip_translate and (
                 config.base_url is None or config.api_key is None or config.model_id is None
         ):
-            raise ValueError(
-                "skip_translate不为false时，base_url、api_key、model_id为必填项"
-            )
+            raise ValueError("skip_translate不为false时，base_url、api_key、model_id为必填项")
 
         if config.glossary_generate_enable:
             if config.glossary_agent_config:
                 self.glossary_agent = GlossaryAgent(config.glossary_agent_config)
             else:
                 glossary_agent_config = GlossaryAgentConfig(
-                    to_lang=config.to_lang, base_url=config.base_url,
-                    api_key=config.api_key, model_id=config.model_id, temperature=config.temperature,
-                    thinking=config.thinking, concurrent=config.concurrent, timeout=config.timeout,
-                    logger=self.logger, retry=config.retry,
-                    system_proxy_enable=config.system_proxy_enable, force_json=config.force_json,
+                    to_lang=config.to_lang,
+                    base_url=config.base_url,
+                    api_key=config.api_key,
+                    model_id=config.model_id,
+                    temperature=config.temperature,
+                    thinking=config.thinking,
+                    concurrent=config.concurrent,
+                    timeout=config.timeout,
+                    logger=self.logger,
+                    retry=config.retry,
+                    system_proxy_enable=config.system_proxy_enable,
+                    force_json=config.force_json,
                     rpm=config.rpm,
                     tpm=config.tpm,
                     provider=config.provider,
