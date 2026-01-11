@@ -206,11 +206,16 @@ class HtmlTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
+            # 1. 获取增量
             glossary_dict_gen = self.glossary_agent.send_segments(original_texts, self.chunk_size)
+
+            # 2. 在 Translator 层统一合并 (SSOT)
             if self.glossary:
                 self.glossary.update(glossary_dict_gen)
-            if self.translate_agent:
-                self.translate_agent.update_glossary_dict(glossary_dict_gen)
+
+            # 3. 将合并后的【完整字典】传给 Agent
+            if self.translate_agent and self.glossary:
+                self.translate_agent.update_glossary_dict(self.glossary.glossary_dict)
         if self.translate_agent:
             translated_texts = self.translate_agent.send_segments(original_texts, self.chunk_size)
         else:
@@ -227,11 +232,16 @@ class HtmlTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
+            # 1. 获取增量
             glossary_dict_gen = await self.glossary_agent.send_segments_async(original_texts, self.chunk_size)
+
+            # 2. 在 Translator 层统一合并 (SSOT)
             if self.glossary:
                 self.glossary.update(glossary_dict_gen)
-            if self.translate_agent:
-                self.translate_agent.update_glossary_dict(glossary_dict_gen)
+
+            # 3. 将合并后的【完整字典】传给 Agent
+            if self.translate_agent and self.glossary:
+                self.translate_agent.update_glossary_dict(self.glossary.glossary_dict)
         if self.translate_agent:
             translated_texts = await self.translate_agent.send_segments_async(original_texts, self.chunk_size)
         else:

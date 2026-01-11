@@ -537,11 +537,16 @@ class DocxTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
+            # 1. 获取增量
             glossary_dict_gen = self.glossary_agent.send_segments(originals, self.chunk_size)
+
+            # 2. 在 Translator 层统一合并 (SSOT)
             if self.glossary:
                 self.glossary.update(glossary_dict_gen)
-            if self.translate_agent:
-                self.translate_agent.update_glossary_dict(glossary_dict_gen)
+
+            # 3. 将合并后的【完整字典】传给 Agent
+            if self.translate_agent and self.glossary:
+                self.translate_agent.update_glossary_dict(self.glossary.glossary_dict)
 
         translated = self.translate_agent.send_segments(originals,
                                                         self.chunk_size) if self.translate_agent else originals
@@ -556,11 +561,16 @@ class DocxTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
+            # 1. 获取增量
             glossary_dict_gen = await self.glossary_agent.send_segments_async(originals, self.chunk_size)
+
+            # 2. 在 Translator 层统一合并 (SSOT)
             if self.glossary:
                 self.glossary.update(glossary_dict_gen)
-            if self.translate_agent:
-                self.translate_agent.update_glossary_dict(glossary_dict_gen)
+
+            # 3. 将合并后的【完整字典】传给 Agent
+            if self.translate_agent and self.glossary:
+                self.translate_agent.update_glossary_dict(self.glossary.glossary_dict)
 
         translated = await self.translate_agent.send_segments_async(originals,
                                                                     self.chunk_size) if self.translate_agent else originals
