@@ -254,20 +254,42 @@ async def lifespan(app: FastAPI):
     global_logger.propagate = False
     global_logger.setLevel(logging.INFO)
     print("应用启动完成，多任务状态已初始化。")
-    print(f"服务接口文档: http://127.0.0.1:{app.state.port_to_use}/docs")
-    print(f"请用浏览器访问 http://127.0.0.1:{app.state.port_to_use}\n")
-    yield
-    # 清理任何可能残留的临时目录
+    if hasattr(app.state, "port_to_use"):
+        print(f"服务接口文档: http://127.0.0.1:{app.state.port_to_use}/docs")
+        print(f"请用浏览器访问 http://127.0.0.1:{app.state.port_to_use}\n")
+    yield  # 应用运行中...
+
+    # --- 关闭阶段 ---
+    print("正在关闭应用，开始清理资源...")
+
+    # 1. 优先取消所有正在进行的后台任务
+    # 如果不取消，uvicorn 会等待它们完成，导致进程挂起
+    pending_tasks = []
+    for task_id, task_state in tasks_state.items():
+        task_ref = task_state.get("current_task_ref")
+        if task_ref and not task_ref.done():
+            print(f"[{task_id}] 检测到未完成任务，正在强制取消...")
+            task_ref.cancel()
+            pending_tasks.append(task_ref)
+
+    # 等待所有任务完成取消操作 (捕获 CancelledError 避免报错)
+    if pending_tasks:
+        await asyncio.gather(*pending_tasks, return_exceptions=True)
+
+    # 2. 关闭 HTTP 客户端连接
+    await httpx_client.aclose()
+
+    # 3. 清理所有任务的临时目录
     for task_id, task_state in tasks_state.items():
         temp_dir = task_state.get("temp_dir")
         if temp_dir and os.path.isdir(temp_dir):
             try:
-                shutil.rmtree(temp_dir)
-                print(f"应用关闭，清理任务 '{task_id}' 的临时目录: {temp_dir}")
+                # ignore_errors=True 防止 Windows 上因文件被短暂占用导致的删除失败报错
+                shutil.rmtree(temp_dir, ignore_errors=True)
+                print(f"[{task_id}] 临时目录已清理: {temp_dir}")
             except Exception as e:
-                print(f"清理任务 '{task_id}' 的临时目录 '{temp_dir}' 时出错: {e}")
-    await httpx_client.aclose()
-    print("应用关闭，资源已清理。")
+                print(f"[{task_id}] 清理临时目录 '{temp_dir}' 时出错: {e}")
+    print("应用关闭，资源已彻底释放。")
 
 
 # --- FastAPI 应用和路由设置 ---

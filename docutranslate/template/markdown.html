@@ -63,6 +63,7 @@
             overflow-y: auto;
             transform: translateX(-100%);
             transition: transform 0.2s ease;
+            will-change: transform; /* 性能优化提示 */
         }
         #toc-panel.show { transform: translateX(0); }
 
@@ -77,10 +78,9 @@
             font-size: 13px;
             border-radius: 3px;
             cursor: pointer;
+            user-select: none; /* 防止频繁点击时选中文本 */
         }
         .toc-link:hover { background: #f5f5f5; }
-        .toc-link.active { background: #007bff; color: #fff; }
-
         .toc-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .toc-expander {
             width: 18px;
@@ -92,12 +92,12 @@
             cursor: pointer;
             flex-shrink: 0;
         }
-        .toc-expander:hover { color: #333; }
+        .toc-expander:hover { color: #333; background: rgba(0,0,0,0.05); border-radius: 2px; }
 
         .toc-children { display: none; padding-left: 12px; }
         .toc-children.expanded { display: block; }
 
-        .toc-item[data-level="1"] > .toc-link { font-weight: 500; }
+        .toc-item[data-level="1"] > .toc-link { font-weight: 500; color: #333; }
         .toc-item[data-level="2"] > .toc-link { padding-left: 20px; }
         .toc-item[data-level="3"] > .toc-link { padding-left: 30px; }
         .toc-item[data-level="4"] > .toc-link { padding-left: 40px; }
@@ -115,81 +115,125 @@
 (function() {
     const panel = document.getElementById('toc-panel');
     const list = document.getElementById('toc-list');
-    let headings = [];
 
-    function init() {
-        headings = Array.from(document.querySelectorAll('main h1, main h2, main h3, main h4, main h5, main h6'));
+    // UI交互逻辑
+    window.toggleToc = function() { panel.classList.toggle('show'); };
+
+    // 事件委托：处理目录点击与折叠
+    list.addEventListener('click', function(e) {
+        // 1. 处理折叠/展开 (+/- 按钮)
+        if (e.target.classList.contains('toc-expander')) {
+            e.stopPropagation();
+            const ul = e.target.closest('li').querySelector('.toc-children');
+            if (ul) {
+                ul.classList.toggle('expanded');
+                e.target.textContent = ul.classList.contains('expanded') ? '-' : '+';
+            }
+            return;
+        }
+
+        // 2. 处理点击跳转
+        const link = e.target.closest('.toc-link');
+        if (link && link.dataset.target) {
+            const targetEl = document.getElementById(link.dataset.target);
+            if (targetEl) {
+                targetEl.scrollIntoView({ behavior: 'smooth' });
+                // 在移动端点击后自动关闭面板
+                if (window.innerWidth < 768) panel.classList.remove('show');
+            }
+        }
+    });
+
+    // 核心生成逻辑
+    function buildToc() {
+        const headings = Array.from(document.querySelectorAll('main h1, main h2, main h3, main h4, main h5, main h6'));
         if (headings.length === 0) return;
 
+        // 确保所有标题都有ID
         headings.forEach((h, i) => { if (!h.id) h.id = 'h-' + i; });
 
+        // 构建树状结构
         const root = { level: 0, children: [] };
         const stack = [root];
+
         headings.forEach(h => {
             const level = parseInt(h.tagName[1]);
             const item = { id: h.id, text: h.textContent.trim(), level, children: [] };
-            while (stack.length > 1 && stack[stack.length - 1].level >= level) stack.pop();
+
+            while (stack.length > 1 && stack[stack.length - 1].level >= level) {
+                stack.pop();
+            }
             stack[stack.length - 1].children.push(item);
             stack.push(item);
         });
-        render(root.children, list);
+
+        // 使用 DocumentFragment 进行离线 DOM 构建 (性能关键点)
+        const fragment = document.createDocumentFragment();
+        renderRecursive(root.children, fragment);
+        list.appendChild(fragment);
     }
 
-    function render(items, parent) {
+    // 递归渲染函数
+    function renderRecursive(items, container) {
         items.forEach(item => {
             const li = document.createElement('li');
             li.className = 'toc-item';
             li.dataset.level = item.level;
 
+            // 链接部分
             const div = document.createElement('div');
             div.className = 'toc-link';
-            div.innerHTML = `<span class="toc-text">${item.text}</span>`;
+            div.dataset.target = item.id; // 存储目标ID供事件委托使用
 
+            const textSpan = document.createElement('span');
+            textSpan.className = 'toc-text';
+            textSpan.textContent = item.text;
+            div.appendChild(textSpan);
+
+            // 折叠按钮
+            let expander = null;
             if (item.children.length) {
-                const expander = document.createElement('span');
+                expander = document.createElement('span');
                 expander.className = 'toc-expander';
-                expander.textContent = '+';
-                expander.onclick = function(e) { e.stopPropagation(); toggle(this); };
+                // 默认展开一级菜单，其他折叠
+                const isRoot = item.level === 1;
+                expander.textContent = isRoot ? '-' : '+';
                 div.appendChild(expander);
             }
-
-            div.onclick = function() { scrollTo(item.id); };
             li.appendChild(div);
 
+            // 子菜单
             if (item.children.length) {
                 const ul = document.createElement('ul');
                 ul.className = 'toc-children';
-                render(item.children, ul);
+                if (item.level === 1) ul.classList.add('expanded');
+
+                renderRecursive(item.children, ul);
                 li.appendChild(ul);
-                if (item.level === 1) {
-                    ul.classList.add('expanded');
-                    expander.textContent = '-';
-                }
             }
-            parent.appendChild(li);
+
+            container.appendChild(li);
         });
     }
 
-    function toggle(btn) {
-        const ul = btn.closest('li').querySelector('.toc-children');
-        ul.classList.toggle('expanded');
-        btn.textContent = ul.classList.contains('expanded') ? '-' : '+';
-    }
+    // 调度执行：优先显示内容，空闲时生成目录
+    const idleCallback = window.requestIdleCallback || function(cb) { setTimeout(cb, 10); };
+    idleCallback(buildToc);
 
-    function scrollTo(id) {
-        const el = document.getElementById(id);
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-    }
-
-    window.toggleToc = function() { panel.classList.toggle('show'); };
-
-    init();
 })();
 
+// 辅助脚本
 setTimeout(() => {
-    for (const e of document.getElementsByClassName('katex-error')) e.innerHTML = e.title;
+    // 修复 Katex 错误显示
+    const errors = document.getElementsByClassName('katex-error');
+    for (let i = 0; i < errors.length; i++) {
+        errors[i].innerHTML = errors[i].title;
+    }
 }, 200);
 
-mermaid.initialize({ securityLevel: 'loose', startOnLoad: true });
+// 确保 Mermaid 存在再初始化
+if (typeof mermaid !== 'undefined') {
+    mermaid.initialize({ securityLevel: 'loose', startOnLoad: true });
+}
 </script>
 </html>
