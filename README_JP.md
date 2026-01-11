@@ -149,27 +149,38 @@ client = Client(
     concurrent=10,  # 同時リクエスト数
 )
 
-# 単一ファイルを翻訳 (ファイル类型を自動検出)
-result = client.translate("path/to/your/document.pdf")
-
-# デフォルトフォーマットで保存 (PDF -> markdown with embedded images)
+# 例 1: テキストファイルを翻訳 (PDF 解析エンジンが不要)
+result = client.translate("path/to/your/document.txt")
 print(f"翻訳完了！保存先: {result.save()}")
 
-# または出力フォーマットを明示的に指定
-# PDF/markdown_based は以下をサポート:
-#   - "markdown": Markdown フォーマット、base64 画像埋め込み (デフォルト)
-#   - "markdown_zip": Markdown フォーマット、画像分離保存 (ZIP アーカイブ)
-#   - "html": HTML フォーマット
-# docx は "docx" をサポート
-# xlsx は "xlsx" をサポート
-result.save(fmt="html")  # HTML として保存
-result.save(fmt="markdown")  # Markdown として保存（画像埋め込み）
-result.save(fmt="markdown_zip")  # ZIP として保存（画像分離）
+# 例 2: PDF ファイルを翻訳 (mineru_token またはローカルデプロイが必要)
+# 方式 A: オンライン MinerU を使用 (token が必要: https://mineru.net/apiManage/token)
+result = client.translate(
+    "path/to/your/document.pdf",
+    convert_engine="mineru",
+    mineru_token="YOUR_MINERU_TOKEN",  # MinerU Token に置き換える
+    formula_ocr=True,  # 数式認識を有効化
+)
+result.save(fmt="html")
 
-# カスタム場所に保存
-result.save(output_dir="./my_translations", name="my_document.html")
+# 方式 B: ローカルデプロイの MinerU を使用 (イントラネット/オフライン環境推奨)
+# ローカル MinerU サービスを先に起動してください, 参考: https://github.com/opendatalab/MinerU
+result = client.translate(
+    "path/to/your/document.pdf",
+    convert_engine="mineru_deploy",
+    mineru_deploy_base_url="http://127.0.0.1:8000",  # ローカル MinerU アドレス
+    mineru_deploy_backend="hybrid-auto-engine",  # バックエンドタイプ
+)
+result.save(fmt="markdown")
 
-# または Base64 エンコード文字列としてエクスポート
+# 例 3: Docx ファイルを翻訳 (書式保持)
+result = client.translate(
+    "path/to/your/document.docx",
+    insert_mode="replace",  # replace/append/prepend
+)
+result.save(fmt="docx")  # docx フォーマットで保存
+
+# 例 4: Base64 エンコード文字列としてエクスポート (API 転送用)
 base64_content = result.export(fmt="html")
 print(f"エクスポートコンテンツ長さ: {len(base64_content)}")
 
@@ -194,6 +205,8 @@ print(f"エクスポートコンテンツ長さ: {len(base64_content)}")
 | **concurrent** | `int` | 10 | 同時 LLM リクエスト数 |
 | **convert_engine** | `str` | `"mineru"` | PDF 解析エンジン: `"mineru"`、`"docling"`、`"mineru_deploy"` |
 | **mineru_deploy_base_url** | `str` | - | ローカル minerU API アドレス（`convert_engine="mineru_deploy"` の場合） |
+| **mineru_deploy_parse_method** | `str` | `"auto"` | ローカル minerU 解析方法: `"auto"`, `"txt"`, `"ocr"` |
+| **mineru_deploy_table_enable** | `bool` | `True` | ローカル minerU テーブル認識を有効化するか |
 | **mineru_token** | `str` | - | minerU API Token（オンライン minerU 使用時） |
 | **skip_translate** | `bool` | `False` | 翻訳をスキップしてドキュメントのみを解析 |
 | **output_dir** | `str` | `"./output"` | `save()` メソッドのデフォルト出力ディレクトリ |

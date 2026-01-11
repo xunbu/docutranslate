@@ -150,27 +150,38 @@ client = Client(
     concurrent=10,  # 并发请求数
 )
 
-# 翻译单个文件 (自动检测文件类型)
-result = client.translate("path/to/your/document.pdf")
-
-# 使用默认格式保存 (PDF -> markdown with embedded images)
+# 示例 1: 翻译纯文本文件 (无需 PDF 解析引擎)
+result = client.translate("path/to/your/document.txt")
 print(f"翻译完成！保存位置: {result.save()}")
 
-# 或显式指定输出格式
-# PDF/markdown_based 支持:
-#   - "markdown": Markdown 格式，内嵌 base64 图片 (默认)
-#   - "markdown_zip": Markdown 格式，图片分离存储 (ZIP 压缩包)
-#   - "html": HTML 格式
-# docx 支持: "docx"
-# xlsx 支持: "xlsx"
-result.save(fmt="html")  # 保存为 HTML
-result.save(fmt="markdown")  # 保存为 Markdown（内嵌图片）
-result.save(fmt="markdown_zip")  # 保存为 ZIP（图片分离）
+# 示例 2: 翻译 PDF 文件 (需要指定 mineru_token 或使用本地部署)
+# 方式 A: 使用在线 MinerU (需要申请 token: https://mineru.net/apiManage/token)
+result = client.translate(
+    "path/to/your/document.pdf",
+    convert_engine="mineru",
+    mineru_token="YOUR_MINERU_TOKEN",  # 替换为您的 MinerU Token
+    formula_ocr=True,  # 启用公式识别
+)
+result.save(fmt="html")
 
-# 保存到自定义位置
-result.save(output_dir="./my_translations", name="my_document.html")
+# 方式 B: 使用本地部署的 MinerU (推荐内网/离线环境)
+# 需要先启动本地 MinerU 服务，参考: https://github.com/opendatalab/MinerU
+result = client.translate(
+    "path/to/your/document.pdf",
+    convert_engine="mineru_deploy",
+    mineru_deploy_base_url="http://127.0.0.1:8000",  # 您的本地 MinerU 地址
+    mineru_deploy_backend="hybrid-auto-engine",  # 后端类型
+)
+result.save(fmt="markdown")
 
-# 导出为 Base64 编码字符串
+# 示例 3: 翻译 Docx 文件 (保持格式)
+result = client.translate(
+    "path/to/your/document.docx",
+    insert_mode="replace",  # replace/append/prepend
+)
+result.save(fmt="docx")  # 保存为 docx 格式
+
+# 示例 4: 导出为 Base64 编码字符串 (用于 API 传输)
 base64_content = result.export(fmt="html")
 print(f"导出内容长度: {len(base64_content)}")
 
@@ -195,6 +206,8 @@ print(f"导出内容长度: {len(base64_content)}")
 | **concurrent** | `int` | 10 | 并发 LLM 请求数 |
 | **convert_engine** | `str` | `"mineru"` | PDF 解析引擎：`"mineru"`、`"docling"`、`"mineru_deploy"` |
 | **mineru_deploy_base_url** | `str` | - | 本地 minerU API 地址（当 `convert_engine="mineru_deploy"` 时） |
+| **mineru_deploy_parse_method** | `str` | `"auto"` | 本地 minerU 解析方法: `"auto"`, `"txt"`, `"ocr"` |
+| **mineru_deploy_table_enable** | `bool` | `True` | 本地 minerU 是否启用表格识别 |
 | **mineru_token** | `str` | - | minerU API Token（使用在线 minerU 时） |
 | **skip_translate** | `bool` | `False` | 跳过翻译，仅解析文档 |
 | **output_dir** | `str` | `"./output"` | `save()` 方法的默认输出目录 |

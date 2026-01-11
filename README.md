@@ -149,27 +149,38 @@ client = Client(
     concurrent=10,  # Number of concurrent requests
 )
 
-# Translate a single file (auto-detects file type)
-result = client.translate("path/to/your/document.pdf")
-
-# Save with default format (PDF -> html by default)
+# Example 1: Translate plain text files (no PDF parsing engine needed)
+result = client.translate("path/to/your/document.txt")
 print(f"Translation complete! Saved to: {result.save()}")
 
-# Or specify output format explicitly
-# For PDF/markdown_based:
-#   - "markdown": Markdown with embedded base64 images (default)
-#   - "markdown_zip": Markdown with separate image files (ZIP archive)
-#   - "html": HTML format
-# For docx: "docx"
-# For xlsx: "xlsx"
-result.save(fmt="html")  # Save as HTML
-result.save(fmt="markdown")  # Save as Markdown with embedded images
-result.save(fmt="markdown_zip")  # Save as ZIP with separate images
+# Example 2: Translate PDF files (requires mineru_token or local deployment)
+# Option A: Use online MinerU (token required: https://mineru.net/apiManage/token)
+result = client.translate(
+    "path/to/your/document.pdf",
+    convert_engine="mineru",
+    mineru_token="YOUR_MINERU_TOKEN",  # Replace with your MinerU Token
+    formula_ocr=True,  # Enable formula recognition
+)
+result.save(fmt="html")
 
-# Save to custom location
-result.save(output_dir="./my_translations", name="my_document.html")
+# Option B: Use locally deployed MinerU (recommended for intranet/offline)
+# First start local MinerU service, reference: https://github.com/opendatalab/MinerU
+result = client.translate(
+    "path/to/your/document.pdf",
+    convert_engine="mineru_deploy",
+    mineru_deploy_base_url="http://127.0.0.1:8000",  # Your local MinerU address
+    mineru_deploy_backend="hybrid-auto-engine",  # Backend type
+)
+result.save(fmt="markdown")
 
-# Export as base64 encoded string
+# Example 3: Translate Docx files (preserve formatting)
+result = client.translate(
+    "path/to/your/document.docx",
+    insert_mode="replace",  # replace/append/prepend
+)
+result.save(fmt="docx")  # Save as docx format
+
+# Example 4: Export as base64 encoded string (for API transmission)
 base64_content = result.export(fmt="html")
 print(f"Exported content length: {len(base64_content)}")
 
@@ -194,6 +205,8 @@ print(f"Exported content length: {len(base64_content)}")
 | **concurrent** | `int` | 10 | Number of concurrent LLM requests |
 | **convert_engine** | `str` | `"mineru"` | PDF parsing engine: `"mineru"`, `"docling"`, `"mineru_deploy"` |
 | **mineru_deploy_base_url** | `str` | - | Local minerU API address (when `convert_engine="mineru_deploy"`) |
+| **mineru_deploy_parse_method** | `str` | `"auto"` | Local minerU parsing method: `"auto"`, `"txt"`, `"ocr"` |
+| **mineru_deploy_table_enable** | `bool` | `True` | Enable table recognition for local minerU |
 | **mineru_token** | `str` | - | minerU API token (when using online minerU) |
 | **skip_translate** | `bool` | `False` | Skip translation, only parse document |
 | **output_dir** | `str` | `"./output"` | Default output directory for `save()` |

@@ -101,7 +101,7 @@ class TranslationResult:
         method = getattr(self._workflow, method_name, None)
         if method:
             method(name=name, output_dir=output_dir)
-            return os.path.join(output_dir, name)
+            return str(Path(output_dir) / name)
         raise AttributeError(f"Workflow 缺少方法 {method_name}")
 
     def export(self, fmt: Optional[str] = None) -> str:
@@ -126,11 +126,10 @@ class TranslationResult:
             fmt = self._supported_formats[0]
             export_key = fmt
 
-        method_name = f"export_to_{export_key.replace('markdown_zip', 'markdown_zip')}"
-        # 特殊处理 markdown_zip -> export_to_markdown_zip
+        # 构建方法名
         if export_key == "markdown_zip":
             method_name = "export_to_markdown_zip"
-        elif export_key in ["html", "markdown"]:
+        else:
             method_name = f"export_to_{export_key}"
 
         method = getattr(self._workflow, method_name, None)
@@ -163,8 +162,8 @@ class Client:
             retry: int = default_params["retry"],
             thinking: ThinkingMode = default_params["thinking"],
             system_proxy_enable: bool = default_params["system_proxy_enable"],
-            convert_engine: Optional[Literal["mineru", "docling", "identity", "mineru_deploy"]] = None,
-            mineru_token: Optional[str] = None,
+            convert_engine: Literal["identity", "mineru", "docling", "mineru_deploy"] = "identity",
+            mineru_token: str = "",
             **kwargs
     ):
         """
@@ -204,22 +203,24 @@ class Client:
             rpm: Optional[int] = None,
             tpm: Optional[int] = None,
             provider: Optional[Union[ProviderType, str]] = None,
-            insert_mode: Optional[InsertMode] = None,
-            separator: Optional[str] = None,
-            segment_mode: Optional[Literal["line", "paragraph", "none"]] = None,
+            insert_mode: Literal["replace", "append", "prepend"] = "replace",
+            separator: str = "\n",
+            segment_mode: Literal["line", "paragraph", "none"] = "line",
             translate_regions: Optional[List[str]] = None,
-            convert_engine: Optional[Literal["mineru", "docling", "identity", "mineru_deploy"]] = None,
-            mineru_token: Optional[str] = None,
-            model_version: Optional[Literal["pipeline", "vlm"]] = None,
-            formula_ocr: Optional[bool] = None,
-            code_ocr: Optional[bool] = None,
-            mineru_deploy_base_url: Optional[str] = None,
-            mineru_deploy_backend: Optional[str] = None,
-            mineru_deploy_formula_enable: Optional[bool] = None,
-            mineru_deploy_start_page_id: Optional[int] = None,
-            mineru_deploy_end_page_id: Optional[int] = None,
+            convert_engine: Literal["identity", "mineru", "docling", "mineru_deploy"] = "identity",
+            mineru_token: str = "",
+            model_version: Literal["pipeline", "vlm"] = "vlm",
+            formula_ocr: bool = True,
+            code_ocr: bool = True,
+            mineru_deploy_base_url: str = "http://127.0.0.1:8000",
+            mineru_deploy_backend: Literal["pipeline", "vlm-auto-engine", "vlm-http-client", "hybrid-auto-engine", "hybrid-http-client"] = "hybrid-auto-engine",
+            mineru_deploy_parse_method: Literal["auto", "txt", "ocr"] = "auto",
+            mineru_deploy_formula_enable: bool = True,
+            mineru_deploy_table_enable: bool = True,
+            mineru_deploy_start_page_id: int = 0,
+            mineru_deploy_end_page_id: int = 99999,
             mineru_deploy_lang_list: Optional[List[str]] = None,
-            mineru_deploy_server_url: Optional[str] = None,
+            mineru_deploy_server_url: str = "",
             json_paths: Optional[List[str]] = None,
             glossary_generate_enable: Optional[bool] = None,
             glossary_dict: Optional[Dict[str, str]] = None,
@@ -270,26 +271,28 @@ class Client:
             provider: Optional[Union[ProviderType, str]] = None,
 
             # --- 格式参数 (Docx/Excel/Txt) ---
-            insert_mode: Optional[InsertMode] = None,
-            separator: Optional[str] = None,
-            segment_mode: Optional[Literal["line", "paragraph", "none"]] = None,
+            insert_mode: Literal["replace", "append", "prepend"] = "replace",
+            separator: str = "\n",
+            segment_mode: Literal["line", "paragraph", "none"] = "line",
             translate_regions: Optional[List[str]] = None,
 
             # --- 解析引擎 (PDF/OCR) ---
-            convert_engine: Optional[Literal["mineru", "docling", "identity", "mineru_deploy"]] = None,
-            mineru_token: Optional[str] = None,
-            model_version: Optional[Literal["pipeline", "vlm"]] = None,
-            formula_ocr: Optional[bool] = None,
-            code_ocr: Optional[bool] = None,
+            convert_engine: Literal["identity", "mineru", "docling", "mineru_deploy"] = "identity",
+            mineru_token: str = "",
+            model_version: Literal["pipeline", "vlm"] = "vlm",
+            formula_ocr: bool = True,
+            code_ocr: bool = True,
 
             # --- Mineru 本地部署参数 ---
-            mineru_deploy_base_url: Optional[str] = None,
-            mineru_deploy_backend: Optional[str] = None,
-            mineru_deploy_formula_enable: Optional[bool] = None,
-            mineru_deploy_start_page_id: Optional[int] = None,
-            mineru_deploy_end_page_id: Optional[int] = None,
+            mineru_deploy_base_url: str = "http://127.0.0.1:8000",
+            mineru_deploy_backend: Literal["pipeline", "vlm-auto-engine", "vlm-http-client", "hybrid-auto-engine", "hybrid-http-client"] = "hybrid-auto-engine",
+            mineru_deploy_parse_method: Literal["auto", "txt", "ocr"] = "auto",
+            mineru_deploy_formula_enable: bool = True,
+            mineru_deploy_table_enable: bool = True,
+            mineru_deploy_start_page_id: int = 0,
+            mineru_deploy_end_page_id: int = 99999,
             mineru_deploy_lang_list: Optional[List[str]] = None,
-            mineru_deploy_server_url: Optional[str] = None,
+            mineru_deploy_server_url: str = "",
 
             # --- JSON / 术语表 ---
             json_paths: Optional[List[str]] = None,
