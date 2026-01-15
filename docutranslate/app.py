@@ -1343,11 +1343,13 @@ async def _start_translation_task(
 ):
     # --- 新增: Auto 工作流路由逻辑 ---
     if payload.workflow_type == "auto":
+        print(f"DEBUG [{task_id}] 原始 Payload: {payload.model_dump()}")
         detected_type = get_workflow_type_from_filename(original_filename)
         print(f"[{task_id}] 自动识别工作流: {original_filename} -> {detected_type}")
 
         # 将参数转换为目标具体工作流类型所需的字典
         payload_data = payload.model_dump()
+        print(f"DEBUG [{task_id}] Dump后的数据: {payload_data}")
         payload_data["workflow_type"] = detected_type
 
         # 针对特定格式的默认策略
