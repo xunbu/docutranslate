@@ -208,8 +208,41 @@ class BaseWorkflowParams(BaseModel):
         return values
 
 
-# 2. 为每个工作流创建独立的参数模型
-class AutoWorkflowParams(BaseWorkflowParams):
+# --- 定义通用参数 Mixin，用于 Auto 模式透传 ---
+# 这是必须添加的关键部分，让 Auto 模式能够显式识别这些参数
+class UniversalParamsMixin(BaseModel):
+    # Markdown/PDF 相关
+    convert_engine: Optional[Literal["identity", "mineru", "docling", "mineru_deploy"]] = None
+    mineru_token: Optional[str] = None
+    model_version: Optional[Literal["pipeline", "vlm"]] = None
+    formula_ocr: Optional[bool] = None
+    code_ocr: Optional[bool] = None
+
+    # MinerU Deploy 相关
+    mineru_deploy_base_url: Optional[str] = None
+    mineru_deploy_backend: Optional[Literal[
+        "pipeline", "vlm-auto-engine", "vlm-http-client",
+        "hybrid-auto-engine", "hybrid-http-client"
+    ]] = None
+    mineru_deploy_parse_method: Optional[Literal["auto", "txt", "ocr"]] = None
+    mineru_deploy_table_enable: Optional[bool] = None
+    mineru_deploy_formula_enable: Optional[bool] = None
+    mineru_deploy_start_page_id: Optional[int] = None
+    mineru_deploy_end_page_id: Optional[int] = None
+    mineru_deploy_lang_list: Optional[List[str]] = None
+    mineru_deploy_server_url: Optional[str] = None
+
+    # Text/Excel/Common 相关
+    insert_mode: Optional[Literal["replace", "append", "prepend"]] = None
+    separator: Optional[str] = None
+    translate_regions: Optional[List[str]] = None
+
+    # Json 相关
+    json_paths: Optional[List[str]] = None
+
+
+# 2. 修改 AutoWorkflowParams，使其继承 UniversalParamsMixin
+class AutoWorkflowParams(BaseWorkflowParams, UniversalParamsMixin):
     workflow_type: Literal["auto"] = Field(..., description="根据文件后缀自动选择工作流。")
     model_config = ConfigDict(extra="allow")
 
