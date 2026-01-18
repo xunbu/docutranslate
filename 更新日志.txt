@@ -4,7 +4,7 @@ v1.6.3版 2025.1.18
 特性
 -UI/README增加越南语
 修复
--修复前端界面gemini平台不可用的问题【需重新输入api-key】
+-修复前端界面gemini平台不可用的问题
 优化
 -优化pptx的翻译效果
 -使用charset_normalizer替代chardet
