@@ -383,6 +383,7 @@ dependencies = [
     { name = "pysubs2" },
     { name = "python-docx" },
     { name = "python-pptx" },
+    { name = "regex" },
     { name = "srt" },
     { name = "xlsx2html" },
 ]
@@ -420,6 +421,7 @@ requires-dist = [
     { name = "pysubs2", specifier = ">=1.8.0" },
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "python-pptx", specifier = ">=1.0.2" },
+    { name = "regex", specifier = ">=2025.11.3" },
     { name = "srt", specifier = ">=3.5.3" },
     { name = "xlsx2html", specifier = ">=0.6.2" },
 ]
