@@ -370,6 +370,7 @@ name = "docutranslate"
 source = { editable = "." }
 dependencies = [
     { name = "beautifulsoup4" },
+    { name = "charset-normalizer" },
     { name = "fastapi", extra = ["standard"] },
     { name = "httpx" },
     { name = "json-repair" },
@@ -405,6 +406,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.13.4" },
+    { name = "charset-normalizer", specifier = ">=3.4.4" },
     { name = "docling", marker = "extra == 'docling'", specifier = ">=2.40.0" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.12" },
     { name = "hf-xet", marker = "extra == 'docling'", specifier = ">=1.1.10" },

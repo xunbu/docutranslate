@@ -21,6 +21,7 @@ dependencies = [
     "python-pptx>=1.0.2",
     "pypdf>=6.4.2",
     "regex>=2025.11.3",
+    "charset-normalizer>=3.4.4",
 ]
 dynamic = ["version"]
 
