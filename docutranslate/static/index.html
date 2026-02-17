@@ -499,6 +499,19 @@
                                             </div>
                                         </div>
 
+                                        <!-- Markdown to Docx Engine Selector -->
+                                        <div class="mt-3">
+                                            <label class="form-label">{{ t('md2docxEngineLabel') || 'Markdown转Docx引擎' }}</label>
+                                            <select class="form-select" v-model="form.md2docx_engine"
+                                                    @change="saveSetting('translator_md2docx_engine', form.md2docx_engine)">
+                                                <option :value="null">{{ t('engineOptionNone') || '不生成docx' }}</option>
+                                                <option value="auto">{{ t('engineOptionAuto') || '自动选择' }}</option>
+                                                <option value="python">{{ t('engineOptionPython') || '纯Python' }}</option>
+                                                <option value="pandoc">{{ t('engineOptionPandoc') || 'Pandoc' }}</option>
+                                            </select>
+                                            <div class="form-text">{{ t('md2docxEngineHelp') || '选择将Markdown导出为Docx的方式' }}</div>
+                                        </div>
+
                                         <div class="border-top mt-3 pt-3">
                                             <div class="form-check form-switch mb-2" v-if="ocrOptions.showFormula">
                                                 <input class="form-check-input" type="checkbox" role="switch"
@@ -1416,6 +1429,7 @@
                 workflow_type: 'markdown_based',
                 auto_workflow_enabled: true,
                 convert_engine: 'mineru',
+                md2docx_engine: 'auto',
                 mineru_token: '',
                 model_version: 'vlm',
                 mineru_deploy_base_url: 'http://127.0.0.1:8000',
@@ -1500,6 +1514,7 @@
                 form.workflow_type = get('translator_last_workflow', 'markdown_based');
                 form.auto_workflow_enabled = getBool('translator_auto_workflow_enabled', true);
                 form.convert_engine = get('translator_convert_engin', 'mineru');
+                form.md2docx_engine = get('translator_md2docx_engine', 'auto');
                 form.mineru_token = get('translator_mineru_token', '');
                 form.model_version = get('translator_model_version', 'vlm');
                 form.mineru_deploy_base_url = get('mineru_deploy_base_url', 'http://127.0.0.1:8000');
@@ -1586,6 +1601,7 @@
                 s('translator_last_workflow', f.workflow_type);
                 s('translator_auto_workflow_enabled', f.auto_workflow_enabled);
                 s('translator_convert_engin', f.convert_engine);
+                s('translator_md2docx_engine', f.md2docx_engine);
                 s('translator_mineru_token', f.mineru_token);
                 s('translator_model_version', f.model_version);
 
@@ -1906,6 +1922,7 @@
                 // Specific Workflow Params
                 if (form.workflow_type === 'markdown_based') {
                     basePayload.convert_engine = form.convert_engine;
+                    basePayload.md2docx_engine = form.md2docx_engine;
                     if (form.convert_engine === 'mineru') {
                         basePayload.mineru_token = emptyToNull(form.mineru_token);
                         basePayload.model_version = form.model_version;

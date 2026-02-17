@@ -212,6 +212,7 @@ print(f"Độ dài nội dung đã xuất: {len(base64_content)}")
 | **to_lang** | `str` | - | Ngôn ngữ đích (ví dụ: `"Chinese"`, `"English"`, `"Japanese"`) |
 | **concurrent** | `int` | 10 | Số lượng yêu cầu LLM đồng thời |
 | **convert_engine** | `str` | `"mineru"` | Công cụ phân tích PDF: `"mineru"`, `"docling"`, `"mineru_deploy"` |
+| **md2docx_engine** | `str` | `"auto"` | Công cụ chuyển đổi Markdown sang Docx: `"python"` (Python thuần), `"pandoc"` (sử dụng Pandoc), `"auto"` (sử dụng Pandoc nếu đã cài đặt, nếu không thì dùng Python), `null` (không tạo docx) |
 | **mineru_deploy_base_url** | `str` | - | Địa chỉ API minerU cục bộ (khi dùng `convert_engine="mineru_deploy"`) |
 | **mineru_deploy_parse_method** | `str` | `"auto"` | Phương pháp phân tích minerU cục bộ: `"auto"`, `"txt"`, `"ocr"` |
 | **mineru_deploy_table_enable** | `bool` | `True` | Bật nhận dạng bảng cho minerU cục bộ |
@@ -280,7 +281,7 @@ asyncio.run(translate_multiple())
 
 | Workflow | Đầu vào | save_as_* | export_to_* | Các tùy chọn Config chính |
 | --- | --- | --- | --- | --- |
-| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip` | `html`, `markdown`, `markdown_zip` | `convert_engine`, `translator_config` |
+| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip`, `docx` | `html`, `markdown`, `markdown_zip`, `docx` | `convert_engine`, `md2docx_engine`, `translator_config` |
 | **TXTWorkflow** | `.txt` | `txt`, `html` | `txt`, `html` | `translator_config` |
 | **JsonWorkflow** | `.json` | `json`, `html` | `json`, `html` | `translator_config`, `json_paths` |
 | **DocxWorkflow** | `.docx` | `docx`, `html` | `docx`, `html` | `translator_config`, `insert_mode` |

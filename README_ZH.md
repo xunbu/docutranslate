@@ -205,6 +205,7 @@ print(f"导出内容长度: {len(base64_content)}")
 | **to_lang** | `str` | - | 目标语言（如 `"中文"`、`"English"`、`"日本語"`） |
 | **concurrent** | `int` | 10 | 并发 LLM 请求数 |
 | **convert_engine** | `str` | `"mineru"` | PDF 解析引擎：`"mineru"`、`"docling"`、`"mineru_deploy"` |
+| **md2docx_engine** | `str` | `"auto"` | Markdown 转 Docx 引擎：`"python"`（纯 Python）、`"pandoc"`（使用 Pandoc）、`"auto"`（若已安装 Pandoc 则使用，否则用 Python）、`null`（不生成 docx） |
 | **mineru_deploy_base_url** | `str` | - | 本地 minerU API 地址（当 `convert_engine="mineru_deploy"` 时） |
 | **mineru_deploy_parse_method** | `str` | `"auto"` | 本地 minerU 解析方法: `"auto"`, `"txt"`, `"ocr"` |
 | **mineru_deploy_table_enable** | `bool` | `True` | 本地 minerU 是否启用表格识别 |
@@ -271,7 +272,7 @@ asyncio.run(translate_multiple())
 
 | 工作流 | 输入格式 | save_as_* | export_to_* | 关键配置选项 |
 |:---|:---|:---|:---|:---|
-| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip` | `html`, `markdown`, `markdown_zip` | `convert_engine`, `translator_config` |
+| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip`, `docx` | `html`, `markdown`, `markdown_zip`, `docx` | `convert_engine`, `md2docx_engine`, `translator_config` |
 | **TXTWorkflow** | `.txt` | `txt`, `html` | `txt`, `html` | `translator_config` |
 | **JsonWorkflow** | `.json` | `json`, `html` | `json`, `html` | `translator_config`, `json_paths` |
 | **DocxWorkflow** | `.docx` | `docx`, `html` | `docx`, `html` | `translator_config`, `insert_mode` |

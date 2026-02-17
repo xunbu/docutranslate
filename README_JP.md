@@ -204,6 +204,7 @@ print(f"エクスポートコンテンツ長さ: {len(base64_content)}")
 | **to_lang** | `str` | - | ターゲット言語（例: `"中文"`、`"English"`、`"日本語"`） |
 | **concurrent** | `int` | 10 | 同時 LLM リクエスト数 |
 | **convert_engine** | `str` | `"mineru"` | PDF 解析エンジン: `"mineru"`、`"docling"`、`"mineru_deploy"` |
+| **md2docx_engine** | `str` | `"auto"` | Markdown から Docx への変換エンジン: `"python"`（純Python）、`"pandoc"`（Pandoc を使用）、`"auto"`（インストールされていればPandocを使用，否则はPython）、`null`（docxを生成しない） |
 | **mineru_deploy_base_url** | `str` | - | ローカル minerU API アドレス（`convert_engine="mineru_deploy"` の場合） |
 | **mineru_deploy_parse_method** | `str` | `"auto"` | ローカル minerU 解析方法: `"auto"`, `"txt"`, `"ocr"` |
 | **mineru_deploy_table_enable** | `bool` | `True` | ローカル minerU テーブル認識を有効化するか |
@@ -270,7 +271,7 @@ asyncio.run(translate_multiple())
 
 | ワークフロー | 入力形式 | save_as_* | export_to_* | 主要設定オプション |
 |:---|:---|:---|:---|:---|
-| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip` | `html`, `markdown`, `markdown_zip` | `convert_engine`, `translator_config` |
+| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip`, `docx` | `html`, `markdown`, `markdown_zip`, `docx` | `convert_engine`, `md2docx_engine`, `translator_config` |
 | **TXTWorkflow** | `.txt` | `txt`, `html` | `txt`, `html` | `translator_config` |
 | **JsonWorkflow** | `.json` | `json`, `html` | `json`, `html` | `translator_config`, `json_paths` |
 | **DocxWorkflow** | `.docx` | `docx`, `html` | `docx`, `html` | `translator_config`, `insert_mode` |

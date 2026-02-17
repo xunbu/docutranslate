@@ -96,6 +96,7 @@ if DOCLING_EXIST or TYPE_CHECKING:
 from docutranslate.converter.x2md.converter_mineru import ConverterMineruConfig
 from docutranslate.converter.x2md.converter_mineru_deploy import ConverterMineruDeployConfig
 from docutranslate.exporter.md.md2html_exporter import MD2HTMLExporterConfig
+from docutranslate.exporter.md.md2docx_exporter import MD2DocxExporterConfig
 from docutranslate.exporter.txt.txt2html_exporter import TXT2HTMLExporterConfig
 from docutranslate.translator.ai_translator.md_translator import MDTranslatorConfig
 from docutranslate.translator.ai_translator.txt_translator import TXTTranslatorConfig
@@ -725,11 +726,17 @@ async def _perform_translation(
                     formula_ocr=payload.formula_ocr,
                 )
             html_exporter_config = MD2HTMLExporterConfig(cdn=True)
+            md2docx_engine = payload.md2docx_engine if hasattr(payload, 'md2docx_engine') else "auto"
+            # 如果md2docx_engine为null，不创建docx导出配置
+            md2docx_exporter_config = MD2DocxExporterConfig(
+                engine=md2docx_engine
+            ) if md2docx_engine is not None else None
             workflow_config = MarkdownBasedWorkflowConfig(
                 convert_engine=payload.convert_engine,
                 converter_config=converter_config,
                 translator_config=translator_config,
                 html_exporter_config=html_exporter_config,
+                md2docx_exporter_config=md2docx_exporter_config,
                 logger=task_logger,
             )
             workflow = MarkdownBasedWorkflow(config=workflow_config)
@@ -1175,11 +1182,13 @@ async def _perform_translation(
                 False,
             )
         if isinstance(workflow, DocxExportable):
-            export_map["docx"] = (
-                workflow.export_to_docx,
-                f"{filename_stem}_translated.docx",
-                False,
-            )
+            # 只有当md2docx_exporter_config不为None时才添加docx导出
+            if hasattr(workflow.config, 'md2docx_exporter_config') and workflow.config.md2docx_exporter_config is not None:
+                export_map["docx"] = (
+                    workflow.export_to_docx,
+                    f"{filename_stem}_translated.docx",
+                    False,
+                )
         if isinstance(workflow, SrtExportable):
             export_map["srt"] = (
                 workflow.export_to_srt,

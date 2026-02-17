@@ -204,6 +204,7 @@ print(f"Exported content length: {len(base64_content)}")
 | **to_lang** | `str` | - | Target language (e.g., `"Chinese"`, `"English"`, `"Japanese"`) |
 | **concurrent** | `int` | 10 | Number of concurrent LLM requests |
 | **convert_engine** | `str` | `"mineru"` | PDF parsing engine: `"mineru"`, `"docling"`, `"mineru_deploy"` |
+| **md2docx_engine** | `str` | `"auto"` | Markdown to Docx engine: `"python"` (pure Python), `"pandoc"` (use Pandoc), `"auto"` (use Pandoc if installed, otherwise Python), `null` (do not generate docx) |
 | **mineru_deploy_base_url** | `str` | - | Local minerU API address (when `convert_engine="mineru_deploy"`) |
 | **mineru_deploy_parse_method** | `str` | `"auto"` | Local minerU parsing method: `"auto"`, `"txt"`, `"ocr"` |
 | **mineru_deploy_table_enable** | `bool` | `True` | Enable table recognition for local minerU |
@@ -270,7 +271,7 @@ For more control, use the Workflow API directly. Each workflow follows the same 
 
 | Workflow | Inputs | save_as_* | export_to_* | Key Config Options |
 |:---|:---|:---|:---|:---|
-| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip` | `html`, `markdown`, `markdown_zip` | `convert_engine`, `translator_config` |
+| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip`, `docx` | `html`, `markdown`, `markdown_zip`, `docx` | `convert_engine`, `md2docx_engine`, `translator_config` |
 | **TXTWorkflow** | `.txt` | `txt`, `html` | `txt`, `html` | `translator_config` |
 | **JsonWorkflow** | `.json` | `json`, `html` | `json`, `html` | `translator_config`, `json_paths` |
 | **DocxWorkflow** | `.docx` | `docx`, `html` | `docx`, `html` | `translator_config`, `insert_mode` |

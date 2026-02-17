@@ -22,6 +22,7 @@ dependencies = [
     "pypdf>=6.4.2",
     "regex>=2025.11.3",
     "charset-normalizer>=3.4.4",
+    "html2text>=2024.2.26",
 ]
 dynamic = ["version"]
 

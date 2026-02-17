@@ -225,6 +225,11 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
         description="选择将文件解析为markdown的引擎。'mineru_deploy' 适用于本地部署的 MinerU 服务。如果输入文件是.md，此项可为`identity`或不传。",
         examples=["identity", "mineru", "docling", "mineru_deploy"],
     )
+    md2docx_engine: Literal["python", "pandoc", "auto"] | None = Field(
+        "auto",
+        description="选择将markdown导出为docx的引擎。'python'使用纯Python实现，'pandoc'使用pandoc命令，'auto'自动选择（优先使用pandoc），null表示不生成docx。",
+        examples=["python", "pandoc", "auto"],
+    )
 
     # --- Engine-Specific Parameters ---
 
