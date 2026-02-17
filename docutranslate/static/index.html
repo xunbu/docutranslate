@@ -1514,7 +1514,9 @@
                 form.workflow_type = get('translator_last_workflow', 'markdown_based');
                 form.auto_workflow_enabled = getBool('translator_auto_workflow_enabled', true);
                 form.convert_engine = get('translator_convert_engin', 'mineru');
-                form.md2docx_engine = get('translator_md2docx_engine', 'auto');
+                // 将字符串 "null" 转换回真正的 null
+                const md2docxVal = get('translator_md2docx_engine', 'auto');
+                form.md2docx_engine = md2docxVal === 'null' ? null : md2docxVal;
                 form.mineru_token = get('translator_mineru_token', '');
                 form.model_version = get('translator_model_version', 'vlm');
                 form.mineru_deploy_base_url = get('mineru_deploy_base_url', 'http://127.0.0.1:8000');
@@ -1922,7 +1924,8 @@
                 // Specific Workflow Params
                 if (form.workflow_type === 'markdown_based') {
                     basePayload.convert_engine = form.convert_engine;
-                    basePayload.md2docx_engine = form.md2docx_engine;
+                    // 将字符串 "null" 转换为真正的 null
+                    basePayload.md2docx_engine = form.md2docx_engine === 'null' ? null : form.md2docx_engine;
                     if (form.convert_engine === 'mineru') {
                         basePayload.mineru_token = emptyToNull(form.mineru_token);
                         basePayload.model_version = form.model_version;
@@ -2040,38 +2043,31 @@
                     }
 
                     task.initializing = true;
-                    const reader = new FileReader();
-                    reader.onload = async () => {
-                        const base64 = reader.result.split(',')[1];
-                        try {
-                            const res = await fetch('/service/translate', {
-                                method: 'POST',
-                                headers: {'Content-Type': 'application/json'},
-                                body: JSON.stringify({
-                                    file_name: task.file.name,
-                                    file_content: base64,
-                                    payload: buildPayload()
-                                })
-                            });
-                            const data = await res.json();
-                            if (res.ok && data.task_started) {
-                                task.backendId = data.task_id;
-                                task.isTranslating = true;
-                                saveActiveTasks();
-                                pollStatus(task);
-                                task.statusMessage = data.message;
-                            } else {
-                                throw new Error(data.message || data.detail || 'Error');
-                            }
-                        } catch (e) {
-                            task.statusMessage = e.message;
-                            task.statusClass = 'text-danger';
-                            task.isTranslating = false;
-                        } finally {
-                            task.initializing = false;
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', task.file);
+                        formData.append('payload', JSON.stringify(buildPayload()));
+                        const res = await fetch('/service/translate/file', {
+                            method: 'POST',
+                            body: formData
+                        });
+                        const data = await res.json();
+                        if (res.ok && data.task_started) {
+                            task.backendId = data.task_id;
+                            task.isTranslating = true;
+                            saveActiveTasks();
+                            pollStatus(task);
+                            task.statusMessage = data.message;
+                        } else {
+                            throw new Error(data.message || data.detail || 'Error');
                         }
-                    };
-                    reader.readAsDataURL(task.file);
+                    } catch (e) {
+                        task.statusMessage = e.message;
+                        task.statusClass = 'text-danger';
+                        task.isTranslating = false;
+                    } finally {
+                        task.initializing = false;
+                    }
                 }
             };
 

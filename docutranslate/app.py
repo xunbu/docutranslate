@@ -1559,22 +1559,85 @@ async def service_translate(
     ### 参数说明
     - **file**: (必须) 要翻译的二进制文件。
     - **payload**: (必须) 包含工作流配置的 **JSON 字符串**。
-      - 必须包含 `workflow_type` (如 `auto`, `docx`, `markdown_based` 等)。
-      - 其他参数根据 `workflow_type` 不同而变化 (详见 `TranslatePayload` 模型)。
 
-    ### Payload 示例 (JSON String)
+    ### workflow_type 可选值
+    | 值 | 说明 | 支持的文件格式 |
+    |:---|:---|:---|
+    | `auto` | 自动识别文件类型 | 根据文件扩展名自动选择 |
+    | `markdown_based` | Markdown工作流 | .pdf, .docx, .md, .png, .jpg, .zip |
+    | `txt` | 纯文本工作流 | .txt |
+    | `json` | JSON工作流 | .json |
+    | `xlsx` | Excel工作流 | .xlsx, .csv |
+    | `docx` | Word工作流 | .docx |
+    | `srt` | 字幕工作流 | .srt |
+    | `epub` | EPUB工作流 | .epub |
+    | `html` | HTML工作流 | .html, .htm |
+    | `ass` | ASS字幕工作流 | .ass |
+    | `pptx` | PPT工作流 | .pptx |
+
+    ### 通用参数（所有workflow_type通用）
+    | 参数 | 类型 | 必填 | 说明 |
+    |:---|:---|:---|:---|
+    | `workflow_type` | string | 是 | 工作流类型 |
+    | `base_url` | string | 否 | AI API 基础URL，默认 https://api.openai.com/v1 |
+    | `api_key` | string | 是 | AI API 密钥 |
+    | `model_id` | string | 是 | 模型ID，如 gpt-4o, claude-3-5-sonnet-20241022 |
+    | `to_lang` | string | 是 | 目标语言，如 "中文", "English", "日本語" |
+    | `provider` | string | 否 | API供应商，默认 "api.openai.com" |
+    | `concurrent` | int | 否 | 并发请求数，默认 10 |
+    | `temperature` | float | 否 | 温度参数，默认 0.3 |
+    | `timeout` | int | 否 | 请求超时(秒)，默认 60 |
+    | `retry` | int | 否 | 重试次数，默认 3 |
+
+    ### Markdown工作流(markdown_based)专有参数
+    | 参数 | 类型 | 必填 | 默认值 | 说明 |
+    |:---|:---|:---|:---|:---|
+    | `convert_engine` | string | 否 | "mineru" | 解析引擎: mineru, docling, mineru_deploy, identity |
+    | `md2docx_engine` | string | 否 | "auto" | 导出为docx的引擎: python, pandoc, auto, null |
+    | `mineru_token` | string | 否 | - | Mineru API token (当convert_engine=mineru时) |
+    | `model_version` | string | 否 | "vlm" | Mineru模型版本: vlm, pipeline |
+    | `mineru_deploy_base_url` | string | 否 | http://127.0.0.1:8000 | 本地Mineru服务地址 |
+    | `mineru_deploy_backend` | string | 否 | hybrid-auto-engine | 本地Mineru后端类型 |
+    | `formula_ocr` | bool | 否 | true | 是否OCR公式 |
+    | `code_ocr` | bool | 否 | true | 是否OCR代码 |
+
+    ### Excel工作流(xlsx)专有参数
+    | 参数 | 类型 | 必填 | 默认值 | 说明 |
+    |:---|:---|:---|:---|:---|
+    | `insert_mode` | string | 否 | "replace" | 插入模式: replace, append, prepend |
+
+    ### Word工作流(docx)专有参数
+    | 参数 | 类型 | 必填 | 默认值 | 说明 |
+    |:---|:---|:---|:---|:---|
+    | `insert_mode` | string | 否 | "replace" | 插入模式: replace, append, prepend |
+
+    ### JSON工作流(json)专有参数
+    | 参数 | 类型 | 必填 | 说明 |
+    |:---|:---|:---|:---|
+    | `json_paths` | array | 否 | JSON路径数组，如 ["$.name", "$.items[*].title"] |
+
+    ### 完整Payload示例
     ```json
     {
-      "workflow_type": "auto",
+      "workflow_type": "markdown_based",
       "base_url": "https://api.openai.com/v1",
       "api_key": "sk-xxxxxx",
       "model_id": "gpt-4o",
-      "to_lang": "中文"
+      "to_lang": "简体中文",
+      "convert_engine": "mineru",
+      "md2docx_engine": "auto",
+      "concurrent": 10,
+      "temperature": 0.3
     }
     ```
 
     ### 响应
     返回包含 `task_id` 的 JSON 对象。客户端需使用此 ID 轮询 `/service/status/{task_id}` 接口获取进度。
+
+    ### 使用流程
+    1. 调用此接口上传文件并获取 task_id
+    2. 轮询 `/service/status/{task_id}` 获取翻译进度
+    3. 翻译完成后，调用 `/service/download/{task_id}` 下载结果
     """,
     responses={
         200: {
