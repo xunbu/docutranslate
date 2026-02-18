@@ -37,20 +37,36 @@ class SrtWorkflow(Workflow[SrtWorkflowConfig, Document, Document], HTMLExportabl
 
 
     def translate(self) -> Self:
+        # 准备阶段
+        self.progress_tracker.update(percent=10, message="正在准备翻译...")
         document, translator=self._pre_translate(self.document_original)
+
+        # 翻译阶段
         translator.translate(document)
-        # 直接从 translator.glossary 获取术语表
+
+        # 保存术语表阶段
         if translator.glossary.glossary_dict:
+            self.progress_tracker.update(percent=95, message="正在保存术语表...")
             self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary.glossary_dict))
+
+        self.progress_tracker.update(percent=100, message="翻译完成")
         self.document_translated = document
         return self
 
     async def translate_async(self) -> Self:
+        # 准备阶段
+        self.progress_tracker.update(percent=10, message="正在准备翻译...")
         document, translator = self._pre_translate(self.document_original)
+
+        # 翻译阶段 - 由 agent 更新细粒度进度
         await translator.translate_async(document)
-        # 直接从 translator.glossary 获取术语表
+
+        # 保存术语表阶段
         if translator.glossary.glossary_dict:
+            self.progress_tracker.update(percent=95, message="正在保存术语表...")
             self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary.glossary_dict))
+
+        self.progress_tracker.update(percent=100, message="翻译完成")
         self.document_translated = document
         return self
 

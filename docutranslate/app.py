@@ -117,6 +117,7 @@ from docutranslate.translator.ai_translator.pptx_translator import PPTXTranslato
 from docutranslate.exporter.pptx.pptx2html_exporter import PPTX2HTMLExporterConfig
 
 from docutranslate.logger import global_logger
+from docutranslate.progress import ProgressTracker
 from docutranslate.translator import default_params
 from docutranslate.utils.resource_utils import resource_path
 
@@ -166,6 +167,7 @@ def _create_default_task_state() -> Dict[str, Any]:
         "status_message": "空闲",
         "error_flag": False,
         "download_ready": False,
+        "progress_percent": 0,  # 进度百分比 (0-100)
         "workflow_instance": None,  # 仅在处理期间使用
         "original_filename_stem": None,
         "task_start_time": 0,
@@ -648,6 +650,18 @@ async def _perform_translation(
         f"后台翻译任务开始: 文件 '{original_filename}', 工作流: '{payload.workflow_type}'"
     )
     task_state["status_message"] = f"正在处理 '{original_filename}'..."
+
+    # 创建进度跟踪器
+    def update_progress(percent: int, message: str):
+        task_state["progress_percent"] = percent
+        if message:
+            task_state["status_message"] = message
+
+    progress_tracker = ProgressTracker(
+        logger=task_logger,
+        callback=update_progress
+    )
+
     temp_dir = None
 
     try:
@@ -698,6 +712,7 @@ async def _perform_translation(
             )
             translator_args["glossary_agent_config"] = build_glossary_agent_config()
             translator_config = MDTranslatorConfig(**translator_args)
+            translator_config.progress_tracker = progress_tracker
 
             converter_config = None
             if payload.convert_engine == "mineru":
@@ -727,7 +742,7 @@ async def _perform_translation(
                 )
             html_exporter_config = MD2HTMLExporterConfig(cdn=True)
             md2docx_engine = payload.md2docx_engine if hasattr(payload, 'md2docx_engine') else "auto"
-            # 如果md2docx_engine为null，不创建docx导出配置
+            # 如果md2docx_engine为None，不创建docx导出配置
             md2docx_exporter_config = MD2DocxExporterConfig(
                 engine=md2docx_engine
             ) if md2docx_engine is not None else None
@@ -738,6 +753,7 @@ async def _perform_translation(
                 html_exporter_config=html_exporter_config,
                 md2docx_exporter_config=md2docx_exporter_config,
                 logger=task_logger,
+                progress_tracker=progress_tracker,
             )
             workflow = MarkdownBasedWorkflow(config=workflow_config)
 
@@ -774,12 +790,14 @@ async def _perform_translation(
             )
             translator_args["glossary_agent_config"] = build_glossary_agent_config()
             translator_config = TXTTranslatorConfig(**translator_args)
+            translator_config.progress_tracker = progress_tracker
 
             html_exporter_config = TXT2HTMLExporterConfig(cdn=True)
             workflow_config = TXTWorkflowConfig(
                 translator_config=translator_config,
                 html_exporter_config=html_exporter_config,
                 logger=task_logger,
+                progress_tracker=progress_tracker,
             )
             workflow = TXTWorkflow(config=workflow_config)
 
@@ -814,12 +832,14 @@ async def _perform_translation(
             )
             translator_args["glossary_agent_config"] = build_glossary_agent_config()
             translator_config = JsonTranslatorConfig(**translator_args)
+            translator_config.progress_tracker = progress_tracker
 
             html_exporter_config = Json2HTMLExporterConfig(cdn=True)
             workflow_config = JsonWorkflowConfig(
                 translator_config=translator_config,
                 html_exporter_config=html_exporter_config,
                 logger=task_logger,
+                progress_tracker=progress_tracker,
             )
             workflow = JsonWorkflow(config=workflow_config)
 
@@ -856,12 +876,14 @@ async def _perform_translation(
             )
             translator_args["glossary_agent_config"] = build_glossary_agent_config()
             translator_config = XlsxTranslatorConfig(**translator_args)
+            translator_config.progress_tracker = progress_tracker
 
             html_exporter_config = Xlsx2HTMLExporterConfig(cdn=True)
             workflow_config = XlsxWorkflowConfig(
                 translator_config=translator_config,
                 html_exporter_config=html_exporter_config,
                 logger=task_logger,
+                progress_tracker=progress_tracker,
             )
             workflow = XlsxWorkflow(config=workflow_config)
 
@@ -897,12 +919,14 @@ async def _perform_translation(
             )
             translator_args["glossary_agent_config"] = build_glossary_agent_config()
             translator_config = DocxTranslatorConfig(**translator_args)
+            translator_config.progress_tracker = progress_tracker
 
             html_exporter_config = Docx2HTMLExporterConfig(cdn=True)
             workflow_config = DocxWorkflowConfig(
                 translator_config=translator_config,
                 html_exporter_config=html_exporter_config,
                 logger=task_logger,
+                progress_tracker=progress_tracker,
             )
             workflow = DocxWorkflow(config=workflow_config)
 
@@ -938,12 +962,14 @@ async def _perform_translation(
             )
             translator_args["glossary_agent_config"] = build_glossary_agent_config()
             translator_config = SrtTranslatorConfig(**translator_args)
+            translator_config.progress_tracker = progress_tracker
 
             html_exporter_config = Srt2HTMLExporterConfig(cdn=True)
             workflow_config = SrtWorkflowConfig(
                 translator_config=translator_config,
                 html_exporter_config=html_exporter_config,
                 logger=task_logger,
+                progress_tracker=progress_tracker,
             )
             workflow = SrtWorkflow(config=workflow_config)
 
@@ -979,12 +1005,14 @@ async def _perform_translation(
             )
             translator_args["glossary_agent_config"] = build_glossary_agent_config()
             translator_config = EpubTranslatorConfig(**translator_args)
+            translator_config.progress_tracker = progress_tracker
 
             html_exporter_config = Epub2HTMLExporterConfig(cdn=True)
             workflow_config = EpubWorkflowConfig(
                 translator_config=translator_config,
                 html_exporter_config=html_exporter_config,
                 logger=task_logger,
+                progress_tracker=progress_tracker,
             )
             workflow = EpubWorkflow(config=workflow_config)
 
@@ -1021,9 +1049,11 @@ async def _perform_translation(
             )
             translator_args["glossary_agent_config"] = build_glossary_agent_config()
             translator_config = HtmlTranslatorConfig(**translator_args)
+            translator_config.progress_tracker = progress_tracker
 
             workflow_config = HtmlWorkflowConfig(
-                translator_config=translator_config, logger=task_logger
+                translator_config=translator_config, logger=task_logger,
+                progress_tracker=progress_tracker,
             )
             workflow = HtmlWorkflow(config=workflow_config)
         # --- HTML WORKFLOW LOGIC END ---
@@ -1061,12 +1091,14 @@ async def _perform_translation(
             )
             translator_args["glossary_agent_config"] = build_glossary_agent_config()
             translator_config = AssTranslatorConfig(**translator_args)
+            translator_config.progress_tracker = progress_tracker
 
             html_exporter_config = Ass2HTMLExporterConfig(cdn=True)
             workflow_config = AssWorkflowConfig(
                 translator_config=translator_config,
                 html_exporter_config=html_exporter_config,
                 logger=task_logger,
+                progress_tracker=progress_tracker,
             )
             workflow = AssWorkflow(config=workflow_config)
         # --- ASS WORKFLOW LOGIC END ---
@@ -1104,12 +1136,14 @@ async def _perform_translation(
             )
             translator_args["glossary_agent_config"] = build_glossary_agent_config()
             translator_config = PPTXTranslatorConfig(**translator_args)
+            translator_config.progress_tracker = progress_tracker
 
             html_exporter_config = PPTX2HTMLExporterConfig(cdn=True)
             workflow_config = PPTXWorkflowConfig(
                 translator_config=translator_config,
                 html_exporter_config=html_exporter_config,
                 logger=task_logger,
+                progress_tracker=progress_tracker,
             )
             workflow = PPTXWorkflow(config=workflow_config)
         # --- PPTX WORKFLOW LOGIC END ---
@@ -1294,6 +1328,7 @@ async def _perform_translation(
                 "status_message": f"翻译成功！用时 {duration:.2f} 秒。",
                 "download_ready": True,
                 "error_flag": False,
+                "progress_percent": 100,
                 "task_end_time": end_time,
                 "downloadable_files": downloadable_files,
                 "attachment_files": attachment_files,
@@ -1312,6 +1347,7 @@ async def _perform_translation(
                 "status_message": f"翻译任务已取消 (用时 {duration:.2f} 秒).",
                 "error_flag": False,
                 "download_ready": False,
+                "progress_percent": 100,
                 "task_end_time": end_time,
             }
         )
@@ -1325,6 +1361,7 @@ async def _perform_translation(
                 "status_message": f"翻译过程中发生错误 (用时 {duration:.2f} 秒): {e}",
                 "error_flag": True,
                 "download_ready": False,
+                "progress_percent": 100,
                 "task_end_time": end_time,
             }
         )
@@ -1593,7 +1630,7 @@ async def service_translate(
     | 参数 | 类型 | 必填 | 默认值 | 说明 |
     |:---|:---|:---|:---|:---|
     | `convert_engine` | string | 否 | "mineru" | 解析引擎: mineru, docling, mineru_deploy, identity |
-    | `md2docx_engine` | string | 否 | "auto" | 导出为docx的引擎: python, pandoc, auto, null |
+    | `md2docx_engine` | string | 否 | "auto" | 导出为docx的引擎: python, pandoc, auto, None |
     | `mineru_token` | string | 否 | - | Mineru API token (当convert_engine=mineru时) |
     | `model_version` | string | 否 | "vlm" | Mineru模型版本: vlm, pipeline |
     | `mineru_deploy_base_url` | string | 否 | http://127.0.0.1:8000 | 本地Mineru服务地址 |
@@ -1984,6 +2021,7 @@ async def service_get_status(
             "status_message": task_state["status_message"],
             "error_flag": task_state["error_flag"],
             "download_ready": task_state["download_ready"],
+            "progress_percent": task_state.get("progress_percent", 0),
             "original_filename_stem": task_state["original_filename_stem"],
             "original_filename": task_state.get("original_filename"),
             "task_start_time": task_state["task_start_time"],

@@ -227,7 +227,7 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
     )
     md2docx_engine: Literal["python", "pandoc", "auto"] | None = Field(
         "auto",
-        description="选择将markdown导出为docx的引擎。'python'使用纯Python实现，'pandoc'使用pandoc命令，'auto'自动选择（优先使用pandoc），null表示不生成docx。",
+        description="选择将markdown导出为docx的引擎。'python'使用纯Python实现，'pandoc'使用pandoc命令，'auto'自动选择（优先使用pandoc），None表示不生成docx。",
         examples=["python", "pandoc", "auto"],
     )
 

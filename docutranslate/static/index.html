@@ -937,12 +937,18 @@
                                                 <i class="bi bi-clipboard"></i>
                                             </button>
                                         </div>
-                                        <div class="mt-2">
+                                        <div class="mt-2 d-flex align-items-center">
                                             <span class="small"
                                                   :class="task.statusClass">{{ task.statusMessage || t('taskCardStatusWaiting')
                                                 }}</span>
                                             <div v-if="task.isProcessing" class="spinner-border spinner-border-sm ms-2"
                                                  role="status"></div>
+                                            <span v-if="task.isProcessing" class="ms-2 small text-muted">{{ task.progressPercent || 0 }}%</span>
+                                        </div>
+                                        <!-- Progress Bar - 不影响卡片布局 -->
+                                        <div v-if="task.isProcessing" class="progress" style="height: 4px; min-height: 4px; margin-top: 4px;">
+                                            <div class="progress-bar bg-primary" :class="{'progress-bar-striped progress-bar-animated': task.progressPercent < 100}"
+                                                 :style="{width: (task.progressPercent || 0) + '%'}"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -1810,7 +1816,8 @@
                 const task = reactive({
                     uiId, backendId, file: null, fileName: '', logs: '', statusMessage: '',
                     statusClass: 'text-muted', isTranslating: false, isFinished: false, isProcessing: false,
-                    validationError: false, downloads: null, attachment: null, initializing: false, isDragOver: false
+                    validationError: false, downloads: null, attachment: null, initializing: false, isDragOver: false,
+                    progressPercent: 0
                 });
                 tasks.value.unshift(task);
                 if (backendId) {
@@ -2110,6 +2117,7 @@
                         const statData = await statRes.json();
                         task.statusMessage = statData.status_message;
                         task.isProcessing = statData.is_processing;
+                        task.progressPercent = statData.progress_percent || 0;
 
                         // Recover filename if task was restored and file object is missing
                         if (statData.original_filename && !task.fileName) {

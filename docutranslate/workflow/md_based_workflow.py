@@ -108,22 +108,38 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
         return convert_engine, convert_config, translator_config, translator
 
     def translate(self) -> Self:
+        # 解析文档阶段
+        self.progress_tracker.update(percent=10, message="正在解析文档...")
         convert_engine, convert_config, translator_config, translator = self._pre_translate(self.document_original)
         document_md = self._get_document_md(convert_engine, convert_config)
+
+        # 翻译阶段
         translator.translate(document_md)
-        # 直接从 translator.glossary 获取术语表
+
+        # 保存术语表阶段
         if translator.glossary.glossary_dict:
+            self.progress_tracker.update(percent=95, message="正在保存术语表...")
             self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary.glossary_dict))
+
+        self.progress_tracker.update(percent=100, message="翻译完成")
         self.document_translated = document_md
         return self
 
     async def translate_async(self) -> Self:
+        # 解析文档阶段
+        self.progress_tracker.update(percent=10, message="正在解析文档...")
         convert_engine, convert_config, translator_config, translator = self._pre_translate(self.document_original)
         document_md = await asyncio.to_thread(self._get_document_md, convert_engine, convert_config)
+
+        # 翻译阶段 - 由 agent 更新细粒度进度
         await translator.translate_async(document_md)
-        # 直接从 translator.glossary 获取术语表
+
+        # 保存术语表阶段
         if translator.glossary.glossary_dict:
+            self.progress_tracker.update(percent=95, message="正在保存术语表...")
             self.attachment.add_document("glossary", Glossary.glossary_dict2csv(translator.glossary.glossary_dict))
+
+        self.progress_tracker.update(percent=100, message="翻译完成")
         self.document_translated = document_md
         return self
 

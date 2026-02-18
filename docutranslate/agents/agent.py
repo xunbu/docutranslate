@@ -59,6 +59,7 @@ class AgentConfig:
     rpm: int | None = None  # 每分钟请求数限制
     tpm: int | None = None  # 每分钟Token数限制
     provider: ProviderType | None = None
+    progress_callback: callable = None  # 进度回调 (current: int, total: int) -> None
 
 
 class TotalErrorCounter:
@@ -311,6 +312,7 @@ class Agent:
         self.token_counter = TokenCounter(logger=self.logger)
         self.retry = config.retry
         self.system_proxy_enable = config.system_proxy_enable
+        self.progress_callback = config.progress_callback  # 进度回调
 
         # 新增：初始化速率限制器
         self.rate_limiter = RateLimiter(rpm=config.rpm, tpm=config.tpm)
@@ -744,6 +746,9 @@ class Agent:
                     nonlocal count
                     count += 1
                     self.logger.info(f"协程-已完成{count}/{total}")
+                    # 调用进度回调
+                    if self.progress_callback:
+                        self.progress_callback(count, total)
                     return result
 
             for p_text in prompts:
