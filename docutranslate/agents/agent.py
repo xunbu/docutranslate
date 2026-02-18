@@ -344,6 +344,24 @@ class Agent:
         # 向上取整
         return int(estimated) + 1
 
+    def get_continue_prompt(self, accumulated_result: str, prompt: str) -> str:
+        """
+        获取继续获取时的提示词。
+        子类可以重写此方法来自定义继续获取的行为。
+
+        默认行为：直接拼接内容，让模型继续输出。
+        """
+        return f"{prompt}\n\n[系统提示：请继续完成之前的响应。之前已输出内容为：\n---\n{accumulated_result}\n---\n请从中断处继续输出剩余内容。]"
+
+    def merge_continue_result(self, accumulated_result: str, additional_result: str) -> str:
+        """
+        合并继续获取的结果。
+        子类可以重写此方法来处理追加模式的数组合并。
+
+        默认行为：直接拼接字符串。
+        """
+        return accumulated_result + additional_result
+
     def _add_thinking_mode(self, data: dict):
         thinking_mode_result = get_thinking_mode(self.provider, data.get("model"))
         if thinking_mode_result is None:
@@ -410,8 +428,8 @@ class Agent:
             f"继续获取剩余内容 (已累计 {len(accumulated_result)} 字符, 第 {continue_count + 1}/{MAX_CONTINUE_FETCHES} 次)...")
 
         # 构造继续请求的提示
-        # 关键：告知模型我们已经获取了部分内容，请继续完成
-        continue_prompt = f"{prompt}\n\n[系统提示：请继续完成之前的响应。之前已输出内容为：\n---\n{accumulated_result}\n---\n请从中断处继续输出剩余内容。]"
+        # 调用子类的 get_continue_prompt 方法，允许子类自定义继续获取的行为
+        continue_prompt = self.get_continue_prompt(accumulated_result, prompt)
 
         if pre_send_handler:
             system_prompt, continue_prompt = pre_send_handler(system_prompt, continue_prompt)
@@ -448,8 +466,8 @@ class Agent:
             )
             self.token_counter.add(input_tokens, cached_tokens, output_tokens, reasoning_tokens)
 
-            # 累加结果
-            accumulated_result += additional_result
+            # 累加结果（使用 merge_continue_result 方法处理追加模式的合并）
+            accumulated_result = self.merge_continue_result(accumulated_result, additional_result)
 
             # 如果仍然是 length，继续获取（限制最大轮数防止无限循环）
             if finish_reason == "length":
@@ -467,11 +485,23 @@ class Agent:
                 )
 
             # 非 length 结束，返回累加结果
-            return (
-                accumulated_result
-                if result_handler is None
-                else result_handler(accumulated_result, prompt, self.logger)
-            )
+            try:
+                return (
+                    accumulated_result
+                    if result_handler is None
+                    else result_handler(accumulated_result, prompt, self.logger)
+                )
+            except PartialAgentResultError as e:
+                # 继续获取成功但结果部分不完整，返回已合并的部分结果
+                self.logger.warning(f"继续获取完成但结果部分不完整: {e}")
+                if e.partial_result:
+                    return e.partial_result
+                # 如果没有部分结果，尝试从已获取的内容中解析
+                return accumulated_result
+            except AgentResultError as e:
+                # 继续获取成功但结果完全无效
+                self.logger.warning(f"继续获取完成但结果无效: {e}")
+                return accumulated_result
 
         except (httpx.HTTPStatusError, httpx.RequestError, KeyError, IndexError, ValueError) as e:
             self.logger.error(f"继续获取内容失败: {repr(e)}")
@@ -802,7 +832,8 @@ class Agent:
             f"继续获取剩余内容 (已累计 {len(accumulated_result)} 字符, 第 {continue_count + 1}/{MAX_CONTINUE_FETCHES} 次)...")
 
         # 构造继续请求的提示
-        continue_prompt = f"{prompt}\n\n[系统提示：请继续完成之前的响应。之前已输出内容为：\n---\n{accumulated_result}\n---\n请从中断处继续输出剩余内容。]"
+        # 调用子类的 get_continue_prompt 方法，允许子类自定义继续获取的行为
+        continue_prompt = self.get_continue_prompt(accumulated_result, prompt)
 
         if pre_send_handler:
             system_prompt, continue_prompt = pre_send_handler(system_prompt, continue_prompt)
@@ -838,7 +869,8 @@ class Agent:
             )
             self.token_counter.add(input_tokens, cached_tokens, output_tokens, reasoning_tokens)
 
-            accumulated_result += additional_result
+            # 累加结果（使用 merge_continue_result 方法处理追加模式的合并）
+            accumulated_result = self.merge_continue_result(accumulated_result, additional_result)
 
             if finish_reason == "length":
                 return self._continue_fetch(
@@ -854,11 +886,24 @@ class Agent:
                     continue_count=continue_count + 1,
                 )
 
-            return (
-                accumulated_result
-                if result_handler is None
-                else result_handler(accumulated_result, prompt, self.logger)
-            )
+            # 非 length 结束，返回累加结果
+            try:
+                return (
+                    accumulated_result
+                    if result_handler is None
+                    else result_handler(accumulated_result, prompt, self.logger)
+                )
+            except PartialAgentResultError as e:
+                # 继续获取成功但结果部分不完整，返回已合并的部分结果
+                self.logger.warning(f"继续获取完成但结果部分不完整: {e}")
+                if e.partial_result:
+                    return e.partial_result
+                # 如果没有部分结果，尝试从已获取的内容中解析
+                return accumulated_result
+            except AgentResultError as e:
+                # 继续获取成功但结果完全无效
+                self.logger.warning(f"继续获取完成但结果无效: {e}")
+                return accumulated_result
 
         except (httpx.HTTPStatusError, httpx.RequestError, KeyError, IndexError, ValueError) as e:
             self.logger.error(f"继续获取内容失败: {repr(e)}")
