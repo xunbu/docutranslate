@@ -200,7 +200,10 @@ class SegmentsTranslateAgent(Agent):
                 raise AgentResultError(f"Agent返回结果不是array的json形式, result: {result}")
 
             # 检查是否与原文完全相同（疑似翻译失败）
-            if repaired_array == [{"id": k, "t": v} for k, v in original_chunk.items()]:
+            # 按ID排序后比较，确保可靠性
+            sorted_original = sorted([{"id": k, "t": v} for k, v in original_chunk.items()], key=lambda x: x["id"])
+            sorted_result = sorted(repaired_array, key=lambda x: x.get("id", ""))
+            if sorted_original == sorted_result:
                 raise AgentResultError("翻译结果与原文完全相同，疑似翻译失败，将进行重试。")
 
             # 转换为 dict 便于处理
