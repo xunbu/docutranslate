@@ -429,7 +429,8 @@
                                             </div>
 
                                             <div class="mb-3">
-                                                <label class="form-label">{{ t('mineruDeployParseMethodLabel') }}</label>
+                                                <label class="form-label">{{ t('mineruDeployParseMethodLabel')
+                                                    }}</label>
                                                 <select class="form-select" v-model="form.mineru_deploy_parse_method"
                                                         @change="saveSetting('mineru_deploy_parse_method', form.mineru_deploy_parse_method)">
                                                     <option value="auto">auto</option>
@@ -439,7 +440,8 @@
                                             </div>
 
                                             <!-- Condition: If Backend is Pipeline or Hybrid, show Lang List -->
-                                            <div class="mb-3" v-if="['pipeline', 'hybrid-auto-engine', 'hybrid-http-client'].includes(form.mineru_deploy_backend)">
+                                            <div class="mb-3"
+                                                 v-if="['pipeline', 'hybrid-auto-engine', 'hybrid-http-client'].includes(form.mineru_deploy_backend)">
                                                 <label class="form-label">{{ t('mineruDeployLangListLabel') }}</label>
                                                 <div class="lang-list-container">
                                                     <div class="form-check" v-for="lang in mineruLangOptions"
@@ -457,7 +459,8 @@
                                             </div>
 
                                             <!-- Condition: If Backend is vlm-http-client or hybrid-http-client, show Server URL -->
-                                            <div class="mb-3" v-if="['vlm-http-client', 'hybrid-http-client'].includes(form.mineru_deploy_backend)">
+                                            <div class="mb-3"
+                                                 v-if="['vlm-http-client', 'hybrid-http-client'].includes(form.mineru_deploy_backend)">
                                                 <label class="form-label">{{ t('mineruDeployServerUrlLabel') }}</label>
                                                 <input type="url" class="form-control"
                                                        v-model="form.mineru_deploy_server_url"
@@ -499,20 +502,8 @@
                                             </div>
                                         </div>
 
-                                        <!-- Markdown to Docx Engine Selector -->
-                                        <div class="mt-3">
-                                            <label class="form-label">{{ t('md2docxEngineLabel') || 'Markdown转Docx引擎' }}</label>
-                                            <select class="form-select" v-model="form.md2docx_engine"
-                                                    @change="saveSetting('translator_md2docx_engine', form.md2docx_engine)">
-                                                <option :value="null">{{ t('engineOptionNone') || '不生成docx' }}</option>
-                                                <option value="auto">{{ t('engineOptionAuto') || '自动选择' }}</option>
-                                                <option value="python">{{ t('engineOptionPython') || '纯Python' }}</option>
-                                                <option value="pandoc">{{ t('engineOptionPandoc') || 'Pandoc' }}</option>
-                                            </select>
-                                            <div class="form-text">{{ t('md2docxEngineHelp') || '选择将Markdown导出为Docx的方式' }}</div>
-                                        </div>
 
-                                        <div class="border-top mt-3 pt-3">
+                                        <div class="mt-3">
                                             <div class="form-check form-switch mb-2" v-if="ocrOptions.showFormula">
                                                 <input class="form-check-input" type="checkbox" role="switch"
                                                        v-model="form.formula_ocr"
@@ -524,6 +515,25 @@
                                                        v-model="form.code_ocr"
                                                        @change="saveSetting('translator_code_ocr', form.code_ocr)">
                                                 <label class="form-check-label">{{ t('codeOcrLabel') }}</label>
+                                            </div>
+                                        </div>
+
+                                        <!-- Markdown to Docx Engine Selector -->
+                                        <div class="border-top mt-3  pt-3">
+                                            <label class="form-label">{{ t('md2docxEngineLabel') || 'Markdown转Docx引擎'
+                                                }}</label>
+                                            <select class="form-select" v-model="form.md2docx_engine"
+                                                    @change="saveSetting('translator_md2docx_engine', form.md2docx_engine)">
+                                                <option :value="null">{{ t('engineOptionNone') || '不生成docx' }}
+                                                </option>
+                                                <option value="auto">{{ t('engineOptionAuto') || '自动选择' }}</option>
+                                                <option value="python">{{ t('engineOptionPython') || '纯Python' }}
+                                                </option>
+                                                <option value="pandoc">{{ t('engineOptionPandoc') || 'Pandoc' }}
+                                                </option>
+                                            </select>
+                                            <div class="form-text">{{ t('md2docxEngineHelp') || '选择将Markdown导出为Docx的方式'
+                                                }}
                                             </div>
                                         </div>
                                     </div>
@@ -943,11 +953,14 @@
                                                 }}</span>
                                             <div v-if="task.isProcessing" class="spinner-border spinner-border-sm ms-2"
                                                  role="status"></div>
-                                            <span v-if="task.isProcessing" class="ms-2 small text-muted">{{ task.progressPercent || 0 }}%</span>
+                                            <span v-if="task.isProcessing"
+                                                  class="ms-2 small text-muted">{{ task.progressPercent || 0 }}%</span>
                                         </div>
                                         <!-- Progress Bar - 不影响卡片布局 -->
-                                        <div v-if="task.isProcessing" class="progress" style="height: 4px; min-height: 4px; margin-top: 4px;">
-                                            <div class="progress-bar bg-primary" :class="{'progress-bar-striped progress-bar-animated': task.progressPercent < 100}"
+                                        <div v-if="task.isProcessing" class="progress"
+                                             style="height: 4px; min-height: 4px; margin-top: 4px;">
+                                            <div class="progress-bar bg-primary"
+                                                 :class="{'progress-bar-striped progress-bar-animated': task.progressPercent < 100}"
                                                  :style="{width: (task.progressPercent || 0) + '%'}"></div>
                                         </div>
                                     </div>
@@ -1229,6 +1242,7 @@
     const KNOWN_PLATFORMS = [
         {val: "custom", label: "platformCustom", provider: "default"},
         {val: "https://api.302.ai/v1", label: "302.AI", provider: ""},
+        {val: "https://api.minimaxi.com/v1", label: "MiniMax", provider: "minimax"},
         {val: "https://api.openai.com/v1", label: "OpenAI", provider: "default"},
         {
             val: "https://generativelanguage.googleapis.com/v1beta/openai/",
@@ -1314,6 +1328,7 @@
                 "https://api.302.ai/v1": ["https://share.302.ai/BgRLAe", "apiHrefInfo302ai"],
                 "https://openrouter.ai/api/v1": ["https://openrouter.ai/settings/keys", null],
                 "https://api.openai.com/v1": ["https://platform.openai.com/api-keys", null],
+                "https://api.minimaxi.com/v1": ["https://platform.minimaxi.com/user-center/basic-information/interface-key", null],
                 "https://api.deepseek.com/v1": ["https://platform.deepseek.com/api_keys", null],
                 "https://open.bigmodel.cn/api/paas/v4": ["https://open.bigmodel.cn/usercenter/apikeys", null],
                 "https://dashscope.aliyuncs.com/compatible-mode/v1": ["https://bailian.console.aliyun.com/?tab=model#/api-key", null],
@@ -1948,7 +1963,7 @@
 
                         // Condition: Pipeline or Hybrid backends support lang_list
                         if (['pipeline', 'hybrid-auto-engine', 'hybrid-http-client'].includes(basePayload.mineru_deploy_backend)) {
-                             basePayload.mineru_deploy_lang_list = form.mineru_deploy_lang_list.length > 0 ? form.mineru_deploy_lang_list : null;
+                            basePayload.mineru_deploy_lang_list = form.mineru_deploy_lang_list.length > 0 ? form.mineru_deploy_lang_list : null;
                         }
 
                         // Condition: HTTP Client backends need server_url
@@ -2361,8 +2376,8 @@
                         mineruDeployParseMethodLabel: "Parse Method",
                         mineruDeployTableEnableLabel: "Table Recognition"
                     };
-                    if(i18nData.value.zh) Object.assign(i18nData.value.zh, extraZh);
-                    if(i18nData.value.en) Object.assign(i18nData.value.en, extraEn);
+                    if (i18nData.value.zh) Object.assign(i18nData.value.zh, extraZh);
+                    if (i18nData.value.en) Object.assign(i18nData.value.en, extraEn);
 
                 } catch (e) {
                     i18nData.value = {
