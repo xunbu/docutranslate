@@ -182,11 +182,37 @@ def _md_to_docx_via_python(md_content: str, logger=global_logger) -> bytes:
     # 创建docx文档
     doc = DocxDocument()
 
-    # 处理表格 - 在解析markdown之前
+    # 从HTML内容中提取所有表格
+    html_table_pattern = r'<table[^>]*>.*?</table>'
+    html_tables = re.findall(html_table_pattern, html_content, re.DOTALL | re.IGNORECASE)
+    table_idx = 0
+
+    # 标记HTML表格在HTML中的位置
+    html_table_positions = []
+    for match in re.finditer(html_table_pattern, html_content, re.DOTALL | re.IGNORECASE):
+        html_table_positions.append((match.start(), match.end(), match.group()))
+        html_content = html_content[:match.start()] + f'<!--HTML_TABLE_PLACEHOLDER_{table_idx}-->' + html_content[match.end():]
+        table_idx += 1
+
+    # 处理markdown内容
     lines = md_content.split('\n')
     i = 0
+    html_table_idx = 0
+
     while i < len(lines):
         line = lines[i].strip()
+
+        # 检测HTML表格占位符
+        html_table_match = re.match(r'<!--HTML_TABLE_PLACEHOLDER_(\d+)-->', line)
+        if html_table_match:
+            table_idx = int(html_table_match.group(1))
+            if table_idx < len(html_tables):
+                table_data = _parse_html_table(html_tables[table_idx])
+                if table_data:
+                    _add_table_to_docx(doc, table_data, logger)
+            html_table_idx += 1
+            i += 1
+            continue
 
         # 检测图片占位符
         img_match = re.match(r'<!--IMG_PLACEHOLDER_(\d+)-->', line)
@@ -197,7 +223,7 @@ def _md_to_docx_via_python(md_content: str, logger=global_logger) -> bytes:
             i += 1
             continue
 
-        # 检测表格开始
+        # 检测表格开始 (markdown格式)
         if line.startswith('|') and '|' in line[1:]:
             # 收集表格行
             table_lines = []
@@ -213,17 +239,7 @@ def _md_to_docx_via_python(md_content: str, logger=global_logger) -> bytes:
             if len(table_lines) >= 1:
                 table_data = _parse_markdown_table('\n'.join(table_lines))
                 if table_data:
-                    # 创建docx表格
-                    table = doc.add_table(rows=len(table_data), cols=len(table_data[0]) if table_data else 0)
-                    table.style = 'Table Grid'
-
-                    for row_idx, row_data in enumerate(table_data):
-                        for col_idx, cell_text in enumerate(row_data):
-                            if row_idx < len(table.rows) and col_idx < len(table.columns):
-                                cell = table.cell(row_idx, col_idx)
-                                cell.text = cell_text
-
-                    doc.add_paragraph()  # 表格后空行
+                    _add_table_to_docx(doc, table_data, logger)
         else:
             # 非表格行，处理标题、列表等
             if not line:
@@ -277,6 +293,24 @@ def _md_to_docx_via_python(md_content: str, logger=global_logger) -> bytes:
     doc.save(buffer)
     buffer.seek(0)
     return buffer.getvalue()
+
+
+def _add_table_to_docx(doc, table_data: list[list[str]], logger):
+    """将表格数据添加到docx文档"""
+    if not table_data or not table_data[0]:
+        return
+
+    # 创建docx表格
+    table = doc.add_table(rows=len(table_data), cols=len(table_data[0]))
+    table.style = 'Table Grid'
+
+    for row_idx, row_data in enumerate(table_data):
+        for col_idx, cell_text in enumerate(row_data):
+            if row_idx < len(table.rows) and col_idx < len(table.columns):
+                cell = table.cell(row_idx, col_idx)
+                cell.text = cell_text
+
+    doc.add_paragraph()  # 表格后空行
 
 
 class MD2DocxExporter(Exporter):
