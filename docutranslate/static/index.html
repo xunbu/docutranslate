@@ -1721,9 +1721,17 @@
                 updatePlatformParams(n, 'glossary_agent_platform', form, true);
             });
 
+            watch(() => currentLang.value, async (newLang) => {
+                try {
+                    const res = await fetch(`/static/i18n/${newLang}.json`);
+                    i18nData.value = await res.json();
+                } catch (e) {
+                    console.error('Failed to load i18n:', e);
+                }
+            });
+
             const t = (k) => {
-                const dict = i18nData.value[currentLang.value] || i18nData.value['zh'] || {};
-                return dict[k] || k;
+                return i18nData.value[k] || k;
             };
             const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
             const saveSetting = (k, v) => localStorage.setItem(k, v);
@@ -2380,50 +2388,24 @@
             onMounted(async () => {
                 // I18n
                 try {
-                    const res = await fetch("/static/i18nData.json");
+                    const lang = currentLang.value || 'zh';
+                    const res = await fetch(`/static/i18n/${lang}.json`);
                     i18nData.value = await res.json();
-
-                    // Add new missing translations for Mineru Deploy
-                    const extraZh = {
-                        mineruDeployParseMethodLabel: "解析方法 (Parse Method)",
-                        mineruDeployTableEnableLabel: "表格识别 (Table Recognition)"
-                    };
-                    const extraEn = {
-                        mineruDeployParseMethodLabel: "Parse Method",
-                        mineruDeployTableEnableLabel: "Table Recognition"
-                    };
-                    if (i18nData.value.zh) Object.assign(i18nData.value.zh, extraZh);
-                    if (i18nData.value.en) Object.assign(i18nData.value.en, extraEn);
 
                 } catch (e) {
                     i18nData.value = {
-                        zh: {
-                            pageTitle: "DocuTranslate",
-                            tutorialBtn: "教程",
-                            projectContributeBtn: "项目协作",
-                            workflowTitle: "选择工作流",
-                            autoWorkflowLabel: "自动选择工作流",
-                            workflowOptionPptx: "PPTX 演示文稿",
-                            pptxSettingsTitleText: "PPTX 设置",
-                            mineruDeployServerUrlLabel: "Server URL",
-                            mineruDeployLangListLabel: "语言列表 (Pipeline模式)",
-                            mineruDeployServerUrlPlaceholder: "http://127.0.0.1:30000",
-                            mineruDeployParseMethodLabel: "解析方法 (Parse Method)",
-                            mineruDeployTableEnableLabel: "表格识别 (Table Recognition)"
-                        },
-                        en: {
-                            pageTitle: "DocuTranslate",
-                            tutorialBtn: "Tutorial",
-                            projectContributeBtn: "Contribute",
-                            workflowTitle: "Select Workflow",
-                            workflowOptionPptx: "PPTX Presentation",
-                            pptxSettingsTitleText: "PPTX Settings",
-                            mineruDeployServerUrlLabel: "Server URL",
-                            mineruDeployLangListLabel: "Language List (Pipeline Mode)",
-                            mineruDeployServerUrlPlaceholder: "http://127.0.0.1:30000",
-                            mineruDeployParseMethodLabel: "Parse Method",
-                            mineruDeployTableEnableLabel: "Table Recognition"
-                        }
+                        pageTitle: "DocuTranslate",
+                        tutorialBtn: "教程",
+                        projectContributeBtn: "项目协作",
+                        workflowTitle: "选择工作流",
+                        autoWorkflowLabel: "自动选择工作流",
+                        workflowOptionPptx: "PPTX 演示文稿",
+                        pptxSettingsTitleText: "PPTX 设置",
+                        mineruDeployServerUrlLabel: "Server URL",
+                        mineruDeployLangListLabel: "语言列表 (Pipeline模式)",
+                        mineruDeployServerUrlPlaceholder: "http://127.0.0.1:30000",
+                        mineruDeployParseMethodLabel: "解析方法 (Parse Method)",
+                        mineruDeployTableEnableLabel: "表格识别 (Table Recognition)"
                     };
                 }
 
