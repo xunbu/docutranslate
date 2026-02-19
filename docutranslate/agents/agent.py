@@ -344,6 +344,17 @@ class Agent:
         # 向上取整
         return int(estimated) + 1
 
+    def _sanitize_result(self, text: str) -> str:
+        """
+        清理响应内容：如果内容以 <think>...</think> 开头，移除该部分。
+        使用 DOTALL 模式以匹配跨行的 thinking 内容。
+        """
+        if not text:
+            return text
+        # 匹配开头的 <think> 标签块，允许标签前后有空白字符
+        # .*? 非贪婪匹配，确保只匹配第一个闭合标签
+        return re.sub(r'^\s*<think>.*?</think>', '', text, flags=re.DOTALL)
+
     def get_continue_prompt(self, accumulated_result: str, prompt: str) -> str:
         """
         获取继续获取时的提示词。
@@ -418,6 +429,8 @@ class Agent:
         if continue_count >= MAX_CONTINUE_FETCHES:
             self.logger.warning(
                 f"已达到最大继续获取次数 ({MAX_CONTINUE_FETCHES})，返回已累计结果 ({len(accumulated_result)} 字符)")
+            # 移除可能存在的 <think> 块
+            accumulated_result = self._sanitize_result(accumulated_result)
             return (
                 accumulated_result
                 if result_handler is None
@@ -486,6 +499,8 @@ class Agent:
 
             # 非 length 结束，返回累加结果
             try:
+                # 最终清理结果
+                accumulated_result = self._sanitize_result(accumulated_result)
                 return (
                     accumulated_result
                     if result_handler is None
@@ -508,6 +523,8 @@ class Agent:
             # 退化：返回已获取的部分结果，而不是报错
             if accumulated_result:
                 self.logger.warning(f"API不支持继续获取，返回已获取的部分结果 ({len(accumulated_result)} 字符)")
+                # 即使是部分结果，也尝试清理一下
+                accumulated_result = self._sanitize_result(accumulated_result)
                 return (
                     accumulated_result
                     if result_handler is None
@@ -577,6 +594,7 @@ class Agent:
             elif finish_reason == "length":
                 # 长度限制，尝试继续获取
                 self.logger.warning(f"响应因长度限制被截断，尝试继续获取...")
+                # 注意：这里传入原始result，清理工作在 _continue_fetch_async 最终返回时统一处理
                 return await self._continue_fetch_async(
                     client=client,
                     prompt=prompt,
@@ -591,6 +609,7 @@ class Agent:
             elif finish_reason in ("tool_calls", "function_call"):
                 # 工具调用场景，当前代码可能不支持，直接返回已获取结果
                 self.logger.warning(f"finish_reason 为 '{finish_reason}'，当前不支持工具调用，返回已获取内容")
+                result = self._sanitize_result(result)
                 return result if result else (
                     prompt if error_result_handler is None
                     else error_result_handler(prompt, self.logger)
@@ -616,6 +635,9 @@ class Agent:
 
             if retry_count > 0:
                 self.logger.info(f"重试成功 (第 {retry_count}/{self.retry} 次尝试)。")
+
+            # 清理 <think> 标签后再处理结果
+            result = self._sanitize_result(result)
 
             return (
                 result
@@ -822,6 +844,8 @@ class Agent:
         if continue_count >= MAX_CONTINUE_FETCHES:
             self.logger.warning(
                 f"已达到最大继续获取次数 ({MAX_CONTINUE_FETCHES})，返回已累计结果 ({len(accumulated_result)} 字符)")
+            # 清理
+            accumulated_result = self._sanitize_result(accumulated_result)
             return (
                 accumulated_result
                 if result_handler is None
@@ -888,6 +912,8 @@ class Agent:
 
             # 非 length 结束，返回累加结果
             try:
+                # 最终清理结果
+                accumulated_result = self._sanitize_result(accumulated_result)
                 return (
                     accumulated_result
                     if result_handler is None
@@ -910,6 +936,7 @@ class Agent:
             # 退化：返回已获取的部分结果，而不是报错
             if accumulated_result:
                 self.logger.warning(f"API不支持继续获取，返回已获取的部分结果 ({len(accumulated_result)} 字符)")
+                accumulated_result = self._sanitize_result(accumulated_result)
                 return (
                     accumulated_result
                     if result_handler is None
@@ -974,6 +1001,7 @@ class Agent:
             elif finish_reason == "length":
                 # 长度限制，尝试继续获取
                 self.logger.warning(f"响应因长度限制被截断，尝试继续获取...")
+                # 注意：这里传入原始result，清理工作在 _continue_fetch 最终返回时统一处理
                 return self._continue_fetch(
                     client=client,
                     prompt=prompt,
@@ -988,6 +1016,7 @@ class Agent:
             elif finish_reason in ("tool_calls", "function_call"):
                 # 工具调用场景，当前代码可能不支持，直接返回已获取结果
                 self.logger.warning(f"finish_reason 为 '{finish_reason}'，当前不支持工具调用，返回已获取内容")
+                result = self._sanitize_result(result)
                 return result if result else (
                     prompt if error_result_handler is None
                     else error_result_handler(prompt, self.logger)
@@ -1013,6 +1042,9 @@ class Agent:
 
             if retry_count > 0:
                 self.logger.info(f"重试成功 (第 {retry_count}/{self.retry} 次尝试)。")
+
+            # 清理 <think> 标签后再处理结果
+            result = self._sanitize_result(result)
 
             return (
                 result
