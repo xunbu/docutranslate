@@ -9,7 +9,6 @@ import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
-import markdown
 from docutranslate.exporter.base import Exporter, ExporterConfig
 from docutranslate.exporter.md.types import MD2DocxEngineType
 from docutranslate.ir.document import Document
@@ -128,6 +127,7 @@ def _parse_html_table(html_table: str) -> list[list[str]]:
 def _add_image_to_docx(doc, img_info: dict, logger):
     """将图片添加到docx文档"""
     from docx.shared import Inches
+    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
     try:
         # 保存为临时文件
         ext = img_info['mime'].split('/')[-1]
@@ -142,7 +142,11 @@ def _add_image_to_docx(doc, img_info: dict, logger):
             para = doc.add_paragraph()
             para.add_run(img_info['alt']).italic = True
 
-        doc.add_picture(tmp_path, width=Inches(4))
+        # 创建新段落并添加图片，设置居中
+        para = doc.add_paragraph()
+        para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+        run = para.add_run()
+        run.add_picture(tmp_path, width=Inches(4))
         doc.add_paragraph()  # 图片后空行
 
         # 删除临时文件
@@ -171,28 +175,24 @@ def _md_to_docx_via_python(md_content: str, logger=global_logger) -> bytes:
     md_content = re.sub(r'\$([^$]+)\$', r'\1', md_content)
     md_content = re.sub(r'\\\(([^\\]+)\\\)', r'\1', md_content)
 
-    # markdown转html
-    extensions = [
-        'markdown.extensions.tables',
-        'markdown.extensions.fenced_code',
-        'markdown.extensions.codehilite',
-    ]
-    html_content = markdown.markdown(md_content, extensions=extensions)
-
     # 创建docx文档
     doc = DocxDocument()
 
-    # 从HTML内容中提取所有表格
+    # 从markdown原始内容中提取所有HTML表格
     html_table_pattern = r'<table[^>]*>.*?</table>'
-    html_tables = re.findall(html_table_pattern, html_content, re.DOTALL | re.IGNORECASE)
-    table_idx = 0
+    html_tables = re.findall(html_table_pattern, md_content, re.DOTALL | re.IGNORECASE)
 
-    # 标记HTML表格在HTML中的位置
+    # 记录HTML表格的位置信息
     html_table_positions = []
-    for match in re.finditer(html_table_pattern, html_content, re.DOTALL | re.IGNORECASE):
+    for match in re.finditer(html_table_pattern, md_content, re.DOTALL | re.IGNORECASE):
         html_table_positions.append((match.start(), match.end(), match.group()))
-        html_content = html_content[:match.start()] + f'<!--HTML_TABLE_PLACEHOLDER_{table_idx}-->' + html_content[match.end():]
-        table_idx += 1
+
+    # 计算每行的起始位置，用于判断是否在HTML表格范围内
+    line_positions = []
+    pos = 0
+    for line in md_content.split('\n'):
+        line_positions.append(pos)
+        pos += len(line) + 1  # +1 for newline
 
     # 处理markdown内容
     lines = md_content.split('\n')
@@ -201,16 +201,22 @@ def _md_to_docx_via_python(md_content: str, logger=global_logger) -> bytes:
 
     while i < len(lines):
         line = lines[i].strip()
+        line_start = line_positions[i] if i < len(line_positions) else 0
 
-        # 检测HTML表格占位符
-        html_table_match = re.match(r'<!--HTML_TABLE_PLACEHOLDER_(\d+)-->', line)
-        if html_table_match:
-            table_idx = int(html_table_match.group(1))
-            if table_idx < len(html_tables):
-                table_data = _parse_html_table(html_tables[table_idx])
+        # 检测是否在HTML表格范围内
+        in_html_table = False
+        for table_start, table_end, table_html in html_table_positions:
+            if table_start <= line_start < table_end:
+                in_html_table = True
+                break
+
+        if in_html_table:
+            # 找到表格开始行，解析并添加表格
+            if html_table_idx < len(html_tables):
+                table_data = _parse_html_table(html_tables[html_table_idx])
                 if table_data:
                     _add_table_to_docx(doc, table_data, logger)
-            html_table_idx += 1
+                html_table_idx += 1
             i += 1
             continue
 
@@ -266,8 +272,6 @@ def _md_to_docx_via_python(md_content: str, logger=global_logger) -> bytes:
                     i += 1
                 if code_lines:
                     para = doc.add_paragraph('\n'.join(code_lines))
-                    if para.runs:
-                        para.runs[0].font.name = 'Courier New'
             else:
                 # 检查行中是否有图片占位符
                 if '<!--IMG_PLACEHOLDER_' in line:
