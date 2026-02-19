@@ -895,8 +895,12 @@
                 <div class="task-area">
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="mb-0"><i class="bi bi-list-task me-2"></i><span>{{ t('taskListTitle') }}</span></h4>
-                        <button class="btn btn-primary" @click="createNewTask()"><i
-                                class="bi bi-plus-circle-fill me-2"></i><span>{{ t('newTaskBtn') }}</span></button>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-outline-danger" @click="clearAllTasks()" v-if="tasks.length > 0"><i
+                                    class="bi bi-trash me-2"></i><span>{{ t('clearAllTasksBtn') }}</span></button>
+                            <button class="btn btn-primary" @click="createNewTask()"><i
+                                    class="bi bi-plus-circle-fill me-2"></i><span>{{ t('newTaskBtn') }}</span></button>
+                        </div>
                     </div>
                     <div id="task-container">
                         <div v-if="tasks.length === 0" class="text-center text-muted mt-5">
@@ -1850,6 +1854,18 @@
                 saveActiveTasks();
             };
 
+            const clearAllTasks = async () => {
+                if (!confirm(t('confirmClearAllTasks') || '确定要清空所有任务吗？')) return;
+                for (const task of tasks.value) {
+                    if (task.backendId) try {
+                        await fetch(`/service/release/${task.backendId}`, {method: 'POST'});
+                    } catch (e) {
+                    }
+                }
+                tasks.value = [];
+                saveActiveTasks();
+            };
+
             const saveActiveTasks = () => {
                 if (window.location.pathname.includes('/admin')) return;
                 const ids = tasks.value.map(t => t.backendId).filter(id => id);
@@ -2456,7 +2472,7 @@
                 version, currentLang, i18nData, glossaryData, glossaryCount, tasks, enginList, defaultParams,
                 form, workflowParams, showMineruToken, previewMode, syncScrollEnabled, showIdentityOption,
                 errors, clearError,
-                t, createNewTask, removeTask, handleTaskFileSelect, handleTaskFileDrop, toggleTaskState,
+                t, createNewTask, removeTask, clearAllTasks, handleTaskFileSelect, handleTaskFileDrop, toggleTaskState,
                 handleGlossaryFiles, clearGlossary, openGlossaryModal,
                 openPreview, setPreviewMode, toggleSyncScroll, printPdf, copyLog, getFileIcon,
                 exportConfig, importConfig, setLang, setTheme, capitalize,
