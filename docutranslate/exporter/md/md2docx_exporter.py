@@ -8,6 +8,14 @@ import subprocess
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
+from typing import List, Dict
+
+import docx.opc.constants
+from bs4 import BeautifulSoup
+from docx import Document as DocxDocument
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+from docx.oxml.shared import OxmlElement, qn
+from docx.shared import Inches, Pt, RGBColor
 
 from docutranslate.exporter.base import Exporter, ExporterConfig
 from docutranslate.exporter.md.types import MD2DocxEngineType
@@ -52,269 +60,421 @@ def _md_to_docx_via_pandoc(md_content: str, logger=global_logger) -> bytes:
         return docx_file.read_bytes()
 
 
-def _extract_base64_images(md_content: str):
-    """提取markdown中的base64图片，返回(处理后的内容, 图片字典{索引: 图片信息})"""
-    images = {}
-    img_idx = 0
+# =============================================================================
+# 增强版纯Python转换核心逻辑
+# =============================================================================
 
-    # 匹配 ![alt](data:image/...) 格式，在原位置添加占位符
-    def extract_md_image(match):
-        nonlocal img_idx
-        alt_text = match.group(1)
-        data_url = match.group(2)
-        # 提取base64数据
-        header, b64data = data_url.split(',', 1)
-        # 获取mime类型
-        mime_type = header.split(';')[0].replace('data:', '')
-        try:
-            img_data = base64.b64decode(b64data)
-            images[img_idx] = {
-                'alt': alt_text,
-                'mime': mime_type,
-                'data': img_data
-            }
-            placeholder = f"<!--IMG_PLACEHOLDER_{img_idx}-->"
-            img_idx += 1
-            return placeholder
-        except Exception:
-            return ''  # 移除原文
-
-    md_content = re.sub(r'!\[([^\]]*)\]\((data:image/[^)]+)\)', extract_md_image, md_content)
-
-    return md_content, images
-
-
-def _parse_markdown_table(table_text: str) -> list[list[str]]:
-    """解析markdown表格"""
-    # 检查是否是HTML表格
-    if table_text.strip().startswith('<table>'):
-        return _parse_html_table(table_text)
-
-    lines = table_text.strip().split('\n')
-    if len(lines) < 2:
-        return []
-
-    rows = []
-    for line in lines:
-        line = line.strip()
-        if line.startswith('|') and line.endswith('|'):
-            # 解析表格行
-            cells = [cell.strip() for cell in line[1:-1].split('|')]
-            rows.append(cells)
-
-    return rows
-
-
-def _parse_html_table(html_table: str) -> list[list[str]]:
-    """解析HTML表格"""
-    from bs4 import BeautifulSoup
-
-    rows = []
+def _add_hyperlink(paragraph, url: str, text: str, color="0563C1", underline=True):
+    """
+    通过底层OXML在段落中插入可点击的超链接
+    """
+    part = paragraph.part
     try:
-        soup = BeautifulSoup(html_table, 'html.parser')
-        for tr in soup.find_all('tr'):
-            cells = []
-            for td in tr.find_all(['td', 'th']):
-                cells.append(td.get_text(strip=True))
-            if cells:
-                rows.append(cells)
+        r_id = part.relate_to(url, docx.opc.constants.RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
     except Exception:
-        pass
+        paragraph.add_run(text)
+        return
 
-    return rows
+    hyperlink = OxmlElement('w:hyperlink')
+    hyperlink.set(qn('r:id'), r_id)
+
+    new_run = OxmlElement('w:r')
+    rPr = OxmlElement('w:rPr')
+
+    if color:
+        c = OxmlElement('w:color')
+        c.set(qn('w:val'), color)
+        rPr.append(c)
+    if underline:
+        u = OxmlElement('w:u')
+        u.set(qn('w:val'), 'single')
+        rPr.append(u)
+
+    new_run.append(rPr)
+    text_elem = OxmlElement('w:t')
+    text_elem.text = text
+    new_run.append(text_elem)
+
+    hyperlink.append(new_run)
+    paragraph._p.append(hyperlink)
 
 
-def _add_image_to_docx(doc, img_info: dict, logger):
-    """将图片添加到docx文档"""
-    from docx.shared import Inches
-    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+def _add_image_run(paragraph, img_info: dict, width_inch: float = 5.8):
+    """在段落中添加图片Run"""
     try:
-        # 保存为临时文件
-        ext = img_info['mime'].split('/')[-1]
-        if ext == 'jpeg':
-            ext = 'jpg'
+        mime = img_info.get('mime', '')
+        ext = 'jpg'
+        if 'png' in mime:
+            ext = 'png'
+        elif 'gif' in mime:
+            ext = 'gif'
+        elif 'bmp' in mime:
+            ext = 'bmp'
+
+        if 'svg' in mime: return
+
         with tempfile.NamedTemporaryFile(suffix=f'.{ext}', delete=False) as tmp:
             tmp.write(img_info['data'])
             tmp_path = tmp.name
 
-        # 添加图片到docx
-        if img_info['alt']:
-            para = doc.add_paragraph()
-            para.add_run(img_info['alt']).italic = True
+        try:
+            run = paragraph.add_run()
+            run.add_picture(tmp_path, width=Inches(width_inch))
+        finally:
+            Path(tmp_path).unlink()
+    except Exception:
+        paragraph.add_run(f"[Image Error: {img_info.get('alt', 'unk')}]")
 
-        # 创建新段落并添加图片，设置居中
-        para = doc.add_paragraph()
-        para.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        run = para.add_run()
-        run.add_picture(tmp_path, width=Inches(4))
-        doc.add_paragraph()  # 图片后空行
 
-        # 删除临时文件
-        Path(tmp_path).unlink()
-    except Exception as e:
-        logger.warning(f"添加图片失败: {e}")
+def _process_inline_markdown(paragraph, text: str, images: Dict[int, Dict]):
+    """
+    行内解析器：支持 粗体、斜体、代码、链接、图片 的混合解析
+    """
+    patterns = [
+        r'(<!--IMG_PLACEHOLDER_\d+-->)',
+        r'(`[^`]+`)',
+        r'(!\[[^\]]*\]\([^\)]+\))',
+        r'(\[[^\]]+\]\([^\)]+\))',
+        r'(\*\*[^\*]+\*\*)',
+        r'(__[^_]+__)',
+        r'(\*[^\*]+\*)',
+        r'(_[^_]+_)',
+    ]
+
+    master_pattern = re.compile('|'.join(patterns))
+    parts = master_pattern.split(text)
+
+    for part in parts:
+        if not part: continue
+
+        if part.startswith('<!--IMG_PLACEHOLDER_'):
+            m = re.match(r'<!--IMG_PLACEHOLDER_(\d+)-->', part)
+            if m:
+                idx = int(m.group(1))
+                if idx in images:
+                    _add_image_run(paragraph, images[idx])
+            continue
+
+        if part.startswith('`') and part.endswith('`') and len(part) > 1:
+            code_text = part[1:-1]
+            run = paragraph.add_run(code_text)
+            run.font.name = 'Consolas'
+            run.font.color.rgb = RGBColor(199, 37, 78)
+            continue
+
+        if part.startswith('![') and ']' in part and '(' in part and part.endswith(')'):
+            m = re.match(r'!\[([^\]]*)\]\(([^)]+)\)', part)
+            if m:
+                alt = m.group(1)
+                paragraph.add_run(f"[Image: {alt}]").italic = True
+            continue
+
+        if part.startswith('[') and ']' in part and '(' in part and part.endswith(')'):
+            m = re.match(r'\[([^\]]+)\]\(([^)]+)\)', part)
+            if m:
+                link_text, link_url = m.group(1), m.group(2)
+                _add_hyperlink(paragraph, link_url, link_text)
+            else:
+                paragraph.add_run(part)
+            continue
+
+        if (part.startswith('**') and part.endswith('**')) or (part.startswith('__') and part.endswith('__')):
+            content = part[2:-2]
+            run = paragraph.add_run(content)
+            run.bold = True
+            continue
+
+        if (part.startswith('*') and part.endswith('*')) or (part.startswith('_') and part.endswith('_')):
+            content = part[1:-1]
+            run = paragraph.add_run(content)
+            run.italic = True
+            continue
+
+        paragraph.add_run(part)
+
+
+def _process_block_code(doc, code_lines: List[str]):
+    """处理代码块"""
+    if not code_lines: return
+    text = '\n'.join(code_lines)
+    p = doc.add_paragraph()
+    p.style = 'Normal'
+    p.paragraph_format.space_after = Pt(2)
+    p.paragraph_format.space_before = Pt(2)
+    p.paragraph_format.line_spacing = 1.0
+    run = p.add_run(text)
+    run.font.name = 'Consolas'
+    run.font.size = Pt(9.5)
+    run.font.color.rgb = RGBColor(36, 41, 46)
+
+
+def _render_table_data(doc, rows: List[List[str]]):
+    """
+    通用表格渲染函数（用于 Markdown 表格和 HTML 表格）
+    """
+    if not rows: return
+
+    # 确定列数 (取最大列数)
+    col_count = max(len(row) for row in rows)
+    if col_count == 0: return
+
+    # 创建表格
+    table = doc.add_table(rows=len(rows), cols=col_count)
+    table.style = 'Table Grid'
+
+    # 填充数据
+    for r_idx, row_data in enumerate(rows):
+        row_cells = table.rows[r_idx].cells
+        for c_idx, text in enumerate(row_data):
+            if c_idx < len(row_cells):
+                # 如果是第一行，默认为表头
+                if r_idx == 0:
+                    p = row_cells[c_idx].paragraphs[0]
+                    run = p.add_run(str(text))
+                    run.bold = True
+                    p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                else:
+                    row_cells[c_idx].text = str(text)
+
+    doc.add_paragraph()  # 表格后空行
+
+
+def _process_markdown_table(doc, table_lines: List[str]):
+    """处理Markdown语法的表格"""
+    if len(table_lines) < 2: return
+    rows = []
+    for line in table_lines:
+        content = line.strip().strip('|')
+        cells = [c.strip() for c in content.split('|')]
+        rows.append(cells)
+
+    if len(rows) < 2: return
+
+    # 校验第二行是否为分割线
+    separator = rows[1]
+    is_valid = True
+    for cell in separator:
+        if not re.match(r'^[\s\-\:]+$', cell):
+            is_valid = False;
+            break
+    if not is_valid:
+        for line in table_lines: doc.add_paragraph(line)
+        return
+
+    # 移除分割线行
+    data_rows = [rows[0]] + rows[2:]
+    _render_table_data(doc, data_rows)
 
 
 def _md_to_docx_via_python(md_content: str, logger=global_logger) -> bytes:
-    """使用纯Python方式将markdown转换为docx"""
-    from docx import Document as DocxDocument
-    from docx.shared import Inches, Pt
-    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+    """
+    纯Python Markdown -> Docx 转换器
+    支持：Markdown语法 + 原生HTML表格(<table>)
+    """
+    if DocxDocument is None:
+        raise RuntimeError("依赖缺失: 未安装 python-docx，无法执行转换。")
 
-    # 提取并处理base64图片
-    md_content, images = _extract_base64_images(md_content)
-
-    # 移除HTML中的base64图片
-    md_content = re.sub(r'<img[^>]*src="data:image/[^"]*"[^>]*>', '', md_content)
-
-    # 将LaTeX公式转换为简单的文本表示（移除标记符号，保留公式内容）
-    # 块公式 $$...$$ 或 \[...\]
-    md_content = re.sub(r'\$\$([^$]+)\$\$', r'\1', md_content)
-    md_content = re.sub(r'\\\[([^\\]+)\\\]', r'\1', md_content)
-    # 行内公式 $...$ 或 \(...\)
-    md_content = re.sub(r'\$([^$]+)\$', r'\1', md_content)
-    md_content = re.sub(r'\\\(([^\\]+)\\\)', r'\1', md_content)
-
-    # 创建docx文档
     doc = DocxDocument()
 
-    # 从markdown原始内容中提取所有HTML表格
-    html_table_pattern = r'<table[^>]*>.*?</table>'
-    html_tables = re.findall(html_table_pattern, md_content, re.DOTALL | re.IGNORECASE)
+    # 0. 全局样式设置
+    style = doc.styles['Normal']
+    style.font.name = 'Calibri'
+    style.element.rPr.rFonts.set(qn('w:eastAsia'), '宋体')
+    style.paragraph_format.space_after = Pt(8)
 
-    # 记录HTML表格的位置信息
-    html_table_positions = []
-    for match in re.finditer(html_table_pattern, md_content, re.DOTALL | re.IGNORECASE):
-        html_table_positions.append((match.start(), match.end(), match.group()))
+    # 1. 图片预处理
+    images = {}
+    img_idx = 0
 
-    # 计算每行的起始位置，用于判断是否在HTML表格范围内
-    line_positions = []
-    pos = 0
-    for line in md_content.split('\n'):
-        line_positions.append(pos)
-        pos += len(line) + 1  # +1 for newline
+    def extract_base64(match):
+        nonlocal img_idx
+        alt = match.group(1)
+        data_uri = match.group(2)
+        try:
+            header, b64 = data_uri.split(',', 1)
+            mime = header.split(';')[0].replace('data:', '')
+            data = base64.b64decode(b64)
+            key = img_idx
+            images[key] = {'alt': alt, 'mime': mime, 'data': data}
+            placeholder = f"<!--IMG_PLACEHOLDER_{key}-->"
+            img_idx += 1
+            return placeholder
+        except Exception:
+            return match.group(0)
 
-    # 处理markdown内容
-    lines = md_content.split('\n')
-    i = 0
+    md_content = re.sub(r'!\[([^\]]*)\]\((data:image/[^)]+)\)', extract_base64, md_content)
+
+    # 2. HTML 表格预处理 (利用 BeautifulSoup)
+    html_tables = {}
     html_table_idx = 0
 
-    while i < len(lines):
-        line = lines[i].strip()
-        line_start = line_positions[i] if i < len(line_positions) else 0
+    if BeautifulSoup:
+        def extract_html_table(match):
+            nonlocal html_table_idx
+            html_str = match.group(0)
+            try:
+                soup = BeautifulSoup(html_str, 'html.parser')
+                rows_data = []
+                for tr in soup.find_all('tr'):
+                    # 同时支持 th 和 td
+                    cells = [cell.get_text(strip=True) for cell in tr.find_all(['td', 'th'])]
+                    if cells:
+                        rows_data.append(cells)
 
-        # 检测是否在HTML表格范围内
-        in_html_table = False
-        for table_start, table_end, table_html in html_table_positions:
-            if table_start <= line_start < table_end:
-                in_html_table = True
-                break
+                if rows_data:
+                    key = html_table_idx
+                    html_tables[key] = rows_data
+                    placeholder = f"\n<!--HTML_TABLE_PLACEHOLDER_{key}-->\n"
+                    html_table_idx += 1
+                    return placeholder
+                return html_str  # 解析失败则保留原样
+            except Exception:
+                return html_str
 
-        if in_html_table:
-            # 找到表格开始行，解析并添加表格
-            if html_table_idx < len(html_tables):
-                table_data = _parse_html_table(html_tables[html_table_idx])
-                if table_data:
-                    _add_table_to_docx(doc, table_data, logger)
-                html_table_idx += 1
-            i += 1
-            continue
+        # 匹配 <table>...</table>，使用 DOTALL 模式匹配跨行
+        md_content = re.sub(r'<table[^>]*>.*?</table>', extract_html_table, md_content, flags=re.DOTALL | re.IGNORECASE)
 
-        # 检测图片占位符
-        img_match = re.match(r'<!--IMG_PLACEHOLDER_(\d+)-->', line)
-        if img_match:
-            img_idx = int(img_match.group(1))
-            if img_idx in images:
-                _add_image_to_docx(doc, images[img_idx], logger)
-            i += 1
-            continue
+    # 3. 逐行解析
+    lines = md_content.split('\n')
+    n = len(lines)
+    i = 0
 
-        # 检测表格开始 (markdown格式)
-        if line.startswith('|') and '|' in line[1:]:
-            # 收集表格行
-            table_lines = []
-            while i < len(lines) and lines[i].strip().startswith('|'):
-                table_lines.append(lines[i].strip())
-                i += 1
-            i -= 1  # 回退一行
+    in_code_block = False
+    code_buffer = []
+    in_table = False
+    table_buffer = []
 
-            # 跳过分割线
-            if len(table_lines) >= 2 and re.match(r'^\|[\s\-:|]+\|$', table_lines[1]):
-                table_lines = table_lines[::2]  # 保留奇数行
+    while i < n:
+        line = lines[i].rstrip()
+        stripped = line.strip()
 
-            if len(table_lines) >= 1:
-                table_data = _parse_markdown_table('\n'.join(table_lines))
-                if table_data:
-                    _add_table_to_docx(doc, table_data, logger)
-        else:
-            # 非表格行，处理标题、列表等
-            if not line:
-                doc.add_paragraph()
-            elif line.startswith('# '):
-                heading = doc.add_heading(line[2:], level=1)
-                heading.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-            elif line.startswith('## '):
-                doc.add_heading(line[3:], level=2)
-            elif line.startswith('### '):
-                doc.add_heading(line[4:], level=3)
-            elif line.startswith('#### '):
-                doc.add_heading(line[5:], level=4)
-            elif line.startswith('- ') or line.startswith('* ') or line.startswith('+ '):
-                doc.add_paragraph(line, style='List Bullet')
-            elif line.startswith(('1.', '2.', '3.', '4.', '5.', '6.', '7.', '8.', '9.', '0.')):
-                doc.add_paragraph(line, style='List Number')
-            elif line.startswith('```') or line.startswith('~~~'):
-                # 代码块
-                code_lines = []
-                i += 1
-                while i < len(lines) and not (lines[i].strip().startswith('```') or lines[i].strip().startswith('~~~')):
-                    code_lines.append(lines[i])
-                    i += 1
-                if code_lines:
-                    para = doc.add_paragraph('\n'.join(code_lines))
+        # A. 代码块
+        if stripped.startswith('```') or stripped.startswith('~~~'):
+            if in_code_block:
+                _process_block_code(doc, code_buffer)
+                in_code_block = False
+                code_buffer = []
             else:
-                # 检查行中是否有图片占位符
-                if '<!--IMG_PLACEHOLDER_' in line:
-                    # 分割行内容，处理占位符
-                    parts = re.split(r'(<!--IMG_PLACEHOLDER_\d+-->)', line)
-                    para = None
-                    for part in parts:
-                        img_match = re.match(r'<!--IMG_PLACEHOLDER_(\d+)-->', part)
-                        if img_match:
-                            img_idx = int(img_match.group(1))
-                            if img_idx in images:
-                                _add_image_to_docx(doc, images[img_idx], logger)
-                        elif part.strip():
-                            para = doc.add_paragraph(part)
+                if in_table:
+                    _process_markdown_table(doc, table_buffer)
+                    in_table = False
+                    table_buffer = []
+                in_code_block = True
+            i += 1
+            continue
+
+        if in_code_block:
+            code_buffer.append(line)
+            i += 1
+            continue
+
+        # B. Markdown 表格
+        is_md_table_row = stripped.startswith('|') or (stripped.endswith('|') and '|' in stripped)
+        if is_md_table_row:
+            if not in_table:
+                if i + 1 < n:
+                    next_line = lines[i + 1].strip()
+                    if set(next_line) & {'-', '|'} and re.match(r'^\|?[\s\-:|]+\|?$', next_line):
+                        in_table = True
+                        table_buffer = [line]
+                        i += 1
+                        continue
+            else:
+                table_buffer.append(line)
+                i += 1
+                continue
+
+        if in_table:
+            _process_markdown_table(doc, table_buffer)
+            in_table = False
+            table_buffer = []
+            if not is_md_table_row:
+                pass
+            else:
+                i += 1;
+                continue
+
+        # C. HTML 表格占位符处理
+        if stripped.startswith('<!--HTML_TABLE_PLACEHOLDER_') and stripped.endswith('-->'):
+            m = re.match(r'<!--HTML_TABLE_PLACEHOLDER_(\d+)-->', stripped)
+            if m:
+                idx = int(m.group(1))
+                if idx in html_tables:
+                    _render_table_data(doc, html_tables[idx])
+                i += 1
+                continue
+
+        # D. 普通元素
+        if stripped.startswith('#'):
+            level = 0
+            for char in stripped:
+                if char == '#':
+                    level += 1
                 else:
-                    # 处理普通段落
-                    doc.add_paragraph(line)
+                    break
+            if 0 < level <= 6:
+                text = stripped[level:].strip()
+                heading = doc.add_heading(level=level)
+                _process_inline_markdown(heading, text, images)
+                i += 1
+                continue
+
+        if re.match(r'^(\*{3,}|-{3,}|_{3,})$', stripped):
+            p = doc.add_paragraph()
+            run = p.add_run("________________________________________")
+            run.font.color.rgb = RGBColor(220, 220, 220)
+            p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+            i += 1
+            continue
+
+        if stripped.startswith('>'):
+            text = stripped.lstrip('> ').strip()
+            p = doc.add_paragraph()
+            p.paragraph_format.left_indent = Inches(0.5)
+            _process_inline_markdown(p, text, images)
+            for run in p.runs:
+                run.font.color.rgb = RGBColor(120, 120, 120)
+            i += 1
+            continue
+
+        ul_match = re.match(r'^(\s*)([\*\-\+])\s+(.*)', line)
+        ol_match = re.match(r'^(\s*)(\d+\.)\s+(.*)', line)
+        if ul_match or ol_match:
+            if ul_match:
+                indent, _, text = ul_match.groups()
+                style = 'List Bullet'
+            else:
+                indent, _, text = ol_match.groups()
+                style = 'List Number'
+            p = doc.add_paragraph(style=style)
+            level = len(indent.replace('\t', '  ')) // 2
+            if level > 0:
+                p.paragraph_format.left_indent = Inches(0.25 * (level + 1))
+            _process_inline_markdown(p, text, images)
+            i += 1
+            continue
+
+        if stripped.startswith('<!--IMG_PLACEHOLDER_') and stripped.endswith('-->'):
+            if stripped.count('<!--IMG_PLACEHOLDER_') == 1 and len(stripped) < 40:
+                p = doc.add_paragraph()
+                p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
+                _process_inline_markdown(p, stripped, images)
+                i += 1
+                continue
+
+        if stripped:
+            p = doc.add_paragraph()
+            _process_inline_markdown(p, stripped, images)
 
         i += 1
 
-    # 保存到bytes
+    if in_table and table_buffer:
+        _process_markdown_table(doc, table_buffer)
+
     buffer = io.BytesIO()
     doc.save(buffer)
     buffer.seek(0)
     return buffer.getvalue()
-
-
-def _add_table_to_docx(doc, table_data: list[list[str]], logger):
-    """将表格数据添加到docx文档"""
-    if not table_data or not table_data[0]:
-        return
-
-    # 创建docx表格
-    table = doc.add_table(rows=len(table_data), cols=len(table_data[0]))
-    table.style = 'Table Grid'
-
-    for row_idx, row_data in enumerate(table_data):
-        for col_idx, cell_text in enumerate(row_data):
-            if row_idx < len(table.rows) and col_idx < len(table.columns):
-                cell = table.cell(row_idx, col_idx)
-                cell.text = cell_text
-
-    doc.add_paragraph()  # 表格后空行
 
 
 class MD2DocxExporter(Exporter):
@@ -322,16 +482,13 @@ class MD2DocxExporter(Exporter):
         config = config or MD2DocxExporterConfig()
         super().__init__(config=config)
         self.engine = config.engine
-        # 使用config中的logger，如果没有则使用全局logger
         self.logger = config.logger if hasattr(config, 'logger') and config.logger else global_logger
 
     def export(self, document: MarkdownDocument) -> Document:
         md_content = document.content.decode("utf-8")
 
-        # 根据引擎选择转换方式
         engine = self.engine
         if engine == "auto":
-            # 自动选择：有pandoc则用pandoc，否则用python
             engine = "pandoc" if is_pandoc_available() else "python"
 
         if engine == "pandoc":
@@ -343,5 +500,4 @@ class MD2DocxExporter(Exporter):
         else:
             docx_bytes = _md_to_docx_via_python(md_content, self.logger)
 
-        # 转换为Document对象
         return Document.from_bytes(docx_bytes, suffix=".docx", stem=document.stem)
