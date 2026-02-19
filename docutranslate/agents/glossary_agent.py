@@ -38,7 +38,7 @@ Here is the input:
 </Requirement>
 
 The output format should be plain JSON text in a JSON array format:
-{[{"src": "<Original Term>", "dst": "<Translated Term>"}]}
+[{"src": "<Original Term>", "dst": "<Translated Term>"}]
 
 <example>
 Assuming the source language is English and the target language is Chinese in the example
