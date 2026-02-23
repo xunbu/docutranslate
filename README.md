@@ -219,6 +219,26 @@ print(f"Exported content length: {len(base64_content)}")
 | **force_json** | `bool` | `False` | Force JSON output mode |
 | **rpm** | `int` | - | Requests per minute limit |
 | **tpm** | `int` | - | Tokens per minute limit |
+| **thinking** | `str` | `"auto"` | Thinking mode: `"auto"`, `"none"`, `"block"` |
+| **custom_prompt** | `str` | - | Custom prompt for translation |
+| **system_proxy_enable** | `bool` | `False` | Enable system proxy |
+| **insert_mode** | `str` | `"replace"` | Docx/Xlsx/Txt insertion mode: `"replace"`, `"append"`, `"prepend"` |
+| **separator** | `str` | `"\n"` | Text separator for append/prepend modes |
+| **segment_mode** | `str` | `"line"` | Segmentation mode: `"line"`, `"paragraph"`, `"none"` |
+| **translate_regions** | `list` | - | Excel translation regions (e.g., `"Sheet1!A1:B10"`) |
+| **model_version** | `str` | `"vlm"` | MinerU model version: `"pipeline"`, `"vlm"` |
+| **formula_ocr** | `bool` | `True` | Enable formula OCR for PDF parsing |
+| **code_ocr** | `bool` | `True` | Enable code OCR for PDF parsing |
+| **mineru_deploy_backend** | `str` | `"hybrid-auto-engine"` | MinerU local backend: `"pipeline"`, `"vlm-auto-engine"`, `"vlm-http-client"`, `"hybrid-auto-engine"`, `"hybrid-http-client"` |
+| **mineru_deploy_formula_enable** | `bool` | `True` | Enable formula recognition for local MinerU |
+| **mineru_deploy_start_page_id** | `int` | 0 | Start page ID for local MinerU parsing |
+| **mineru_deploy_end_page_id** | `int` | 99999 | End page ID for local MinerU parsing |
+| **mineru_deploy_lang_list** | `list` | - | Language list for local MinerU parsing |
+| **mineru_deploy_server_url** | `str` | - | MinerU local server URL |
+| **json_paths** | `list` | - | JSONPath expressions for JSON translation (e.g., `"$.data.*"`) |
+| **glossary_generate_enable** | `bool` | - | Enable auto glossary generation |
+| **glossary_dict** | `dict` | - | Glossary dictionary (e.g., `{"Jobs": "Steve Jobs"}`) |
+| **glossary_agent_config** | `dict` | - | Glossary agent configuration |
 
 #### Result Methods
 

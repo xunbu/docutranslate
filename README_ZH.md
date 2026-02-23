@@ -220,6 +220,26 @@ print(f"导出内容长度: {len(base64_content)}")
 | **force_json** | `bool` | `False` | 强制 JSON 输出模式 |
 | **rpm** | `int` | - | 每分钟请求数限制 |
 | **tpm** | `int` | - | 每分钟 Token 数限制 |
+| **thinking** | `str` | `"auto"` | 思考模式：`"auto"`、`"none"`、`"block"` |
+| **custom_prompt** | `str` | - | 自定义翻译提示词 |
+| **system_proxy_enable** | `bool` | `False` | 启用系统代理 |
+| **insert_mode** | `str` | `"replace"` | Docx/Xlsx/Txt 插入模式：`"replace"`、`"append"`、`"prepend"` |
+| **separator** | `str` | `"\n"` | append/prepend 模式的文本分隔符 |
+| **segment_mode** | `str` | `"line"` | 分段模式：`"line"`、`"paragraph"`、`"none"` |
+| **translate_regions** | `list` | - | Excel 翻译区域（如 `"Sheet1!A1:B10"`） |
+| **model_version** | `str` | `"vlm"` | MinerU 模型版本：`"pipeline"`、`"vlm"` |
+| **formula_ocr** | `bool` | `True` | PDF 解析启用公式 OCR |
+| **code_ocr** | `bool` | `True` | PDF 解析启用代码 OCR |
+| **mineru_deploy_backend** | `str` | `"hybrid-auto-engine"` | MinerU 本地后端：`"pipeline"`、`"vlm-auto-engine"`、`"vlm-http-client"`、`"hybrid-auto-engine"`、`"hybrid-http-client"` |
+| **mineru_deploy_formula_enable** | `bool` | `True` | 本地 MinerU 启用公式识别 |
+| **mineru_deploy_start_page_id** | `int` | 0 | 本地 MinerU 解析起始页 ID |
+| **mineru_deploy_end_page_id** | `int` | 99999 | 本地 MinerU 解析结束页 ID |
+| **mineru_deploy_lang_list** | `list` | - | 本地 MinerU 解析语言列表 |
+| **mineru_deploy_server_url** | `str` | - | MinerU 本地服务器 URL |
+| **json_paths** | `list` | - | JSON 翻译的 JSONPath 表达式（如 `"$.data.*"`） |
+| **glossary_generate_enable** | `bool` | - | 启用自动术语表生成 |
+| **glossary_dict** | `dict` | - | 术语表字典（如 `{"Jobs": "Steve Jobs"}`） |
+| **glossary_agent_config** | `dict` | - | 术语表代理配置 |
 
 #### Result 方法说明
 

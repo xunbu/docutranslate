@@ -227,6 +227,26 @@ print(f"Độ dài nội dung đã xuất: {len(base64_content)}")
 | **force_json** | `bool` | `False` | Bắt buộc chế độ đầu ra JSON |
 | **rpm** | `int` | - | Giới hạn số yêu cầu mỗi phút |
 | **tpm** | `int` | - | Giới hạn số token mỗi phút |
+| **thinking** | `str` | `"auto"` | Chế độ suy nghĩ: `"auto"`, `"none"`, `"block"` |
+| **custom_prompt** | `str` | - | Prompt tùy chỉnh cho dịch thuật |
+| **system_proxy_enable** | `bool` | `False` | Bật proxy hệ thống |
+| **insert_mode** | `str` | `"replace"` | Chế độ chèn Docx/Xlsx/Txt: `"replace"`, `"append"`, `"prepend"` |
+| **separator** | `str` | `"\n"` | Dấu phân cách văn bản cho chế độ append/prepend |
+| **segment_mode** | `str` | `"line"` | Chế độ phân đoạn: `"line"`, `"paragraph"`, `"none"` |
+| **translate_regions** | `list` | - | Vùng dịch Excel (ví dụ: `"Sheet1!A1:B10"`) |
+| **model_version** | `str` | `"vlm"` | Phiên bản model MinerU: `"pipeline"`, `"vlm"` |
+| **formula_ocr** | `bool` | `True` | Bật nhận dạng công thức OCR khi phân tích PDF |
+| **code_ocr** | `bool` | `True` | Bật nhận dạng mã OCR khi phân tích PDF |
+| **mineru_deploy_backend** | `str` | `"hybrid-auto-engine"` | Backend MinerU cục bộ: `"pipeline"`, `"vlm-auto-engine"`, `"vlm-http-client"`, `"hybrid-auto-engine"`, `"hybrid-http-client"` |
+| **mineru_deploy_formula_enable** | `bool` | `True` | Bật nhận dạng công thức cho MinerU cục bộ |
+| **mineru_deploy_start_page_id** | `int` | 0 | ID trang bắt đầu phân tích MinerU cục bộ |
+| **mineru_deploy_end_page_id** | `int` | 99999 | ID trang kết thúc phân tích MinerU cục bộ |
+| **mineru_deploy_lang_list** | `list` | - | Danh sách ngôn ngữ phân tích MinerU cục bộ |
+| **mineru_deploy_server_url** | `str` | - | URL máy chủ MinerU cục bộ |
+| **json_paths** | `list` | - | Biểu thức JSONPath cho dịch JSON (ví dụ: `"$.data.*"`) |
+| **glossary_generate_enable** | `bool` | - | Bật tự động tạo bảng thuật ngữ |
+| **glossary_dict** | `dict` | - | Từ điển thuật ngữ (ví dụ: `{"Jobs": "Steve Jobs"}`) |
+| **glossary_agent_config** | `dict` | - | Cấu hình agent thuật ngữ |
 
 #### Các phương thức Kết quả (Result Methods)
 

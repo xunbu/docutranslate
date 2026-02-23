@@ -219,6 +219,26 @@ print(f"エクスポートコンテンツ長さ: {len(base64_content)}")
 | **force_json** | `bool` | `False` | 強制 JSON 出力モード |
 | **rpm** | `int` | - | 1分あたりのリクエスト数制限 |
 | **tpm** | `int` | - | 1分あたりのトークン数制限 |
+| **thinking** | `str` | `"auto"` | 思考モード: `"auto"`、`"none"`、`"block"` |
+| **custom_prompt** | `str` | - | カスタム翻訳プロンプト |
+| **system_proxy_enable** | `bool` | `False` | システムプロキシを有効化 |
+| **insert_mode** | `str` | `"replace"` | Docx/Xlsx/Txt 挿入モード: `"replace"`、`"append"`、`"prepend"` |
+| **separator** | `str` | `"\n"` | append/prepend モードのテキスト区切り文字 |
+| **segment_mode** | `str` | `"line"` | セグメンテーションモード: `"line"`、`"paragraph"`、`"none"` |
+| **translate_regions** | `list` | - | Excel 翻訳領域（例: `"Sheet1!A1:B10"`） |
+| **model_version** | `str` | `"vlm"` | MinerU モデルバージョン: `"pipeline"`、`"vlm"` |
+| **formula_ocr** | `bool` | `True` | PDF 解析で数式 OCR を有効化 |
+| **code_ocr** | `bool` | `True` | PDF 解析でコード OCR を有効化 |
+| **mineru_deploy_backend** | `str` | `"hybrid-auto-engine"` | MinerU ローカルバックエンド: `"pipeline"`、`"vlm-auto-engine"`、`"vlm-http-client"`、`"hybrid-auto-engine"`、`"hybrid-http-client"` |
+| **mineru_deploy_formula_enable** | `bool` | `True` | ローカル MinerU で数式認識を有効化 |
+| **mineru_deploy_start_page_id** | `int` | 0 | ローカル MinerU 解析開始ページ ID |
+| **mineru_deploy_end_page_id** | `int` | 99999 | ローカル MinerU 解析終了ページ ID |
+| **mineru_deploy_lang_list** | `list` | - | ローカル MinerU 解析言語リスト |
+| **mineru_deploy_server_url** | `str` | - | MinerU ローカルサーバー URL |
+| **json_paths** | `list` | - | JSON 翻訳用の JSONPath 式（例: `"$.data.*"`） |
+| **glossary_generate_enable** | `bool` | - | 用語集自動生成を有効化 |
+| **glossary_dict** | `dict` | - | 用語集辞書（例: `{"Jobs": "Steve Jobs"}`） |
+| **glossary_agent_config** | `dict` | - | 用語集エージェント設定 |
 
 #### Result メソッド一覧
 
