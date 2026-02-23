@@ -1530,6 +1530,92 @@ def _cancel_translation_logic(task_id: str):
 - **Auto 模式**: 当设置为 `auto` 时，后端将根据 `file_name` 的扩展名自动选择最合适的工作流。
 - **动态参数**: 根据所选工作流，API需要不同的参数集。请参考下面的Schema或示例。
 - **异步处理**: 此端点会立即返回任务ID，客户端需轮询状态接口获取进度。
+
+### 参数说明
+- **file_name**: (必须) 原始文件名，用于自动识别工作流类型
+- **file_content**: (必须) 文件内容的Base64编码字符串
+- **payload**: (必须) 包含工作流参数的JSON对象
+
+### workflow_type 可选值
+| 值 | 说明 | 支持的文件格式 |
+|:---|:---|:---|
+| `auto` | 自动识别文件类型 | 根据文件扩展名自动选择 |
+| `markdown_based` | Markdown工作流 | .pdf, .docx, .md, .png, .jpg, .zip |
+| `txt` | 纯文本工作流 | .txt |
+| `json` | JSON工作流 | .json |
+| `xlsx` | Excel工作流 | .xlsx, .csv |
+| `docx` | Word工作流 | .docx |
+| `srt` | 字幕工作流 | .srt |
+| `epub` | EPUB工作流 | .epub |
+| `html` | HTML工作流 | .html, .htm |
+| `ass` | ASS字幕工作流 | .ass |
+| `pptx` | PPT工作流 | .pptx |
+
+### 通用参数（所有workflow_type通用）
+| 参数 | 类型 | 必填 | 说明 |
+|:---|:---|:---|:---|
+| `workflow_type` | string | 是 | 工作流类型 |
+| `skip_translate` | bool | 否 | 是否跳过翻译步骤，仅执行文档解析和格式转换，默认 false |
+| `base_url` | string | 否 | AI API 基础URL，默认 https://api.openai.com/v1 |
+| `api_key` | string | 是 | AI API 密钥 |
+| `model_id` | string | 是 | 模型ID，如 gpt-4o, claude-3-5-sonnet-20241022 |
+| `to_lang` | string | 是 | 目标语言，如 "中文", "English", "日本語" |
+| `concurrent` | int | 否 | 并发请求数，默认 10 |
+| `temperature` | float | 否 | 温度参数，默认 0.3 |
+| `timeout` | int | 否 | 请求超时(秒)，默认 60 |
+| `thinking` | string | 否 | Agent思考模式: default, enable, disable，默认 default |
+| `retry` | int | 否 | 重试次数，默认 3 |
+| `system_proxy_enable` | bool | 否 | 是否使用系统代理，默认 false |
+| `custom_prompt` | string | 否 | 用户自定义翻译Prompt |
+| `glossary_dict` | object | 否 | 术语表字典，key为原文，value为译文 |
+| `glossary_generate_enable` | bool | 否 | 是否开启术语表自动生成，默认 false |
+| `glossary_agent_config` | object | 否 | 术语表生成的Agent配置 |
+| `force_json` | bool | 否 | 强制AI输出JSON格式，默认 false |
+| `rpm` | int | 否 | RPM限制 (每分钟请求数) |
+| `tpm` | int | 否 | TPM限制 (每分钟Token数) |
+| `provider` | string | 否 | API供应商标识 |
+
+### Markdown工作流(markdown_based)专有参数
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|:---|:---|:---|:---|:---|
+| `convert_engine` | string | 否 | "mineru" | 解析引擎: mineru, docling, mineru_deploy, identity |
+| `md2docx_engine` | string | 否 | "auto" | 导出为docx的引擎: python, pandoc, auto, None |
+| `mineru_token` | string | 否 | - | Mineru API token (当convert_engine=mineru时) |
+| `model_version` | string | 否 | "vlm" | Mineru模型版本: vlm, pipeline |
+| `mineru_deploy_base_url` | string | 否 | http://127.0.0.1:8000 | 本地Mineru服务地址 |
+| `mineru_deploy_backend` | string | 否 | hybrid-auto-engine | 本地Mineru后端类型 |
+| `mineru_deploy_parse_method` | string | 否 | auto | 解析方法: auto, txt, ocr |
+| `mineru_deploy_table_enable` | bool | 否 | true | 本地部署服务是否启用表格解析 |
+| `mineru_deploy_formula_enable` | bool | 否 | true | 本地部署服务是否启用公式解析 |
+| `mineru_deploy_start_page_id` | int | 否 | 0 | 起始解析页面 |
+| `mineru_deploy_end_page_id` | int | 否 | 99999 | 结束解析页面 |
+| `mineru_deploy_lang_list` | array | 否 | ["ch"] | 语言列表 |
+| `mineru_deploy_server_url` | string | 否 | - | Server URL (当backend为http-client相关时) |
+| `formula_ocr` | bool | 否 | true | 是否OCR公式 (当convert_engine=mineru或docling时) |
+| `code_ocr` | bool | 否 | true | 是否OCR代码 (当convert_engine=docling时) |
+
+### Excel工作流(xlsx)专有参数
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|:---|:---|:---|:---|:---|
+| `insert_mode` | string | 否 | "replace" | 插入模式: replace, append, prepend |
+
+### Word工作流(docx)专有参数
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|:---|:---|:---|:---|:---|
+| `insert_mode` | string | 否 | "replace" | 插入模式: replace, append, prepend |
+
+### JSON工作流(json)专有参数
+| 参数 | 类型 | 必填 | 说明 |
+|:---|:---|:---|:---|
+| `json_paths` | array | 否 | JSON路径数组，如 ["$.name", "$.items[*].title"] |
+
+### 响应
+返回包含 `task_id` 的 JSON 对象。客户端需使用此 ID 轮询 `/service/status/{task_id}` 接口获取进度。
+
+### 使用流程
+1. 调用此接口上传文件并获取 task_id
+2. 轮询 `/service/status/{task_id}` 获取翻译进度
+3. 翻译完成后，调用 `/service/download/{task_id}` 下载结果
 """,
     responses={
         200: {
@@ -1589,93 +1675,100 @@ async def service_translate(
     "/translate/file",
     summary="提交翻译任务 (文件上传)",
     description="""
-    通过 `multipart/form-data` 方式上传文件并启动翻译任务。
+通过 `multipart/form-data` 方式上传文件并启动翻译任务。
 
-    此接口适用于直接上传二进制文件（如 PDF, Docx 等），无需先进行 Base64 编码。
+此接口适用于直接上传二进制文件（如 PDF, Docx 等），无需先进行 Base64 编码。
 
-    ### 参数说明
-    - **file**: (必须) 要翻译的二进制文件。
-    - **payload**: (必须) 包含工作流配置的 **JSON 字符串**。
+- **工作流选择**: `payload.workflow_type` 决定任务类型（如 `markdown_based`, `txt`, `json`, `xlsx`, `docx`, `srt`, `epub`, `html`, `ass`, `pptx`, `auto`）。
+- **Auto 模式**: 当设置为 `auto` 时，后端将根据文件扩展名自动选择最合适的工作流。
+- **动态参数**: 根据所选工作流，API需要不同的参数集。
+- **异步处理**: 此端点会立即返回任务ID，客户端需轮询状态接口获取进度。
 
-    ### workflow_type 可选值
-    | 值 | 说明 | 支持的文件格式 |
-    |:---|:---|:---|
-    | `auto` | 自动识别文件类型 | 根据文件扩展名自动选择 |
-    | `markdown_based` | Markdown工作流 | .pdf, .docx, .md, .png, .jpg, .zip |
-    | `txt` | 纯文本工作流 | .txt |
-    | `json` | JSON工作流 | .json |
-    | `xlsx` | Excel工作流 | .xlsx, .csv |
-    | `docx` | Word工作流 | .docx |
-    | `srt` | 字幕工作流 | .srt |
-    | `epub` | EPUB工作流 | .epub |
-    | `html` | HTML工作流 | .html, .htm |
-    | `ass` | ASS字幕工作流 | .ass |
-    | `pptx` | PPT工作流 | .pptx |
+### 参数说明
+- **file**: (必须) 要翻译的二进制文件。
+- **payload**: (必须) 包含工作流参数的 JSON 字符串。
 
-    ### 通用参数（所有workflow_type通用）
-    | 参数 | 类型 | 必填 | 说明 |
-    |:---|:---|:---|:---|
-    | `workflow_type` | string | 是 | 工作流类型 |
-    | `base_url` | string | 否 | AI API 基础URL，默认 https://api.openai.com/v1 |
-    | `api_key` | string | 是 | AI API 密钥 |
-    | `model_id` | string | 是 | 模型ID，如 gpt-4o, claude-3-5-sonnet-20241022 |
-    | `to_lang` | string | 是 | 目标语言，如 "中文", "English", "日本語" |
-    | `provider` | string | 否 | API供应商，默认 "api.openai.com" |
-    | `concurrent` | int | 否 | 并发请求数，默认 10 |
-    | `temperature` | float | 否 | 温度参数，默认 0.3 |
-    | `timeout` | int | 否 | 请求超时(秒)，默认 60 |
-    | `retry` | int | 否 | 重试次数，默认 3 |
+### workflow_type 可选值
+| 值 | 说明 | 支持的文件格式 |
+|:---|:---|:---|
+| `auto` | 自动识别文件类型 | 根据文件扩展名自动选择 |
+| `markdown_based` | Markdown工作流 | .pdf, .docx, .md, .png, .jpg, .zip |
+| `txt` | 纯文本工作流 | .txt |
+| `json` | JSON工作流 | .json |
+| `xlsx` | Excel工作流 | .xlsx, .csv |
+| `docx` | Word工作流 | .docx |
+| `srt` | 字幕工作流 | .srt |
+| `epub` | EPUB工作流 | .epub |
+| `html` | HTML工作流 | .html, .htm |
+| `ass` | ASS字幕工作流 | .ass |
+| `pptx` | PPT工作流 | .pptx |
 
-    ### Markdown工作流(markdown_based)专有参数
-    | 参数 | 类型 | 必填 | 默认值 | 说明 |
-    |:---|:---|:---|:---|:---|
-    | `convert_engine` | string | 否 | "mineru" | 解析引擎: mineru, docling, mineru_deploy, identity |
-    | `md2docx_engine` | string | 否 | "auto" | 导出为docx的引擎: python, pandoc, auto, None |
-    | `mineru_token` | string | 否 | - | Mineru API token (当convert_engine=mineru时) |
-    | `model_version` | string | 否 | "vlm" | Mineru模型版本: vlm, pipeline |
-    | `mineru_deploy_base_url` | string | 否 | http://127.0.0.1:8000 | 本地Mineru服务地址 |
-    | `mineru_deploy_backend` | string | 否 | hybrid-auto-engine | 本地Mineru后端类型 |
-    | `formula_ocr` | bool | 否 | true | 是否OCR公式 |
-    | `code_ocr` | bool | 否 | true | 是否OCR代码 |
+### 通用参数（所有workflow_type通用）
+| 参数 | 类型 | 必填 | 说明 |
+|:---|:---|:---|:---|
+| `workflow_type` | string | 是 | 工作流类型 |
+| `skip_translate` | bool | 否 | 是否跳过翻译步骤，仅执行文档解析和格式转换，默认 false |
+| `base_url` | string | 否 | AI API 基础URL，默认 https://api.openai.com/v1 |
+| `api_key` | string | 是 | AI API 密钥 |
+| `model_id` | string | 是 | 模型ID，如 gpt-4o, claude-3-5-sonnet-20241022 |
+| `to_lang` | string | 是 | 目标语言，如 "中文", "English", "日本語" |
+| `concurrent` | int | 否 | 并发请求数，默认 10 |
+| `temperature` | float | 否 | 温度参数，默认 0.3 |
+| `timeout` | int | 否 | 请求超时(秒)，默认 60 |
+| `thinking` | string | 否 | Agent思考模式: default, enable, disable，默认 default |
+| `retry` | int | 否 | 重试次数，默认 3 |
+| `system_proxy_enable` | bool | 否 | 是否使用系统代理，默认 false |
+| `custom_prompt` | string | 否 | 用户自定义翻译Prompt |
+| `glossary_dict` | object | 否 | 术语表字典，key为原文，value为译文 |
+| `glossary_generate_enable` | bool | 否 | 是否开启术语表自动生成，默认 false |
+| `glossary_agent_config` | object | 否 | 术语表生成的Agent配置 |
+| `force_json` | bool | 否 | 强制AI输出JSON格式，默认 false |
+| `rpm` | int | 否 | RPM限制 (每分钟请求数) |
+| `tpm` | int | 否 | TPM限制 (每分钟Token数) |
+| `provider` | string | 否 | API供应商标识 |
 
-    ### Excel工作流(xlsx)专有参数
-    | 参数 | 类型 | 必填 | 默认值 | 说明 |
-    |:---|:---|:---|:---|:---|
-    | `insert_mode` | string | 否 | "replace" | 插入模式: replace, append, prepend |
+### Markdown工作流(markdown_based)专有参数
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|:---|:---|:---|:---|:---|
+| `convert_engine` | string | 否 | "mineru" | 解析引擎: mineru, docling, mineru_deploy, identity |
+| `md2docx_engine` | string | 否 | "auto" | 导出为docx的引擎: python, pandoc, auto, None |
+| `mineru_token` | string | 否 | - | Mineru API token (当convert_engine=mineru时) |
+| `model_version` | string | 否 | "vlm" | Mineru模型版本: vlm, pipeline |
+| `mineru_deploy_base_url` | string | 否 | http://127.0.0.1:8000 | 本地Mineru服务地址 |
+| `mineru_deploy_backend` | string | 否 | hybrid-auto-engine | 本地Mineru后端类型 |
+| `mineru_deploy_parse_method` | string | 否 | auto | 解析方法: auto, txt, ocr |
+| `mineru_deploy_table_enable` | bool | 否 | true | 本地部署服务是否启用表格解析 |
+| `mineru_deploy_formula_enable` | bool | 否 | true | 本地部署服务是否启用公式解析 |
+| `mineru_deploy_start_page_id` | int | 否 | 0 | 起始解析页面 |
+| `mineru_deploy_end_page_id` | int | 否 | 99999 | 结束解析页面 |
+| `mineru_deploy_lang_list` | array | 否 | ["ch"] | 语言列表 |
+| `mineru_deploy_server_url` | string | 否 | - | Server URL (当backend为http-client相关时) |
+| `formula_ocr` | bool | 否 | true | 是否OCR公式 |
+| `code_ocr` | bool | 否 | true | 是否OCR代码 |
 
-    ### Word工作流(docx)专有参数
-    | 参数 | 类型 | 必填 | 默认值 | 说明 |
-    |:---|:---|:---|:---|:---|
-    | `insert_mode` | string | 否 | "replace" | 插入模式: replace, append, prepend |
+### Excel工作流(xlsx)专有参数
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|:---|:---|:---|:---|:---|
+| `insert_mode` | string | 否 | "replace" | 插入模式: replace, append, prepend |
 
-    ### JSON工作流(json)专有参数
-    | 参数 | 类型 | 必填 | 说明 |
-    |:---|:---|:---|:---|
-    | `json_paths` | array | 否 | JSON路径数组，如 ["$.name", "$.items[*].title"] |
+### Word工作流(docx)专有参数
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+|:---|:---|:---|:---|:---|
+| `insert_mode` | string | 否 | "replace" | 插入模式: replace, append, prepend |
 
-    ### 完整Payload示例
-    ```json
-    {
-      "workflow_type": "markdown_based",
-      "base_url": "https://api.openai.com/v1",
-      "api_key": "sk-xxxxxx",
-      "model_id": "gpt-4o",
-      "to_lang": "简体中文",
-      "convert_engine": "mineru",
-      "md2docx_engine": "auto",
-      "concurrent": 10,
-      "temperature": 0.3
-    }
-    ```
+### JSON工作流(json)专有参数
+| 参数 | 类型 | 必填 | 说明 |
+|:---|:---|:---|:---|
+| `json_paths` | array | 否 | JSON路径数组，如 ["$.name", "$.items[*].title"] |
 
-    ### 响应
-    返回包含 `task_id` 的 JSON 对象。客户端需使用此 ID 轮询 `/service/status/{task_id}` 接口获取进度。
+### 响应
+返回包含 `task_id` 的 JSON 对象。客户端需使用此 ID 轮询 `/service/status/{task_id}` 接口获取进度。
 
-    ### 使用流程
-    1. 调用此接口上传文件并获取 task_id
-    2. 轮询 `/service/status/{task_id}` 获取翻译进度
-    3. 翻译完成后，调用 `/service/download/{task_id}` 下载结果
-    """,
+### 使用流程
+1. 调用此接口上传文件并获取 task_id
+2. 轮询 `/service/status/{task_id}` 获取翻译进度
+3. 翻译完成后，调用 `/service/download/{task_id}` 下载结果
+""",
     responses={
         200: {
             "description": "翻译任务已成功启动。",
@@ -1734,18 +1827,31 @@ async def service_translate_file(
 @service_router.post(
     "/cancel/{task_id}",
     summary="取消翻译任务",
-    description="""根据任务ID取消一个正在进行中的翻译任务。如果任务已经完成、失败或已经被取消，则会返回错误。""",
+    description="根据任务ID取消一个正在进行中的翻译任务。如果任务已经完成、失败或已经被取消，则会返回错误。",
+    responses={
+        200: {"description": "成功取消任务。"},
+        404: {"description": "任务ID不存在。"},
+        409: {"description": "任务已结束，无法取消。"},
+    },
 )
-async def service_cancel_translate(task_id: str):
+async def service_cancel_translate(
+        task_id: str = FastApiPath(..., description="要取消的任务ID", examples=["a1b2c3d4"])
+):
     return _cancel_translation_logic(task_id)
 
 
 @service_router.post(
     "/release/{task_id}",
     summary="释放任务资源",
-    description="""根据任务ID释放其在服务器上占用的所有资源，包括状态、日志和缓存的翻译结果文件。如果任务正在进行，会先尝试取消该任务。此操作不可逆。""",
+    description="根据任务ID释放其在服务器上占用的所有资源，包括状态、日志和缓存的翻译结果文件。如果任务正在进行，会先尝试取消该任务。此操作不可逆。",
+    responses={
+        200: {"description": "成功释放任务资源。"},
+        404: {"description": "任务ID不存在。"},
+    },
 )
-async def service_release_task(task_id: str):
+async def service_release_task(
+        task_id: str = FastApiPath(..., description="要释放资源的任务ID", examples=["a1b2c3d4"])
+):
     if task_id not in tasks_state:
         return JSONResponse(
             status_code=404,
@@ -1803,6 +1909,7 @@ async def service_release_task(task_id: str):
                                 "status_message": "正在处理 'annual_report.pdf'...",
                                 "error_flag": False,
                                 "download_ready": False,
+                                "progress_percent": 45,
                                 "original_filename_stem": "annual_report",
                                 "original_filename": "annual_report.pdf",
                                 "task_start_time": 1678889400.0,
@@ -1819,6 +1926,7 @@ async def service_release_task(task_id: str):
                                 "status_message": "翻译成功！用时 123.45 秒。",
                                 "error_flag": False,
                                 "download_ready": True,
+                                "progress_percent": 100,
                                 "original_filename_stem": "my_paper",
                                 "original_filename": "my_paper.pdf",
                                 "task_start_time": 1678889400.123,
@@ -1839,6 +1947,7 @@ async def service_release_task(task_id: str):
                                 "status_message": "翻译成功！用时 125.00 秒。",
                                 "error_flag": False,
                                 "download_ready": True,
+                                "progress_percent": 100,
                                 "original_filename_stem": "complex_document",
                                 "original_filename": "complex_document.docx",
                                 "task_start_time": 1678891000.0,
@@ -1860,6 +1969,7 @@ async def service_release_task(task_id: str):
                                 "status_message": "翻译成功！用时 18.99 秒。",
                                 "error_flag": False,
                                 "download_ready": True,
+                                "progress_percent": 100,
                                 "original_filename_stem": "sales_data",
                                 "original_filename": "sales_data.xlsx",
                                 "task_start_time": 1678889600.0,
@@ -1880,6 +1990,7 @@ async def service_release_task(task_id: str):
                                 "status_message": "翻译成功！用时 25.10 秒。",
                                 "error_flag": False,
                                 "download_ready": True,
+                                "progress_percent": 100,
                                 "original_filename_stem": "contract",
                                 "original_filename": "contract.docx",
                                 "task_start_time": 1678889500.123,
@@ -1899,6 +2010,7 @@ async def service_release_task(task_id: str):
                                 "status_message": "翻译成功！用时 45.32 秒。",
                                 "error_flag": False,
                                 "download_ready": True,
+                                "progress_percent": 100,
                                 "original_filename_stem": "my_book",
                                 "original_filename": "my_book.epub",
                                 "task_start_time": 1678890000.0,
@@ -1919,6 +2031,7 @@ async def service_release_task(task_id: str):
                                 "status_message": "翻译成功！用时 15.78 秒。",
                                 "error_flag": False,
                                 "download_ready": True,
+                                "progress_percent": 100,
                                 "original_filename_stem": "about_us",
                                 "original_filename": "about_us.html",
                                 "task_start_time": 1678890100.0,
@@ -1939,6 +2052,7 @@ async def service_release_task(task_id: str):
                                 "status_message": "翻译成功！用时 12.34 秒。",
                                 "error_flag": False,
                                 "download_ready": True,
+                                "progress_percent": 100,
                                 "original_filename_stem": "dialogue",
                                 "original_filename": "dialogue.ass",
                                 "task_start_time": 1678890200.0,
@@ -1960,6 +2074,7 @@ async def service_release_task(task_id: str):
                                 "status_message": "翻译成功！用时 30.50 秒。",
                                 "error_flag": False,
                                 "download_ready": True,
+                                "progress_percent": 100,
                                 "original_filename_stem": "presentation",
                                 "original_filename": "presentation.pptx",
                                 "task_start_time": 1678890300.0,
@@ -2035,9 +2150,15 @@ async def service_get_status(
 @service_router.get(
     "/logs/{task_id}",
     summary="获取任务增量日志",
-    description="""以流式方式获取任务的增量日志。客户端每次调用此接口，都会返回自上次调用以来产生的新日志行。这对于实时展示翻译进度非常有用。如果任务ID不存在，则返回404。""",
+    description="以流式方式获取任务的增量日志。客户端每次调用此接口，都会返回自上次调用以来产生的新日志行。这对于实时展示翻译进度非常有用。如果任务ID不存在，则返回404。",
+    responses={
+        200: {"description": "成功返回增量日志。"},
+        404: {"description": "任务ID不存在。"},
+    },
 )
-async def service_get_logs(task_id: str):
+async def service_get_logs(
+        task_id: str = FastApiPath(..., description="要获取日志的任务ID", examples=["a1b2c3d4"])
+):
     if task_id not in tasks_log_queues:
         raise HTTPException(
             status_code=404, detail=f"找不到任务ID '{task_id}' 的日志队列。"
@@ -2276,7 +2397,20 @@ async def service_content(
 # --- 应用主路由和启动 ---
 # ===================================================================
 @service_router.get(
-    "/engin-list", tags=["Application"], description="返回正在进行的可用的转换引擎"
+    "/engin-list",
+    summary="获取可用的转换引擎",
+    description="返回当前服务支持的文档转换引擎列表，包括 MinerU Cloud、MinerU Local 和 Docling（如果已安装）。",
+    tags=["Application"],
+    responses={
+        200: {
+            "description": "成功返回可用的转换引擎列表。",
+            "content": {
+                "application/json": {
+                    "example": ["mineru", "mineru_deploy", "docling"]
+                }
+            }
+        }
+    },
 )
 async def service_get_engin_list():
     engin_list = ["mineru", "mineru_deploy"]
@@ -2286,20 +2420,68 @@ async def service_get_engin_list():
 
 
 @service_router.get(
-    "/task-list", tags=["Application"], description="返回正在进行的task_id列表"
+    "/task-list",
+    summary="获取任务列表",
+    description="返回当前所有正在处理或已完成的翻译任务ID列表。",
+    tags=["Application"],
+    responses={
+        200: {
+            "description": "成功返回任务ID列表。",
+            "content": {
+                "application/json": {
+                    "example": ["a1b2c3d4", "e5f6g7h8"]
+                }
+            }
+        }
+    },
 )
 async def service_get_task_list():
     return JSONResponse(content=list(tasks_state.keys()))
 
 
 @service_router.get(
-    "/default-params", tags=["Application"], description="返回一些默认参数"
+    "/default-params",
+    summary="获取默认参数",
+    description="返回服务使用的默认参数，包括并发数、分块大小、温度、超时等配置。",
+    tags=["Application"],
+    responses={
+        200: {
+            "description": "成功返回默认参数。",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "chunk_size": 2000,
+                        "concurrent": 10,
+                        "temperature": 0.3,
+                        "timeout": 60,
+                        "retry": 3,
+                        "thinking": "default"
+                    }
+                }
+            }
+        }
+    },
 )
 def service_get_default_params():
     return JSONResponse(content=default_params)
 
 
-@service_router.get("/meta", tags=["Application"], description="返回软件版本号")
+@service_router.get(
+    "/meta",
+    summary="获取应用信息",
+    description="返回当前服务的版本号等元信息。",
+    tags=["Application"],
+    responses={
+        200: {
+            "description": "成功返回应用信息。",
+            "content": {
+                "application/json": {
+                    "example": {"version": "1.0.0"}
+                }
+            }
+        }
+    },
+)
 async def service_get_app_version():
     return JSONResponse(content={"version": __version__})
 
@@ -2308,14 +2490,36 @@ async def service_get_app_version():
     "/flat-translate",
     summary="translate(sync)",
     description="""
-    上传文件并直接等待翻译完成，无需轮询状态。
-    所有参数均已扁平化展开，直接通过 Form 表单提交。
+上传文件并直接等待翻译完成，无需轮询状态。
+所有参数均已扁平化展开，直接通过 Form 表单提交。
 
-    **注意**: 
-    1. 这是一个同步阻塞接口，大文件翻译时间较长，请确保客户端(如Nginx)超时设置足够长。
-    2. 复杂对象(如术语表字典)需以 JSON 字符串格式传入。
-    """,
-    response_model=None
+**注意**:
+1. 这是一个同步阻塞接口，大文件翻译时间较长，请确保客户端(如Nginx)超时设置足够长。
+2. 复杂对象(如术语表字典)需以 JSON 字符串格式传入。
+
+### workflow_type 可选值
+| 值 | 说明 | 支持的文件格式 |
+|:---|:---|:---|
+| `auto` | 自动识别文件类型 | 根据文件扩展名自动选择 |
+| `markdown_based` | Markdown工作流 | .pdf, .docx, .md, .png, .jpg, .zip |
+| `txt` | 纯文本工作流 | .txt |
+| `json` | JSON工作流 | .json |
+| `xlsx` | Excel工作流 | .xlsx, .csv |
+| `docx` | Word工作流 | .docx |
+| `srt` | 字幕工作流 | .srt |
+| `epub` | EPUB工作流 | .epub |
+| `html` | HTML工作流 | .html, .htm |
+| `ass` | ASS字幕工作流 | .ass |
+| `pptx` | PPT工作流 | .pptx |
+
+### 响应
+返回翻译完成后的文件内容（Base64编码）。
+""",
+    response_model=None,
+    responses={
+        200: {"description": "翻译成功，返回翻译后的文件内容。"},
+        500: {"description": "翻译过程中发生错误。"},
+    },
 )
 async def service_flat_translate(
         request: Request,
@@ -2348,7 +2552,7 @@ async def service_flat_translate(
         formula_ocr: bool = Form(True, description="[PDF] 是否启用公式识别"),
         code_ocr: bool = Form(True, description="[Docling] 是否启用代码块识别"),
         mineru_deploy_base_url: str = Form("http://127.0.0.1:8000", description="[MinerU Local] 服务地址"),
-        mineru_deploy_backend: str = Form("hybrid-auto-engine", description="[MinerU Local] 后端类型: hybrid-auto-engine, pipeline 等"),
+        mineru_deploy_backend: str = Form("hybrid-auto-engine", description="[MinerU Local] 后端类型: pipeline, vlm-auto-engine, vlm-http-client, hybrid-auto-engine, hybrid-http-client"),
         mineru_deploy_parse_method: str = Form("auto", description="[MinerU Local] 解析方法: auto, txt, ocr"),
         mineru_deploy_formula_enable: bool = Form(True, description="[MinerU Local] 是否启用公式"),
         mineru_deploy_table_enable: bool = Form(True, description="[MinerU Local] 是否启用表格"),
