@@ -12,7 +12,8 @@ def main():
                "  docutranslate -i                     (启动图形界面，默认本地访问)\n"
                "  docutranslate -i --host 0.0.0.0      (允许局域网内其他设备访问)\n"
                "  docutranslate -i -p 8081             (指定端口号)\n"
-               "  docutranslate -i --cors              (启用默认的跨域设置)\n",
+               "  docutranslate -i --cors              (启用默认的跨域设置)\n"
+               "  docutranslate --mcp                   (启动 MCP 服务器)\n",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
@@ -52,6 +53,12 @@ def main():
     )
 
     parser.add_argument(
+        "--mcp",
+        action="store_true",
+        help="启动 MCP (Model Context Protocol) 服务器，用于 AI 助手集成。"
+    )
+
+    parser.add_argument(
          "--version",
         action="store_true",
         help="查看版本号。"
@@ -64,6 +71,7 @@ def main():
         print("\n示例:")
         print("  docutranslate -i")
         print("  docutranslate -i --host 0.0.0.0 (局域网共享)")
+        print("  docutranslate --mcp (启动 MCP 服务器)")
         print("\n如需查看所有可用选项，请运行:")
         print("  docutranslate --help")
         sys.exit(0)
@@ -79,6 +87,9 @@ def main():
             enable_CORS=args.cors,
             allow_origin_regex=args.cors_regex
         )
+    elif args.mcp:
+        from docutranslate.mcp import run_mcp_server
+        run_mcp_server()
     elif args.version:
         from docutranslate import  __version__
         print(__version__)
