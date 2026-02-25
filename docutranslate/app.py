@@ -8,18 +8,13 @@ import json
 import logging
 import os
 import socket
-import tempfile
-import time
 import uuid
 from contextlib import asynccontextmanager, closing
 from pathlib import Path
 from typing import (
     List,
-    Dict,
-    Any,
     Optional,
     Literal,
-    TYPE_CHECKING,
 )
 
 import httpx
@@ -55,29 +50,26 @@ from docutranslate import __version__
 from docutranslate.core.schemas import TranslatePayload
 from docutranslate.exporter.md.types import ConvertEngineType
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
-
 from docutranslate.logger import global_logger
-from docutranslate.translator import default_params
-from docutranslate.utils.resource_utils import resource_path
-
 # Shared server layer imports
 from docutranslate.server import (
     TranslationService,
     get_translation_service,
     MEDIA_TYPES,
 )
+from docutranslate.translator import default_params
+from docutranslate.utils.resource_utils import resource_path
 
 # MCP integration imports (optional)
 try:
+    import docutranslate.mcp
     from docutranslate.mcp import get_sse_app
-    MCP_AVAILABLE = True
+    MCP_AVAILABLE = docutranslate.mcp.MCP_AVAILABLE
 except ImportError:
     MCP_AVAILABLE = False
 
-
 # --- Shared Translation Service ---
 translation_service: TranslationService = get_translation_service()
-
 
 # --- FastAPI application and router setup ---
 tags_metadata = [
@@ -113,7 +105,7 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, "port_to_use"):
         print(f"服务接口文档: http://127.0.0.1:{app.state.port_to_use}/docs")
         print(f"请用浏览器访问 http://127.0.0.1:{app.state.port_to_use}\n")
-        if hasattr(app.state,"with_mcp"):
+        if getattr(app.state, "with_mcp", False) and MCP_AVAILABLE:
             print(f"MCP SSE endpoint available at: http://127.0.0.1:{app.state.port_to_use}/mcp/sse")
 
     yield  # Application running...
@@ -163,9 +155,9 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 # ===================================================================
 
 def setup_mcp_integration(
-    enable: bool = False,
-    host: str = "127.0.0.1",
-    port: int = 8000,
+        enable: bool = False,
+        host: str = "127.0.0.1",
+        port: int = 8000,
 ) -> Optional[TranslationService]:
     """
     Setup MCP integration with shared translation service.
@@ -178,7 +170,15 @@ def setup_mcp_integration(
     Returns:
         TranslationService instance if MCP is enabled, None otherwise
     """
-    if not enable or not MCP_AVAILABLE:
+    if not enable:
+        return None
+
+    if not MCP_AVAILABLE:
+        print("\n" + "=" * 60)
+        print("WARNING: MCP dependencies not installed.")
+        print("To use --with-mcp, please install MCP dependencies:")
+        print("  pip install docutranslate[mcp]")
+        print("=" * 60 + "\n")
         return None
 
     try:
@@ -798,10 +798,12 @@ async def service_flat_translate(
         request: Request,
         file: UploadFile = File(..., description="要翻译的文件"),
         model_id: str = Form("", description="模型ID (例如: gpt-4o, glm-4-air)，当 skip_translate=False 时必填"),
-        base_url: Optional[str] = Form("", description="LLM API 基础 URL (如不填则依赖环境变量或默认值，当 skip_translate=False 时必填)"),
+        base_url: Optional[str] = Form("",
+                                       description="LLM API 基础 URL (如不填则依赖环境变量或默认值，当 skip_translate=False 时必填)"),
         api_key: str = Form("xx", description="API Key (默认xx)"),
         to_lang: str = Form("中文", description="目标翻译语言"),
-        workflow_type: str = Form("auto", description="工作流类型: auto, markdown_based, txt, json, xlsx, docx, srt, epub, html, ass, pptx"),
+        workflow_type: str = Form("auto",
+                                  description="工作流类型: auto, markdown_based, txt, json, xlsx, docx, srt, epub, html, ass, pptx"),
         skip_translate: bool = Form(False, description="是否跳过翻译仅进行格式解析"),
         concurrent: int = Form(default_params["concurrent"], description="并发请求数"),
         chunk_size: int = Form(default_params["chunk_size"], description="文本分块大小"),
@@ -819,38 +821,29 @@ async def service_flat_translate(
         separator: str = Form("\n", description="追加/前置时的分隔符"),
         segment_mode: str = Form("line", description="[Txt专用] 分段模式: line(按行), paragraph(按段), none(全文)"),
         translate_regions: Optional[List[str]] = Form(None, description="[Xlsx专用] 翻译区域列表, 如 'Sheet1!A1:B10'"),
-        convert_engine: Optional[ConvertEngineType] = Form("mineru", description="[PDF/MD] 解析引擎: mineru, docling, identity,mineru_deploy"),
+        convert_engine: Optional[ConvertEngineType] = Form("mineru",
+                                                           description="[PDF/MD] 解析引擎: mineru, docling, identity,mineru_deploy"),
         mineru_token: Optional[str] = Form("", description="[MinerU Cloud] API Token"),
         model_version: str = Form("vlm", description="[MinerU Cloud] 模型版本: vlm, pipeline"),
         formula_ocr: bool = Form(True, description="[PDF] 是否启用公式识别"),
         code_ocr: bool = Form(True, description="[Docling] 是否启用代码块识别"),
         mineru_deploy_base_url: str = Form("http://127.0.0.1:8000", description="[MinerU Local] 服务地址"),
-        mineru_deploy_backend: str = Form("hybrid-auto-engine", description="[MinerU Local] 后端类型: pipeline, vlm-auto-engine, vlm-http-client, hybrid-auto-engine, hybrid-http-client"),
+        mineru_deploy_backend: str = Form("hybrid-auto-engine",
+                                          description="[MinerU Local] 后端类型: pipeline, vlm-auto-engine, vlm-http-client, hybrid-auto-engine, hybrid-http-client"),
         mineru_deploy_parse_method: str = Form("auto", description="[MinerU Local] 解析方法: auto, txt, ocr"),
         mineru_deploy_formula_enable: bool = Form(True, description="[MinerU Local] 是否启用公式"),
         mineru_deploy_table_enable: bool = Form(True, description="[MinerU Local] 是否启用表格"),
         mineru_deploy_start_page_id: int = Form(0, description="[MinerU Local] 起始页码"),
         mineru_deploy_end_page_id: int = Form(99999, description="[MinerU Local] 结束页码"),
         mineru_deploy_lang_list: Optional[List[str]] = Form(None, description="[MinerU Local] 语言列表"),
-        mineru_deploy_server_url: Optional[str] = Form("", description="[MinerU Local] Server URL (backend='vlm-http-client'时使用)"),
+        mineru_deploy_server_url: Optional[str] = Form("",
+                                                       description="[MinerU Local] Server URL (backend='vlm-http-client'时使用)"),
         json_paths: Optional[List[str]] = Form(None, description="[Json专用] JsonPath 表达式列表, 如 '$.name'"),
         glossary_generate_enable: bool = Form(False, description="是否开启术语表自动生成"),
         glossary_dict_json: Optional[str] = Form("", description="术语表字典 JSON 字符串, 格式: {'原文':'译文'}"),
-        glossary_agent_config_json: Optional[str] = Form("", description="术语表 Agent 配置 JSON 字符串 (包含 base_url, model_id 等)")
+        glossary_agent_config_json: Optional[str] = Form("",
+                                                         description="术语表 Agent 配置 JSON 字符串 (包含 base_url, model_id 等)")
 ):
-    from docutranslate.core.schemas import (
-        MarkdownWorkflowParams,
-        TextWorkflowParams,
-        JsonWorkflowParams,
-        XlsxWorkflowParams,
-        DocxWorkflowParams,
-        SrtWorkflowParams,
-        EpubWorkflowParams,
-        HtmlWorkflowParams,
-        AssWorkflowParams,
-        PPTXWorkflowParams,
-    )
-
     task_id = uuid.uuid4().hex[:8]
 
     try:
@@ -861,17 +854,28 @@ async def service_flat_translate(
 
     if workflow_type == "auto":
         ext = Path(original_filename).suffix.lower().lstrip(".")
-        if ext in ["md", "pdf"]: workflow_type = "markdown_based"
-        elif ext == "txt": workflow_type = "txt"
-        elif ext == "json": workflow_type = "json"
-        elif ext == "xlsx": workflow_type = "xlsx"
-        elif ext == "docx": workflow_type = "docx"
-        elif ext == "srt": workflow_type = "srt"
-        elif ext == "epub": workflow_type = "epub"
-        elif ext in ["html", "htm"]: workflow_type = "html"
-        elif ext == "ass": workflow_type = "ass"
-        elif ext == "pptx": workflow_type = "pptx"
-        else: workflow_type = "txt"
+        if ext in ["md", "pdf"]:
+            workflow_type = "markdown_based"
+        elif ext == "txt":
+            workflow_type = "txt"
+        elif ext == "json":
+            workflow_type = "json"
+        elif ext == "xlsx":
+            workflow_type = "xlsx"
+        elif ext == "docx":
+            workflow_type = "docx"
+        elif ext == "srt":
+            workflow_type = "srt"
+        elif ext == "epub":
+            workflow_type = "epub"
+        elif ext in ["html", "htm"]:
+            workflow_type = "html"
+        elif ext == "ass":
+            workflow_type = "ass"
+        elif ext == "pptx":
+            workflow_type = "pptx"
+        else:
+            workflow_type = "txt"
 
     parsed_glossary_dict = None
     if glossary_dict_json and glossary_dict_json.strip():
@@ -1093,7 +1097,7 @@ def run_app(host=None, port: int | None = None, enable_CORS=False,
             print(f"端口 {initial_port} 被占用，将使用端口 {port_to_use} 代替")
         print(f"正在启动 DocuTranslate WebUI 版本号：{__version__}")
         app.state.port_to_use = port_to_use
-        app.state.with_mcp=with_mcp
+        app.state.with_mcp = with_mcp
         if enable_CORS:
             print(f"已开启跨域，allow_origin_regex：{allow_origin_regex}")
             app.add_middleware(
