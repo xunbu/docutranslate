@@ -37,12 +37,26 @@ Mount to existing FastAPI:
 For more details, see the README.md in this package.
 """
 
-from docutranslate.mcp.server import (
-    create_mcp_server,
-    run_mcp_server,
-    get_sse_app,
-    MCP_AVAILABLE,
-)
+try:
+    from docutranslate.mcp.server import (
+        create_mcp_server,
+        run_mcp_server,
+        get_sse_app,
+        MCP_AVAILABLE,
+    )
+except ImportError:
+    # MCP dependencies not installed
+    MCP_AVAILABLE = False
+
+    def _mcp_not_available(*args, **kwargs):
+        raise ImportError(
+            "MCP dependencies not installed. "
+            "Install with: pip install docutranslate[mcp]"
+        )
+
+    create_mcp_server = _mcp_not_available
+    run_mcp_server = _mcp_not_available
+    get_sse_app = _mcp_not_available
 
 __all__ = [
     "create_mcp_server",
