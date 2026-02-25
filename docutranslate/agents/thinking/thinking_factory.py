@@ -9,6 +9,7 @@ DisableValueType: TypeAlias =  str | dict[str,Any] | bool
 ThinkingConfig: TypeAlias= tuple[ThinkingField, EnableValueType, DisableValueType]
 
 thinking_mode: dict[ProviderType,ThinkingConfig] = {
+    "minimax": ("reasoning_effort", "medium", "none"),
     "ollama": ("reasoning_effort", "medium", "none"),
     "bigmodel": ("thinking", {"type": "enabled"}, {"type": "disabled"}),
     "aliyuncs": (

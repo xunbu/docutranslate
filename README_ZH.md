@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="/README_ZH.md"><strong>简体中文</strong></a> / <a href="/README.md"><strong>English</strong></a> / <a href="/README_JP.md"><strong>日本語</strong></a>
+  <a href="/README_ZH.md"><strong>简体中文</strong></a> / <a href="/README.md"><strong>English</strong></a> / <a href="/README_JP.md"><strong>日本語</strong></a> / <a href="/README_VI.md"><strong>Tiếng Việt</strong></a>
 </p>
 
 <p align="center">
@@ -205,6 +205,7 @@ print(f"导出内容长度: {len(base64_content)}")
 | **to_lang** | `str` | - | 目标语言（如 `"中文"`、`"English"`、`"日本語"`） |
 | **concurrent** | `int` | 10 | 并发 LLM 请求数 |
 | **convert_engine** | `str` | `"mineru"` | PDF 解析引擎：`"mineru"`、`"docling"`、`"mineru_deploy"` |
+| **md2docx_engine** | `str` | `"auto"` | Markdown 转 Docx 引擎：`"python"`（纯 Python）、`"pandoc"`（使用 Pandoc）、`"auto"`（若已安装 Pandoc 则使用，否则用 Python）、`null`（不生成 docx） |
 | **mineru_deploy_base_url** | `str` | - | 本地 minerU API 地址（当 `convert_engine="mineru_deploy"` 时） |
 | **mineru_deploy_parse_method** | `str` | `"auto"` | 本地 minerU 解析方法: `"auto"`, `"txt"`, `"ocr"` |
 | **mineru_deploy_table_enable** | `bool` | `True` | 本地 minerU 是否启用表格识别 |
@@ -219,6 +220,26 @@ print(f"导出内容长度: {len(base64_content)}")
 | **force_json** | `bool` | `False` | 强制 JSON 输出模式 |
 | **rpm** | `int` | - | 每分钟请求数限制 |
 | **tpm** | `int` | - | 每分钟 Token 数限制 |
+| **thinking** | `str` | `"auto"` | 思考模式：`"auto"`、`"none"`、`"block"` |
+| **custom_prompt** | `str` | - | 自定义翻译提示词 |
+| **system_proxy_enable** | `bool` | `False` | 启用系统代理 |
+| **insert_mode** | `str` | `"replace"` | Docx/Xlsx/Txt 插入模式：`"replace"`、`"append"`、`"prepend"` |
+| **separator** | `str` | `"\n"` | append/prepend 模式的文本分隔符 |
+| **segment_mode** | `str` | `"line"` | 分段模式：`"line"`、`"paragraph"`、`"none"` |
+| **translate_regions** | `list` | - | Excel 翻译区域（如 `"Sheet1!A1:B10"`） |
+| **model_version** | `str` | `"vlm"` | MinerU 模型版本：`"pipeline"`、`"vlm"` |
+| **formula_ocr** | `bool` | `True` | PDF 解析启用公式 OCR |
+| **code_ocr** | `bool` | `True` | PDF 解析启用代码 OCR |
+| **mineru_deploy_backend** | `str` | `"hybrid-auto-engine"` | MinerU 本地后端：`"pipeline"`、`"vlm-auto-engine"`、`"vlm-http-client"`、`"hybrid-auto-engine"`、`"hybrid-http-client"` |
+| **mineru_deploy_formula_enable** | `bool` | `True` | 本地 MinerU 启用公式识别 |
+| **mineru_deploy_start_page_id** | `int` | 0 | 本地 MinerU 解析起始页 ID |
+| **mineru_deploy_end_page_id** | `int` | 99999 | 本地 MinerU 解析结束页 ID |
+| **mineru_deploy_lang_list** | `list` | - | 本地 MinerU 解析语言列表 |
+| **mineru_deploy_server_url** | `str` | - | MinerU 本地服务器 URL |
+| **json_paths** | `list` | - | JSON 翻译的 JSONPath 表达式（如 `"$.data.*"`） |
+| **glossary_generate_enable** | `bool` | - | 启用自动术语表生成 |
+| **glossary_dict** | `dict` | - | 术语表字典（如 `{"Jobs": "Steve Jobs"}`） |
+| **glossary_agent_config** | `dict` | - | 术语表代理配置 |
 
 #### Result 方法说明
 
@@ -271,7 +292,7 @@ asyncio.run(translate_multiple())
 
 | 工作流 | 输入格式 | save_as_* | export_to_* | 关键配置选项 |
 |:---|:---|:---|:---|:---|
-| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip` | `html`, `markdown`, `markdown_zip` | `convert_engine`, `translator_config` |
+| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip`, `docx` | `html`, `markdown`, `markdown_zip`, `docx` | `convert_engine`, `md2docx_engine`, `translator_config` |
 | **TXTWorkflow** | `.txt` | `txt`, `html` | `txt`, `html` | `translator_config` |
 | **JsonWorkflow** | `.json` | `json`, `html` | `json`, `html` | `translator_config`, `json_paths` |
 | **DocxWorkflow** | `.docx` | `docx`, `html` | `docx`, `html` | `translator_config`, `insert_mode` |

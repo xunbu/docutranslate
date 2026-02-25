@@ -1,12 +1,12 @@
 # SPDX-FileCopyrightText: 2025 QinHan
 # SPDX-License-Identifier: MPL-2.0
 import asyncio
+import regex  # [使用您依赖列表中的 regex 库]
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Self, Literal, List, Dict, Any, Tuple
 
 from pptx import Presentation
-from pptx.enum.dml import MSO_COLOR_TYPE
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.enum.text import MSO_AUTO_SIZE
 from pptx.oxml.ns import qn
@@ -15,6 +15,59 @@ from pptx.text.text import _Paragraph, TextFrame
 from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, SegmentsTranslateAgent
 from docutranslate.ir.document import Document
 from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTranslator
+
+
+# ---------------- 辅助工具类：语言与字体智能适配 ----------------
+class LanguageHelper:
+    """
+    专门处理 PPTX 的语言标签与字体渲染适配。
+    利用 regex 库的 Unicode 属性检测脚本类型。
+    """
+
+    # 常用语言映射 (覆盖常见写法)
+    _COMMON_MAP = {
+        "chinese": "zh-CN", "simplified chinese": "zh-CN", "zh": "zh-CN",
+        "english": "en-US", "en": "en-US",
+        "japanese": "ja-JP", "ja": "ja-JP",
+        "korean": "ko-KR", "ko": "ko-KR",
+        "french": "fr-FR", "fr": "fr-FR",
+        "german": "de-DE", "de": "de-DE",
+        "spanish": "es-ES", "es": "es-ES",
+        "russian": "ru-RU", "ru": "ru-RU",
+        # ... 其他语言
+    }
+
+    # [关键改进] 使用 regex 库的 Unicode 属性进行精确匹配
+    # \p{Han}: 汉字
+    # \p{Hiragana} / \p{Katakana}: 日文假名
+    # \p{Hangul}: 韩文
+    # 如果包含这些字符，说明需要启用东亚字体渲染
+    _CJK_PATTERN = regex.compile(r'[\p{Han}\p{Hiragana}\p{Katakana}\p{Hangul}]')
+
+    @classmethod
+    def guess_lang_tag(cls, config_lang: str, text_content: str) -> str:
+        """
+        根据用户配置和实际文本内容，推断最合适的 PPT XML lang 属性。
+        """
+        # 1. 优先尝试解析用户配置
+        if config_lang:
+            clean_lang = config_lang.lower().strip()
+            if clean_lang in cls._COMMON_MAP:
+                return cls._COMMON_MAP[clean_lang]
+            # 如果看起来像 ISO 代码 (如 'fr-FR'), 直接信赖
+            if regex.match(r'^[a-z]{2,3}(-[a-z0-9]+)?$', clean_lang):
+                return config_lang
+
+        # 2. [兜底策略] 基于内容的脚本检测
+        # 使用 regex 检查是否包含中日韩字符
+        if cls._CJK_PATTERN.search(text_content):
+            # 包含 CJK 字符 -> 声明为中文，激活东亚字体槽 (a:ea)
+            # 即使是日文/韩文，设为 zh-CN 在字体回退机制上通常也能正确激活 CJK 渲染逻辑
+            return "zh-CN"
+        else:
+            # 不含 CJK -> 默认为英文，激活西文字体槽 (a:latin)
+            # 这涵盖了英文、法文、德文、俄文、越南语等绝大多数非 CJK 语言
+            return "en-US"
 
 
 # ---------------- 配置类 ----------------
@@ -27,13 +80,8 @@ class PPTXTranslatorConfig(AiTranslatorConfig):
 # ---------------- 主类 ----------------
 class PPTXTranslator(AiTranslator):
     """
-    基于 python-pptx 的 .pptx 文件翻译器 (增强版)。
-
-    改进特性：
-    1. 深度遍历：支持母版、版式、备注页、以及隐藏在 AlternateContent (兼容性块) 中的文本。
-    2. 公式保护：智能检测文本间的公式，防止翻译后文字错位。
-    3. 样式保留：翻译后完全保留原有的中英文字体设置，不做强制覆盖。
-    4. 布局自适应：防止翻译后文本溢出。
+    基于 python-pptx 的 .pptx 文件翻译器 (最终增强版)。
+    使用 regex 库进行高性能的脚本检测。
     """
 
     def __init__(self, config: PPTXTranslatorConfig):
@@ -56,80 +104,92 @@ class PPTXTranslator(AiTranslator):
         self.insert_mode = config.insert_mode
         self.separator = config.separator
 
-    # ---------------- 辅助函数：样式与字体 ----------------
+    # ---------------- 辅助函数：视觉样式 ----------------
 
-    def _get_font_signature(self, run) -> Tuple:
-        """获取 Run 的字体样式签名，用于合并判断。"""
-        font = run.font
-        color_key = None
+    def _get_visual_style_signature(self, run) -> Tuple:
+        """获取 Run 的视觉样式签名"""
+        r_element = run._r
+        rPr = r_element.rPr
 
-        # 稳健的颜色获取逻辑
-        if hasattr(font, 'color') and font.color:
-            try:
-                if font.color.type == MSO_COLOR_TYPE.RGB:
-                    color_key = str(font.color.rgb)
-                elif font.color.type == MSO_COLOR_TYPE.THEME:
-                    color_key = f"THEME_{font.color.theme_color}_{font.color.brightness}"
-            except AttributeError:
-                pass
+        if rPr is None:
+            return ("DEFAULT",)
 
-        return (
-            font.name,
-            font.size,
-            font.bold,
-            font.italic,
-            font.underline,
-            color_key
-        )
+        def get_bool_attr(tag_name):
+            node = rPr.find(qn(f'a:{tag_name}'))
+            if node is None: return None
+            val = node.get('val')
+            return val if val is not None else '1'
+
+        bold = get_bool_attr('b')
+        italic = get_bool_attr('i')
+        u_node = rPr.find(qn('a:u'))
+        underline = u_node.get('val') if u_node is not None else None
+        strike_node = rPr.find(qn('a:strike'))
+        strike = strike_node.get('val') if strike_node is not None else None
+        sz = rPr.get('sz')
+        latin = rPr.find(qn('a:latin'))
+        latin_face = latin.get('typeface') if latin is not None else None
+        ea = rPr.find(qn('a:ea'))
+        ea_face = ea.get('typeface') if ea is not None else None
+
+        color_sig = "INHERITED"
+        for tag in ['solidFill', 'gradFill', 'noFill', 'blipFill', 'pattFill']:
+            fill_node = rPr.find(qn(f'a:{tag}'))
+            if fill_node is not None:
+                parts = [tag]
+                for child in fill_node:
+                    val = child.get('val') or ""
+                    parts.append(f"{child.tag.split('}')[-1]}:{val}")
+                color_sig = "-".join(parts)
+                break
+
+        baseline = rPr.get('baseline')
+        effect_sig = []
+        for tag in ['highlight', 'effectLst', 'sp3d']:
+            if rPr.find(qn(f'a:{tag}')) is not None:
+                effect_sig.append(tag)
+
+        return (bold, italic, underline, strike, sz, latin_face, ea_face, baseline, color_sig,
+                tuple(sorted(effect_sig)))
 
     def _have_same_significant_styles(self, run1, run2) -> bool:
-        """检查两个 Run 是否样式相同且在 XML 结构上紧邻（中间无公式）。"""
-        if run1 is None or run2 is None:
-            return False
-
-        # 1. 检查视觉样式是否一致
-        if self._get_font_signature(run1) != self._get_font_signature(run2):
-            return False
-
-        # 2. 检查 XML 邻接性
-        # 如果 run1 和 run2 之间夹杂了 <m:oMath> (公式) 或其他标签，
-        # 它们的 XML 索引将不连续。此时必须切分，否则回填时文字会跑到公式前面。
+        """检查两个 Run 是否样式一致且紧邻"""
+        if run1 is None or run2 is None: return False
+        if self._get_visual_style_signature(run1) != self._get_visual_style_signature(run2): return False
         try:
             r1_element = run1._r
             r2_element = run2._r
             parent = r1_element.getparent()
-
-            # 只有当它们属于同一个父节点，且索引差为1时，才视为紧邻
-            if parent == r2_element.getparent():
-                index1 = parent.index(r1_element)
-                index2 = parent.index(r2_element)
-                if index2 != index1 + 1:
-                    return False  # 中间有东西（如公式），禁止合并
+            if parent != r2_element.getparent(): return False
+            if parent.index(r2_element) != parent.index(r1_element) + 1: return False
         except Exception:
-            # 如果底层操作失败，保守起见不合并
             return False
-
         return True
+
+    def _apply_lang_correction(self, run, text_content: str):
+        """[智能修正] 根据配置和文本内容，设置正确的 lang 属性"""
+        if not text_content: return
+        best_lang = LanguageHelper.guess_lang_tag(self.config.to_lang, text_content)
+        if best_lang:
+            rPr = run._r.get_or_add_rPr()
+            rPr.set('lang', best_lang)
+            rPr.set('altLang', best_lang)
 
     # ---------------- 核心遍历逻辑 ----------------
 
     def _process_text_frame(self, text_frame: TextFrame, elements: List[Dict[str, Any]], texts: List[str]):
-        """处理 TextFrame 中的所有段落"""
         for paragraph in text_frame.paragraphs:
             self._process_paragraph(paragraph, elements, texts)
 
     def _process_paragraph(self, paragraph: _Paragraph, elements: List[Dict[str, Any]], texts: List[str]):
-        """处理单个段落，智能切分文本"""
-        if not paragraph.runs:
-            return
+        if not paragraph.runs: return
 
-        current_runs = []
+        state = {'current_runs': []}
 
         def flush_segment():
-            if not current_runs:
-                return
+            current_runs = state['current_runs']
+            if not current_runs: return
             full_text = "".join(r.text for r in current_runs)
-            # 只有非空文本才翻译
             if full_text.strip():
                 elements.append({
                     "type": "text_runs",
@@ -141,29 +201,20 @@ class PPTXTranslator(AiTranslator):
             current_runs.clear()
 
         for run in paragraph.runs:
-            # 这里的 run.text 只有纯文本，不包含公式内容
-            if not run.text:
-                continue
-
-            last_run = current_runs[-1] if current_runs else None
-
-            # 样式不同 或 物理位置不连续（中间有公式）则切分
+            if not run.text: continue
+            last_run = state['current_runs'][-1] if state['current_runs'] else None
             if last_run and not self._have_same_significant_styles(last_run, run):
                 flush_segment()
-
-            current_runs.append(run)
+            state['current_runs'].append(run)
 
         flush_segment()
 
     def _process_shape(self, shape, elements: List[Dict[str, Any]], texts: List[str]):
-        """递归处理常规形状"""
-        # 1. 组合图形
         if shape.shape_type == MSO_SHAPE_TYPE.GROUP:
             for child_shape in shape.shapes:
                 self._process_shape(child_shape, elements, texts)
             return
 
-        # 2. 表格
         if shape.has_table:
             for row in shape.table.rows:
                 for cell in row.cells:
@@ -171,7 +222,6 @@ class PPTXTranslator(AiTranslator):
                         self._process_text_frame(cell.text_frame, elements, texts)
             return
 
-        # 3. 常规文本框
         if shape.has_text_frame:
             try:
                 self._process_text_frame(shape.text_frame, elements, texts)
@@ -179,120 +229,79 @@ class PPTXTranslator(AiTranslator):
                 pass
 
     def _scan_deep_xml_for_text(self, slide_element, elements: List[Dict[str, Any]], texts: List[str]):
-        """
-        [深度扫描] 直接遍历 XML 树，寻找标准 API 无法触及的文本。
-        修复了 KeyError: 'mc' 问题。
-        """
-        # 定义 XML 命名空间 URI
         MC_NS = "http://schemas.openxmlformats.org/markup-compatibility/2006"
-        # 手动构建带命名空间的标签名，不依赖 qn()
         MC_ALT = f"{{{MC_NS}}}AlternateContent"
         MC_CHOICE = f"{{{MC_NS}}}Choice"
-
-        # 对于 'p' (PresentationML) 命名空间，python-pptx 支持 qn，可以继续使用
         P_SP = qn('p:sp')
         P_TXBODY = qn('p:txBody')
 
-        # 查找所有 AlternateContent 块
         for alt_content in slide_element.iter(MC_ALT):
-            # 找到 Choice 分支
             choice = alt_content.find(MC_CHOICE)
-            if choice is None:
-                continue
-
-            # 在 Choice 内部寻找形状 (p:sp)
+            if choice is None: continue
             for sp in choice.iter(P_SP):
-                # 寻找 p:txBody (文本主体)
                 txBody = sp.find(P_TXBODY)
                 if txBody is not None:
                     try:
-                        # 手动构建 TextFrame 对象
-                        # 这里的 parent 设为 None 在读取/写入 text 属性时通常是安全的
                         tf = TextFrame(txBody, None)
                         self._process_text_frame(tf, elements, texts)
                     except Exception as e:
-                        self.logger.warning(f"处理深度 XML 文本框时出错: {e}")
+                        self.logger.warning(f"Deep XML Scan Error: {e}")
 
     def _scan_presentation_content(self, prs: Presentation, elements: List[Dict[str, Any]], texts: List[str]):
-        """全量扫描 PPT 内容"""
-
-        # 辅助内部函数：扫描单个“幻灯片类”对象
         def scan_slide_object(slide_obj):
-            # 1. 常规 API 遍历 (处理普通文本、表格、组合)
             for shape in slide_obj.shapes:
                 self._process_shape(shape, elements, texts)
-
-            # 2. 深度 XML 遍历 (处理 AlternateContent/公式文本)
             self._scan_deep_xml_for_text(slide_obj.element, elements, texts)
 
-        # 1. 遍历普通幻灯片 (Slides)
         for slide in prs.slides:
             scan_slide_object(slide)
-            # 备注页
-            if slide.has_notes_slide:
-                notes = slide.notes_slide
-                if notes.notes_text_frame:
-                    self._process_text_frame(notes.notes_text_frame, elements, texts)
+            if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
+                self._process_text_frame(slide.notes_slide.notes_text_frame, elements, texts)
 
-        # 2. 遍历母版 (Slide Masters)
         for master in prs.slide_masters:
             scan_slide_object(master)
-
-            # 3. 遍历版式 (Layouts)
             for layout in master.slide_layouts:
                 scan_slide_object(layout)
 
-    # ---------------- 翻译前后处理 ----------------
+    # ---------------- 翻译逻辑 ----------------
 
     def _pre_translate(self, document: Document) -> Tuple[Presentation, List[Dict[str, Any]], List[str]]:
-        """解析 PPT 文件"""
         prs = Presentation(BytesIO(document.content))
         elements, texts = [], []
-
         self._scan_presentation_content(prs, elements, texts)
-        self.logger.info(f"共提取了 {len(texts)} 个文本片段 (包含隐藏的公式文本)。")
+        self.logger.info(f"Extracted {len(texts)} text segments.")
         return prs, elements, texts
 
     def _apply_translation(self, element_info: Dict[str, Any], final_text: str):
-        """回填翻译，精细控制样式"""
         runs = element_info["runs"]
-        if not runs:
-            return
+        if not runs: return
 
         original_text = "".join(r.text for r in runs)
-
         text_to_set = final_text
         if self.insert_mode == "append":
             text_to_set = original_text + self.separator + final_text
         elif self.insert_mode == "prepend":
             text_to_set = final_text + self.separator + original_text
 
-        # --- 回填策略 ---
         primary_run = runs[0]
-
         try:
-            # 1. 写入文本 (python-pptx 会自动保留原有的 rPr 属性，即保留默认字体)
             primary_run.text = text_to_set
+            # 调用利用 regex 的智能修正
+            self._apply_lang_correction(primary_run, text_to_set)
 
-            # 2. (已移除字体强制设置逻辑，以保留 PPT 原样)
-
-            # 3. 处理溢出
             text_frame = element_info.get("text_frame")
             if text_frame and hasattr(text_frame, 'auto_size'):
                 if text_frame.auto_size == MSO_AUTO_SIZE.NONE:
                     text_frame.auto_size = MSO_AUTO_SIZE.TEXT_TO_FIT_SHAPE
-
         except Exception as e:
-            self.logger.warning(f"应用翻译到 Run 时出错: {e}")
+            self.logger.warning(f"Error applying translation: {e}")
             return
 
-        # 清空后续 run (模拟合并效果)
         for i in range(1, len(runs)):
             runs[i].text = ""
 
     def _after_translate(self, prs: Presentation, elements: List[Dict[str, Any]], translated: List[str],
                          originals: List[str]) -> bytes:
-        """保存结果"""
         if len(elements) != len(translated):
             min_len = min(len(elements), len(translated))
             elements = elements[:min_len]
@@ -305,26 +314,20 @@ class PPTXTranslator(AiTranslator):
         prs.save(output_stream)
         return output_stream.getvalue()
 
-    # ---------------- 接口实现 ----------------
+    # ---------------- 接口 ----------------
 
     def translate(self, document: Document) -> Self:
         prs, elements, originals = self._pre_translate(document)
         if not originals:
-            self.logger.info("未找到可翻译文本。")
+            self.logger.info("No text found.")
             document.content = self._after_translate(prs, elements, [], [])
             return self
 
         if self.glossary_agent:
-            # 1. 获取增量
             glossary_dict_gen = self.glossary_agent.send_segments(originals, self.chunk_size)
-
-            # 2. 在 Translator 层统一合并 (SSOT)
-            if self.glossary:
-                self.glossary.update(glossary_dict_gen)
-
-            # 3. 将合并后的【完整字典】传给 Agent
-            if self.translate_agent and self.glossary:
-                self.translate_agent.update_glossary_dict(self.glossary.glossary_dict)
+            if self.glossary: self.glossary.update(glossary_dict_gen)
+            if self.translate_agent and self.glossary: self.translate_agent.update_glossary_dict(
+                self.glossary.glossary_dict)
 
         translated = self.translate_agent.send_segments(originals,
                                                         self.chunk_size) if self.translate_agent else originals
@@ -334,21 +337,15 @@ class PPTXTranslator(AiTranslator):
     async def translate_async(self, document: Document) -> Self:
         prs, elements, originals = await asyncio.to_thread(self._pre_translate, document)
         if not originals:
-            self.logger.info("未找到可翻译文本。")
+            self.logger.info("No text found.")
             document.content = await asyncio.to_thread(self._after_translate, prs, elements, [], [])
             return self
 
         if self.glossary_agent:
-            # 1. 获取增量
             glossary_dict_gen = await self.glossary_agent.send_segments_async(originals, self.chunk_size)
-
-            # 2. 在 Translator 层统一合并 (SSOT)
-            if self.glossary:
-                self.glossary.update(glossary_dict_gen)
-
-            # 3. 将合并后的【完整字典】传给 Agent
-            if self.translate_agent and self.glossary:
-                self.translate_agent.update_glossary_dict(self.glossary.glossary_dict)
+            if self.glossary: self.glossary.update(glossary_dict_gen)
+            if self.translate_agent and self.glossary: self.translate_agent.update_glossary_dict(
+                self.glossary.glossary_dict)
 
         translated = await self.translate_agent.send_segments_async(originals,
                                                                     self.chunk_size) if self.translate_agent else originals

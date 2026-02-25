@@ -9,10 +9,14 @@ def main():
         description="DocuTranslate: 一个文档翻译工具。",
         # 更新示例，展示如何使用 host 参数
         epilog="示例:\n"
-               "  docutranslate -i                     (启动图形界面，默认本地访问)\n"
-               "  docutranslate -i --host 0.0.0.0      (允许局域网内其他设备访问)\n"
-               "  docutranslate -i -p 8081             (指定端口号)\n"
-               "  docutranslate -i --cors              (启用默认的跨域设置)\n",
+               "  docutranslate -i                           (启动图形界面，默认本地访问)\n"
+               "  docutranslate -i --host 0.0.0.0            (允许局域网内其他设备访问)\n"
+               "  docutranslate -i -p 8081                   (指定端口号)\n"
+               "  docutranslate -i --cors                    (启用默认的跨域设置)\n"
+               "  docutranslate -i --with-mcp                (启动图形界面同时启用 MCP SSE 端点，共用队列)\n"
+               "  docutranslate --mcp                         (启动 MCP 服务器，stdio 模式)\n"
+               "  docutranslate --mcp --transport sse         (启动 MCP 服务器，SSE 模式)\n"
+               "  docutranslate --mcp --transport streamable-http  (启动 MCP 服务器，Streamable HTTP 模式)\n",
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
 
@@ -52,6 +56,40 @@ def main():
     )
 
     parser.add_argument(
+        "--mcp",
+        action="store_true",
+        help="启动 MCP (Model Context Protocol) 服务器，用于 AI 助手集成。"
+    )
+
+    parser.add_argument(
+        "--with-mcp",
+        action="store_true",
+        help="启动 Web UI 时同时启用 MCP SSE 端点（共用任务队列）。"
+    )
+
+    parser.add_argument(
+        "--transport",
+        type=str,
+        default="stdio",
+        choices=["stdio", "sse", "streamable-http"],
+        help="MCP 服务器传输方式：stdio (默认), sse, 或 streamable-http"
+    )
+
+    parser.add_argument(
+        "--mcp-host",
+        type=str,
+        default="127.0.0.1",
+        help="MCP 服务器监听地址（用于 sse/streamable-http 模式，默认: 127.0.0.1)"
+    )
+
+    parser.add_argument(
+        "--mcp-port",
+        type=int,
+        default=8000,
+        help="MCP 服务器监听端口（用于 sse/streamable-http 模式，默认: 8000)"
+    )
+
+    parser.add_argument(
          "--version",
         action="store_true",
         help="查看版本号。"
@@ -64,6 +102,7 @@ def main():
         print("\n示例:")
         print("  docutranslate -i")
         print("  docutranslate -i --host 0.0.0.0 (局域网共享)")
+        print("  docutranslate --mcp (启动 MCP 服务器)")
         print("\n如需查看所有可用选项，请运行:")
         print("  docutranslate --help")
         sys.exit(0)
@@ -77,7 +116,15 @@ def main():
             host=args.host,
             port=args.port,
             enable_CORS=args.cors,
-            allow_origin_regex=args.cors_regex
+            allow_origin_regex=args.cors_regex,
+            with_mcp=args.with_mcp,
+        )
+    elif args.mcp:
+        from docutranslate.mcp import run_mcp_server
+        run_mcp_server(
+            transport=args.transport,
+            host=args.mcp_host,
+            port=args.mcp_port
         )
     elif args.version:
         from docutranslate import  __version__

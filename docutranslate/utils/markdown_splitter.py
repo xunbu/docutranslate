@@ -16,7 +16,7 @@ def is_placeholder(text: str) -> bool:
 class MarkdownBlockSplitter:
     def __init__(self, max_block_size: int = 5000):
         self.max_block_size = max_block_size
-        self.special_token_pattern = r'(```[\s\S]*?```|~~~[\s\S]*?~~~|<ph-[a-zA-Z0-9]+>)'
+        self.special_token_pattern = r'(```[\s\S]*?```|~~~[\s\S]*?~~~|\$\$[\s\S]*?\$\$|<ph-[a-zA-Z0-9]+>)'
 
     @staticmethod
     def _get_bytes(text: str) -> int:
@@ -105,7 +105,7 @@ class MarkdownBlockSplitter:
         for part in parts:
             if not part: continue
 
-            # === A. 特殊块 (代码/图片) ===
+            # === A. 特殊块 (代码/图片/公式) ===
             if re.match(self.special_token_pattern, part):
                 # 1. 正常大小：直接添加
                 if self._get_bytes(part) < self.max_block_size:
@@ -118,9 +118,12 @@ class MarkdownBlockSplitter:
                     continue
 
                 # 2. 超大代码块：进行“合成拆分”
-                # 判断是否是图片占位符（图片占位符理论上不会超大，但为了严谨）
-                if is_placeholder(part):
-                    # 图片无法拆分，只能强制字节切断（极罕见情况）
+                # 修改点：判断是否为标准的 ``` 或 ~~~ 代码块
+                is_standard_code = part.startswith('```') or part.startswith('~~~')
+
+                # 如果是图片占位符，或者是公式块($$)等非标准代码块
+                # 我们不能使用针对代码块的“拆头去尾”合并逻辑，直接按字节兜底切分
+                if is_placeholder(part) or not is_standard_code:
                     add_safe_block(part)
                     continue
 

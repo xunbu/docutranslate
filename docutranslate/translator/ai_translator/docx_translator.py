@@ -24,9 +24,6 @@ from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTr
 
 # ---------------- 辅助函数 ----------------
 
-# [v6.2] 定义一组具有显著视觉效果的格式标签。
-# 我们只在 Run 包含这些格式时才将其视为空白格式边界。
-# 这避免了因字体、字号等微小变化导致的过度文本切分。
 SIGNIFICANT_STYLES = frozenset([
     qn('w:u'),  # 下划线
     qn('w:strike'),  # 删除线
@@ -53,23 +50,23 @@ def is_formatting_only_run(run: Run) -> bool:
     return run.text == ""
 
 
-# ---------- 新增修改部分 1: is_styled_whitespace_run 函数被移除 ----------
-# 此函数不再需要，因为新的逻辑会根据格式变化来切分，而不是根据带格式的空格。
-# ---------------------- 修改结束 ----------------------
-
 def is_tab_run(run: Run) -> bool:
     """
     检查一个 Run 是否主要代表一个制表符，应被视作格式边界。
-    仅当 Run 的文本内容为空或仅包含空白，且 XML 中存在 <w:tab/> 时，
-    才将其视为纯格式化用途的 Run。
     """
-    # .text 属性会将 <w:tab/> 转换成 '\t'
-    # 如果 .text 在去除空白后仍有内容，说明这个 Run 不仅仅是个制表符。
     if run.text.strip():
         return False
-
     xml = getattr(run.element, 'xml', '')
     return '<w:tab' in xml or '<w:ptab' in xml
+
+
+def is_instr_text_run(run: Run) -> bool:
+    """
+    检查一个 Run 是否包含域指令文本 (w:instrText)。
+    目录(TOC)、页码、超链接等功能的指令代码存储在此标签中。
+    必须跳过这些 Run，否则写入 text 会破坏域结构。
+    """
+    return run.element.find(qn('w:instrText')) is not None
 
 
 # ---------------- 配置类 ----------------
@@ -84,31 +81,6 @@ class DocxTranslator(AiTranslator):
     """
     一个基于高级结构化解析的 .docx 文件翻译器。
     它能高精度保留样式，并正确处理正文、表格、页眉/脚、脚注/尾注、超链接和目录(TOC)等复杂元素。
-
-    [v6.4 - 形状文本翻译]
-    - 新增对形状（Shapes）内文本的提取与翻译支持。现在可以正确翻译标注、流程图等图形元素中的文字。
-    - 改进了核心遍历逻辑，使其能够深入 <w:drawing> 元素，解析内部的 <w:txbxContent>（文本框内容），
-      同时保持对无文本的普通图片的原有处理方式，实现鲁棒性和兼容性。
-
-    [v6.3 - 上下文感知格式切分]
-    - 根本性地改进了文本切分逻辑，解决了因带格式的空格（如下划线空格）导致连续短语被错误拆分的问题。
-    - 新逻辑不再将任何带格式的空格视为固定的边界，而是通过比较相邻文本片段的“显著格式”是否一致来决定是否合并。
-    - 只要格式（如下划线、高亮等）保持不变，即使中间有空格，文本也会被视为一个连续的翻译单元，
-      极大地提升了对标题、合同条款等格式化文本的翻译准确性和流畅性。
-
-    [v6.2 - 精确格式保留]
-    - 根据用户反馈，精确定义了构成“重要格式”的样式范围。
-    - 现在仅在空白 Run 包含下划线、背景色、边框等显著视觉样式时才将其视为边界。
-    - 忽略了加粗、倾斜、字体/字号变化等对空格本身无视觉效果或不重要的样式，
-      避免了因此对翻译句子造成不必要的切分，提升了翻译质量。
-
-    [v6.1 - 格式保留修复版]
-    - 修复了因合并 Run 导致下划线等格式在翻译后丢失的问题。
-    - 通过引入 is_styled_whitespace_run 检查，将仅包含空格但带有样式的 Run（如下划线空格）
-      视为与图片类似的不可翻译边界。
-
-    [v6.0 - 语义切分重构版]
-    - 重构核心逻辑，不再跳过域结果，而是将其作为语义边界来切分文本，增强了鲁棒性。
     """
     IGNORED_TAGS = {
         qn('w:proofErr'), qn('w:lastRenderedPageBreak'), qn('w:bookmarkStart'),
@@ -139,7 +111,6 @@ class DocxTranslator(AiTranslator):
         self.insert_mode = config.insert_mode
         self.separator = config.separator
 
-    # ---------- 新增修改部分 2: 增加用于比较格式的辅助函数 ----------
     def _get_significant_styles(self, run: Run) -> frozenset:
         """从一个 Run 中提取“显著”格式标签的集合。"""
         if run is None:
@@ -155,9 +126,6 @@ class DocxTranslator(AiTranslator):
         styles2 = self._get_significant_styles(run2)
         return styles1 == styles2
 
-    # ---------------------- 修改结束 ----------------------
-
-    # ---------- 代码修改部分 1: 形状翻译逻辑的核心实现 ----------
     def _process_element_children(self, element, parent_paragraph: Paragraph, elements: List[Dict[str, Any]],
                                   texts: List[str],
                                   state: Dict[str, Any],
@@ -200,53 +168,40 @@ class DocxTranslator(AiTranslator):
                 # 传入 parent_paragraph 以确保 Run 对象具有正确的上下文
                 run = Run(child, parent_paragraph)
 
-                # 新增逻辑：处理形状（drawing/pict）内的文本
-                # 形状可以包含文本框，需要优先于图片处理逻辑进行解析
                 if '<w:drawing' in run.element.xml or '<w:pict' in run.element.xml:
-                    # 使用 list() 消耗迭代器，以便检查是否找到了文本框
                     text_boxes = list(run.element.iter(qn('w:txbxContent')))
                     if text_boxes:
                         flush_segment()  # 包含文本的形状是一个边界，刷新前面的文本
                         for txbx_content in text_boxes:
-                            # 遍历文本框内的所有段落
                             for p_element in txbx_content.findall(qn('w:p')):
-                                # 创建新的段落对象，并传入父级上下文
                                 shape_para = Paragraph(p_element, parent_paragraph)
-                                # 递归处理该段落，并传递顶级段落上下文
                                 self._process_paragraph(shape_para, elements, texts, top_level_para=top_level_para)
-
-                        # 如果处理了形状内的文本，则该 Run 的任务已完成
                         continue
 
-                # 保留原有逻辑: 检查绝对边界（图片、制表符等）
-                if is_image_run(run) or is_formatting_only_run(run) or is_tab_run(run):
+                # 增加对 instrText 的检查，防止提取出 TOC 指令作为原文
+                if is_image_run(run) or is_formatting_only_run(run) or is_tab_run(run) or is_instr_text_run(run):
                     flush_segment()
-                    continue  # 这些 Run 本身不包含在任何文本片段中
+                    continue
 
                 # 保留原有逻辑: 基于格式变化进行切分
                 last_run_in_segment = state['current_runs'][-1] if state['current_runs'] else None
                 if last_run_in_segment and not self._have_same_significant_styles(last_run_in_segment, run):
                     flush_segment()
 
-                # 将当前 Run 添加到片段中
                 state['current_runs'].append(run)
             else:
-                # 遇到任何非 Run 的块级元素（如在单元格中嵌套的表格），都应结束当前文本片段。
                 flush_segment()
 
     def _process_paragraph(self, para: Paragraph, elements: List[Dict[str, Any]], texts: List[str],
-                         top_level_para: Paragraph = None):
-        # 如果是首次进入段落处理（非递归调用），则当前段落是顶级段落
+                           top_level_para: Paragraph = None):
         if top_level_para is None:
             top_level_para = para
 
         state = {
             'current_runs': [],
         }
-        # 修改调用：传入 `para` 对象、其顶级上下文
         self._process_element_children(para._p, para, elements, texts, state, top_level_para)
 
-        # 确保在段落处理结束时，刷新所有剩余的 Run
         current_runs = state['current_runs']
         if current_runs:
             full_text = "".join(r.text for r in current_runs)
@@ -259,8 +214,6 @@ class DocxTranslator(AiTranslator):
                 })
                 texts.append(full_text)
             current_runs.clear()
-
-    # ---------------------- 修改结束 ----------------------
 
     def _process_body_elements(self, parent_element, container, elements: List[Dict[str, Any]], texts: List[str]):
         """ 遍历一个容器内的所有顶级元素（段落、表格、内容控件等） """
@@ -278,10 +231,6 @@ class DocxTranslator(AiTranslator):
                     self._process_body_elements(sdt_content, container, elements, texts)
 
     def _traverse_container(self, container: Any, elements: List[Dict[str, Any]], texts: List[str]):
-        """
-        [核心导航员 v2.0 - 增强版] 健壮地遍历任何文本容器，
-        特别为具有额外嵌套层的 Part (如脚注/尾注) 提供了专门处理逻辑。
-        """
         if container is None:
             return
 
@@ -327,22 +276,17 @@ class DocxTranslator(AiTranslator):
             if not runs: return
 
             first_real_run_index = -1
-            # 找到第一个可以写入文本的run
             for i, run in enumerate(runs):
                 if run.element.getparent() is not None:
-                    # 如果 run 是副本的一部分，其 _parent 可能仍然指向原始文档的段落
-                    # 但我们需要确保它与 element_info["paragraph"] 同步
                     run._parent = element_info["paragraph"]
                     run.text = final_text
                     first_real_run_index = i
                     break
 
-            # 如果没有找到有效的run（例如，它们都已被删除），则记录警告
             if first_real_run_index == -1:
                 self.logger.warning(f"无法应用翻译 '{final_text}'，因为找不到有效的run。")
                 return
 
-            # 删除所有后续的run，因为它们的文本已经被合并到第一个run中了
             for i in range(first_real_run_index + 1, len(runs)):
                 run = runs[i]
                 parent_element = run.element.getparent()
@@ -350,15 +294,13 @@ class DocxTranslator(AiTranslator):
                     try:
                         parent_element.remove(run.element)
                     except ValueError:
-                        # 在某些复杂情况下，一个run可能已经被其父元素隐式删除
                         self.logger.debug(f"尝试删除一个不存在的run元素。这通常是安全的。")
                         pass
 
-    # ---------- FIX START: 新增用于清理副本段落的辅助方法 ----------
     def _prune_unwanted_elements_from_copy(self, p_element: OxmlElement):
         """
-        从复制的段落元素中移除包含图片或页码字段的 Run。
-        这可以防止在“append”和“prepend”模式下出现重复。
+        从复制的段落元素中移除图片、页码字段以及TOC域指令。
+        这可以防止在“append”模式下出现重复的图片、错误的页码或裸露的域代码。
         """
         runs_to_remove = []
         runs = p_element.findall(qn('w:r'))
@@ -367,57 +309,104 @@ class DocxTranslator(AiTranslator):
         while i < len(runs):
             run_element = runs[i]
 
-            # 检查图片
+            # 1. 检查图片
             if run_element.find(qn('w:drawing')) is not None or run_element.find(qn('w:pict')) is not None:
                 runs_to_remove.append(run_element)
                 i += 1
                 continue
 
-            # 检查页码字段
+            # 2. 检查域开始字符 (处理 PAGE, NUMPAGES, TOC 等)
             fldChar = run_element.find(qn('w:fldChar'))
             if fldChar is not None and fldChar.get(qn('w:fldCharType')) == 'begin':
-                is_page_field = False
+                is_target_field = False
                 field_end_index = -1
+                is_toc_field = False
 
-                # 向前查找以确定是否是页码字段
+                # 向前查找指令文本
                 for j in range(i + 1, len(runs)):
                     next_run = runs[j]
+
+                    # 检查指令文本
                     instrText = next_run.find(qn('w:instrText'))
                     if instrText is not None and instrText.text is not None:
                         text = instrText.text.strip().upper()
+                        # 检测页码
                         if 'PAGE' in text or 'NUMPAGES' in text:
-                            is_page_field = True
-                        break
-
-                    next_fldChar = next_run.find(qn('w:fldChar'))
-                    if next_fldChar is not None and next_fldChar.get(qn('w:fldCharType')) == 'begin':
-                        break
-
-                if is_page_field:
-                    # 如果是页码字段，则找到其结束标记并标记整个字段的 runs
-                    field_runs_to_remove = [run_element]
-                    end_found = False
-                    for j in range(i + 1, len(runs)):
-                        field_run = runs[j]
-                        field_runs_to_remove.append(field_run)
-                        end_fldChar = field_run.find(qn('w:fldChar'))
-                        if end_fldChar is not None and end_fldChar.get(qn('w:fldCharType')) == 'end':
-                            end_found = True
-                            field_end_index = j
+                            is_target_field = True
+                            break
+                        # [FIX] 检测 TOC 目录生成指令
+                        # 如果是 TOC 指令，我们必须移除它，否则译文段落会再次尝试生成目录，或显示乱码。
+                        if text.startswith('TOC'):
+                            is_target_field = True
+                            is_toc_field = True
                             break
 
-                    if end_found:
-                        runs_to_remove.extend(field_runs_to_remove)
-                        i = field_end_index + 1
-                        continue
+                    # 如果遇到嵌套的 begin，或者 unexpected end，停止搜索
+                    next_fldChar = next_run.find(qn('w:fldChar'))
+                    if next_fldChar is not None:
+                        if next_fldChar.get(qn('w:fldCharType')) == 'begin':
+                            break  # 嵌套开始，放弃当前层匹配（简化处理）
+                        if next_fldChar.get(qn('w:fldCharType')) == 'end':
+                            # 到了结束还没找到指令，说明不是我们要找的字段
+                            break
+
+                if is_target_field:
+                    # 找到要移除的字段了。
+                    # 对于 PAGE 字段，我们通常移除整个字段（因为译文段落的页码可能不准确，或者避免重复）。
+                    # 对于 TOC 字段，我们必须"解包"：移除 Begin, Instr, Separate，但保留结果文本(Hyperlink/Text)。
+                    # 但在这里，简单的策略是：移除 Begin 到 Separate (或 End) 之间的指令部分。
+
+                    if is_toc_field:
+                        # 特殊处理 TOC：我们希望保留后面的文字（如 "研究背景..."），只删掉域的定义部分。
+                        # TOC 结构通常是: Begin -> Instr(TOC) -> Separate -> Result(Text) -> End
+                        # 我们移除 Begin -> ... -> Separate。保留 Result -> End。
+                        runs_to_remove.append(run_element)  # 移除 Begin
+
+                        found_separate = False
+                        for j in range(i + 1, len(runs)):
+                            field_run = runs[j]
+
+                            # 总是移除中间的 run (包含 instrText)
+                            runs_to_remove.append(field_run)
+
+                            end_fldChar = field_run.find(qn('w:fldChar'))
+                            if end_fldChar is not None:
+                                fld_type = end_fldChar.get(qn('w:fldCharType'))
+                                if fld_type == 'separate':
+                                    found_separate = True
+                                    i = j + 1  # 跳过 Separate，继续处理后面的 Result Run
+                                    break
+                                if fld_type == 'end':
+                                    # 如果没有 separate 直接 end，那就全删了
+                                    i = j + 1
+                                    break
+                        if found_separate:
+                            continue  # 继续外层循环
+
+                    else:
+                        # 普通字段 (PAGE 等)，移除整个字段 (Begin ... End)
+                        field_runs_to_remove = [run_element]
+                        end_found = False
+                        for j in range(i + 1, len(runs)):
+                            field_run = runs[j]
+                            field_runs_to_remove.append(field_run)
+                            end_fldChar = field_run.find(qn('w:fldChar'))
+                            if end_fldChar is not None and end_fldChar.get(qn('w:fldCharType')) == 'end':
+                                end_found = True
+                                field_end_index = j
+                                break
+
+                        if end_found:
+                            runs_to_remove.extend(field_runs_to_remove)
+                            i = field_end_index + 1
+                            continue
+
             i += 1
 
         # 从 XML 树中实际移除被标记的 runs
         for run_to_remove in runs_to_remove:
             if run_to_remove.getparent() is not None:
                 p_element.remove(run_to_remove)
-
-    # ---------- FIX END ----------
 
     def _after_translate(self, doc: DocumentObject, elements: List[Dict[str, Any]], translated: List[str],
                          originals: List[str]) -> bytes:
@@ -432,7 +421,6 @@ class DocxTranslator(AiTranslator):
                 self._apply_translation(info, trans)
         else:
             paragraph_segments = defaultdict(list)
-            # [FIX] 按顶级段落对所有片段进行分组，以确保形状等嵌套内容与主段落一起处理
             for i, info in enumerate(elements):
                 top_level_paragraph = info["top_level_paragraph"]
                 paragraph_segments[id(top_level_paragraph._p)].append({
@@ -442,88 +430,138 @@ class DocxTranslator(AiTranslator):
                 })
 
             for para_id, segments_for_this_para in paragraph_segments.items():
-                # 从该组的第一个片段中获取唯一的顶级段落对象
                 top_level_paragraph_orig = segments_for_this_para[0]["paragraph_obj"]
                 p_element_orig = top_level_paragraph_orig._p
 
-                # 创建顶级段落的深拷贝，所有翻译将应用于此副本
                 translated_p_element = deepcopy(p_element_orig)
-                self._prune_unwanted_elements_from_copy(translated_p_element)
-                top_level_paragraph_copy = Paragraph(translated_p_element, top_level_paragraph_orig._parent)
 
-                # [FIX] 创建从原始元素到复制元素的映射，包括嵌套的段落和所有runs
-                # 1. 嵌套段落映射
+                # ================= 核心修复：先映射 =================
+                top_level_paragraph_copy = Paragraph(translated_p_element, top_level_paragraph_orig._parent)
                 para_map = {id(p_element_orig): top_level_paragraph_copy}
                 orig_nested_ps = p_element_orig.iter(qn('w:p'))
                 copy_nested_ps = translated_p_element.iter(qn('w:p'))
                 for o, c in zip(orig_nested_ps, copy_nested_ps):
                     para_map[id(o)] = Paragraph(c, top_level_paragraph_copy)
 
-                # 2. Run元素映射
+                # 建立 Run 映射
                 run_element_map = {
                     id(orig_r): copied_r
                     for orig_r, copied_r in zip(p_element_orig.iter(qn('w:r')), translated_p_element.iter(qn('w:r')))
                 }
 
+                # ================= 核心修复：后清理 =================
+                # 移除 TOC 指令等干扰元素，确保译文纯净
+                self._prune_unwanted_elements_from_copy(translated_p_element)
+
+                # ================= 新增逻辑：判断是否需要使用软回车 =================
+                use_soft_break = False
+                pPr = p_element_orig.find(qn('w:pPr'))
+
+                if pPr is not None:
+                    # 1. 判断是否列表项
+                    if pPr.find(qn('w:numPr')) is not None:
+                        use_soft_break = True
+
+                    # 2. 判断是否目录项 (样式通常为 TOC1, TOC2...)
+                    pStyle = pPr.find(qn('w:pStyle'))
+                    if pStyle is not None:
+                        style_val = pStyle.get(qn('w:val'), "")
+                        # 检查样式名称是否以 TOC 开头 (忽略大小写)
+                        if style_val and style_val.upper().startswith("TOC"):
+                            use_soft_break = True
+
+                # 如果不是软回车模式，才需要在副本中清理列表属性（避免两个圆点）
+                if not use_soft_break:
+                    pPr_copy = translated_p_element.find(qn('w:pPr'))
+                    if pPr_copy is not None:
+                        numPr = pPr_copy.find(qn('w:numPr'))
+                        if numPr is not None:
+                            pPr_copy.remove(numPr)
+
+                # 应用翻译到副本 (使用前面建立的 map)
                 for seg_info in segments_for_this_para:
                     element_index = seg_info["index"]
                     translation = seg_info["translation"]
                     original_element_info = elements[element_index]
 
-                    # [FIX] 从映射中查找当前片段对应的、位于副本中的父段落对象
                     original_para_id = id(original_element_info["paragraph"]._p)
                     translated_paragraph_obj = para_map.get(original_para_id)
 
-                    if not translated_paragraph_obj:
-                        self.logger.warning(
-                            f"无法在段落副本中找到对应的嵌套段落，跳过翻译应用: '{translation}'")
-                        continue
+                    if not translated_paragraph_obj: continue
 
-                    # [FIX] 查找位于副本中的Run对象
                     runs_from_copy = []
                     for r in original_element_info["runs"]:
                         copied_r_element = run_element_map.get(id(r.element))
-                        if copied_r_element is not None:
-                            # 使用正确的、位于副本中的父段落对象来创建Run
+                        # 只有当该 Run 在副本中未被 prune 删除时，才进行翻译替换
+                        if copied_r_element is not None and copied_r_element.getparent() is not None:
                             new_run = Run(copied_r_element, translated_paragraph_obj)
                             runs_from_copy.append(new_run)
 
-                    if not runs_from_copy:
-                        # self.logger.warning("在副本段落中找不到对应的Runs，跳过翻译应用。")
-                        continue
+                    if runs_from_copy:
+                        self._apply_translation({
+                            "type": "text_runs", "runs": runs_from_copy, "paragraph": translated_paragraph_obj
+                        }, translation)
 
-                    translated_element_info = {
-                        "type": "text_runs",
-                        "runs": runs_from_copy,
-                        "paragraph": translated_paragraph_obj
-                    }
-                    self._apply_translation(translated_element_info, translation)
+                # ================= 插入逻辑分支 =================
+                if use_soft_break:
+                    # 列表项或目录项：使用软回车 (<w:br>) 连接，忽略 separator
+                    separator_run = OxmlElement('w:r')
+                    separator_run.append(OxmlElement('w:br'))
 
-                # --- 分隔符和插入逻辑 (保持不变) ---
-                separator_p_element = None
-                if self.separator:
-                    separator_p_element = OxmlElement('w:p')
-                    run_element = OxmlElement('w:r')
-                    lines = self.separator.split('\n')
-                    for i, line in enumerate(lines):
-                        text_element = OxmlElement('w:t')
-                        text_element.set(qn('xml:space'), 'preserve')
-                        text_element.text = line
-                        run_element.append(text_element)
-                        if i < len(lines) - 1:
-                            run_element.append(OxmlElement('w:br'))
-                    separator_p_element.append(run_element)
+                    translated_runs = list(translated_p_element.iter(qn('w:r')))
 
-                if self.insert_mode == "append":
-                    current_element = p_element_orig
-                    if separator_p_element is not None:
-                        current_element.addnext(separator_p_element)
-                        current_element = separator_p_element
-                    current_element.addnext(translated_p_element)
-                elif self.insert_mode == "prepend":
-                    p_element_orig.addprevious(translated_p_element)
-                    if separator_p_element is not None:
-                        translated_p_element.addnext(separator_p_element)
+                    if self.insert_mode == "append":
+                        p_element_orig.append(separator_run)
+                        for tr in translated_runs:
+                            p_element_orig.append(tr)
+
+                    elif self.insert_mode == "prepend":
+                        # 如果有属性节点(pPr)，插入到它后面
+                        insert_index = 0
+                        if p_element_orig.find(qn('w:pPr')) is not None:
+                            insert_index = 1
+
+                        # 先插入分隔符
+                        p_element_orig.insert(insert_index, separator_run)
+                        # 倒序插入译文 runs，确保顺序正确
+                        for tr in reversed(translated_runs):
+                            p_element_orig.insert(insert_index, tr)
+
+                else:
+                    # 普通段落：使用新段落 (<w:p>) 插入，并使用 separator
+                    separator_p_element = None
+                    if self.separator:
+                        separator_p_element = OxmlElement('w:p')
+                        # 尝试复制原段落样式到分隔符段落，保持间距一致（可选）
+                        if pPr is not None:
+                            separator_p_element.append(deepcopy(pPr))
+                            # 但要去掉列表属性和边框等，防止分隔符也带列表头
+                            sep_pPr = separator_p_element.find(qn('w:pPr'))
+                            if sep_pPr is not None:
+                                numPr = sep_pPr.find(qn('w:numPr'))
+                                if numPr is not None: sep_pPr.remove(numPr)
+
+                        run_element = OxmlElement('w:r')
+                        lines = self.separator.split('\n')
+                        for i, line in enumerate(lines):
+                            text_element = OxmlElement('w:t')
+                            text_element.set(qn('xml:space'), 'preserve')
+                            text_element.text = line
+                            run_element.append(text_element)
+                            if i < len(lines) - 1:
+                                run_element.append(OxmlElement('w:br'))
+                        separator_p_element.append(run_element)
+
+                    if self.insert_mode == "append":
+                        current_element = p_element_orig
+                        if separator_p_element is not None:
+                            current_element.addnext(separator_p_element)
+                            current_element = separator_p_element
+                        current_element.addnext(translated_p_element)
+                    elif self.insert_mode == "prepend":
+                        p_element_orig.addprevious(translated_p_element)
+                        if separator_p_element is not None:
+                            translated_p_element.addnext(separator_p_element)
 
         doc_output_stream = BytesIO()
         doc.save(doc_output_stream)
@@ -537,14 +575,9 @@ class DocxTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
-            # 1. 获取增量
             glossary_dict_gen = self.glossary_agent.send_segments(originals, self.chunk_size)
-
-            # 2. 在 Translator 层统一合并 (SSOT)
             if self.glossary:
                 self.glossary.update(glossary_dict_gen)
-
-            # 3. 将合并后的【完整字典】传给 Agent
             if self.translate_agent and self.glossary:
                 self.translate_agent.update_glossary_dict(self.glossary.glossary_dict)
 
@@ -561,14 +594,9 @@ class DocxTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
-            # 1. 获取增量
             glossary_dict_gen = await self.glossary_agent.send_segments_async(originals, self.chunk_size)
-
-            # 2. 在 Translator 层统一合并 (SSOT)
             if self.glossary:
                 self.glossary.update(glossary_dict_gen)
-
-            # 3. 将合并后的【完整字典】传给 Agent
             if self.translate_agent and self.glossary:
                 self.translate_agent.update_glossary_dict(self.glossary.glossary_dict)
 

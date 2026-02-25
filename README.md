@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="/README_ZH.md"><strong>简体中文</strong></a> / <a href="/README.md"><strong>English</strong></a> / <a href="/README_JP.md"><strong>日本語</strong></a>
+  <a href="/README_ZH.md"><strong>简体中文</strong></a> / <a href="/README.md"><strong>English</strong></a> / <a href="/README_JP.md"><strong>日本語</strong></a> / <a href="/README_VI.md"><strong>Tiếng Việt</strong></a>
 </p>
 
 <p align="center">
@@ -204,6 +204,7 @@ print(f"Exported content length: {len(base64_content)}")
 | **to_lang** | `str` | - | Target language (e.g., `"Chinese"`, `"English"`, `"Japanese"`) |
 | **concurrent** | `int` | 10 | Number of concurrent LLM requests |
 | **convert_engine** | `str` | `"mineru"` | PDF parsing engine: `"mineru"`, `"docling"`, `"mineru_deploy"` |
+| **md2docx_engine** | `str` | `"auto"` | Markdown to Docx engine: `"python"` (pure Python), `"pandoc"` (use Pandoc), `"auto"` (use Pandoc if installed, otherwise Python), `null` (do not generate docx) |
 | **mineru_deploy_base_url** | `str` | - | Local minerU API address (when `convert_engine="mineru_deploy"`) |
 | **mineru_deploy_parse_method** | `str` | `"auto"` | Local minerU parsing method: `"auto"`, `"txt"`, `"ocr"` |
 | **mineru_deploy_table_enable** | `bool` | `True` | Enable table recognition for local minerU |
@@ -218,6 +219,26 @@ print(f"Exported content length: {len(base64_content)}")
 | **force_json** | `bool` | `False` | Force JSON output mode |
 | **rpm** | `int` | - | Requests per minute limit |
 | **tpm** | `int` | - | Tokens per minute limit |
+| **thinking** | `str` | `"auto"` | Thinking mode: `"auto"`, `"none"`, `"block"` |
+| **custom_prompt** | `str` | - | Custom prompt for translation |
+| **system_proxy_enable** | `bool` | `False` | Enable system proxy |
+| **insert_mode** | `str` | `"replace"` | Docx/Xlsx/Txt insertion mode: `"replace"`, `"append"`, `"prepend"` |
+| **separator** | `str` | `"\n"` | Text separator for append/prepend modes |
+| **segment_mode** | `str` | `"line"` | Segmentation mode: `"line"`, `"paragraph"`, `"none"` |
+| **translate_regions** | `list` | - | Excel translation regions (e.g., `"Sheet1!A1:B10"`) |
+| **model_version** | `str` | `"vlm"` | MinerU model version: `"pipeline"`, `"vlm"` |
+| **formula_ocr** | `bool` | `True` | Enable formula OCR for PDF parsing |
+| **code_ocr** | `bool` | `True` | Enable code OCR for PDF parsing |
+| **mineru_deploy_backend** | `str` | `"hybrid-auto-engine"` | MinerU local backend: `"pipeline"`, `"vlm-auto-engine"`, `"vlm-http-client"`, `"hybrid-auto-engine"`, `"hybrid-http-client"` |
+| **mineru_deploy_formula_enable** | `bool` | `True` | Enable formula recognition for local MinerU |
+| **mineru_deploy_start_page_id** | `int` | 0 | Start page ID for local MinerU parsing |
+| **mineru_deploy_end_page_id** | `int` | 99999 | End page ID for local MinerU parsing |
+| **mineru_deploy_lang_list** | `list` | - | Language list for local MinerU parsing |
+| **mineru_deploy_server_url** | `str` | - | MinerU local server URL |
+| **json_paths** | `list` | - | JSONPath expressions for JSON translation (e.g., `"$.data.*"`) |
+| **glossary_generate_enable** | `bool` | - | Enable auto glossary generation |
+| **glossary_dict** | `dict` | - | Glossary dictionary (e.g., `{"Jobs": "Steve Jobs"}`) |
+| **glossary_agent_config** | `dict` | - | Glossary agent configuration |
 
 #### Result Methods
 
@@ -270,7 +291,7 @@ For more control, use the Workflow API directly. Each workflow follows the same 
 
 | Workflow | Inputs | save_as_* | export_to_* | Key Config Options |
 |:---|:---|:---|:---|:---|
-| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip` | `html`, `markdown`, `markdown_zip` | `convert_engine`, `translator_config` |
+| **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip`, `docx` | `html`, `markdown`, `markdown_zip`, `docx` | `convert_engine`, `md2docx_engine`, `translator_config` |
 | **TXTWorkflow** | `.txt` | `txt`, `html` | `txt`, `html` | `translator_config` |
 | **JsonWorkflow** | `.json` | `json`, `html` | `json`, `html` | `translator_config`, `json_paths` |
 | **DocxWorkflow** | `.docx` | `docx`, `html` | `docx`, `html` | `translator_config`, `insert_mode` |

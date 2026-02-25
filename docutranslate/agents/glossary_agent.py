@@ -12,7 +12,7 @@ import json_repair
 
 from docutranslate.agents import AgentConfig, Agent
 from docutranslate.agents.agent import AgentResultError
-from docutranslate.utils.json_utils import segments2json_chunks
+from docutranslate.utils.json_utils import segments2json_chunks, parse_json_response
 
 
 def generate_prompt(json_segments: str, to_lang: str):
@@ -38,7 +38,7 @@ Here is the input:
 </Requirement>
 
 The output format should be plain JSON text in a JSON array format:
-{[{"src": "<Original Term>", "dst": "<Translated Term>"}]}
+[{{"src": "<Original Term>", "dst": "<Translated Term>"}}]
 
 <example>
 Assuming the source language is English and the target language is Chinese in the example
@@ -59,11 +59,8 @@ def get_original_segments(prompt: str):
 
 
 def get_target_segments(result: str):
-    match = re.search(r'```json(.*)```', result, re.DOTALL)
-    if match:
-        return match.group(1)
-    else:
-        return result
+    """使用统一解析函数解析JSON响应"""
+    return parse_json_response(result)
 
 
 @dataclass(kw_only=True)
@@ -86,15 +83,64 @@ You are a professional glossary extractor
         if config.custom_prompt:
             self.system_prompt += "\n# **Important rules or background** \n" + self.custom_prompt + '\nEND\n'
 
+    def get_continue_prompt(self, accumulated_result: str, prompt: str) -> str:
+        """
+        继续获取时的提示词。
+        只返回新增的术语，而不是完整的术语表。
+        """
+        return f"""你之前的术语表输出被截断了。
+
+之前已输出的内容:
+```json
+{accumulated_result}
+```
+
+请继续输出后续的术语。只输出新增的数组元素，格式为JSON数组。
+例如：请继续输出更多术语，如：
+[{{"src":"新术语","dst":"译文"}}]
+
+注意：
+- 不要重复之前已输出的术语
+- 只输出新增的部分
+- 保持相同的格式 [{{"src":"...","dst":"..."}}]
+"""
+
+    def merge_continue_result(self, accumulated_result: str, additional_result: str) -> str:
+        """
+        合并继续获取的结果。
+        处理追加模式的数组合并：将追加的术语合并到已有的数组中。
+        自动去重：如果 additional 中有重复的 src，保留 accumulated 中的版本。
+        """
+        try:
+            # 尝试解析两个部分
+            accumulated = parse_json_response(accumulated_result)
+            additional = parse_json_response(additional_result)
+
+            # 如果都是列表，合并并去重
+            if isinstance(accumulated, list) and isinstance(additional, list):
+                # 收集 accumulated 中的 src
+                existing_srcs = {item.get("src") for item in accumulated if "src" in item}
+
+                # 只添加 additional 中不重复的 src
+                for item in additional:
+                    if item.get("src") not in existing_srcs:
+                        accumulated.append(item)
+                        existing_srcs.add(item.get("src"))
+
+                return json.dumps(accumulated, ensure_ascii=False)
+        except Exception as e:
+            # 如果解析失败，回退到直接拼接
+            pass
+        return accumulated_result + additional_result
+
     def _result_handler(self, result: str, origin_prompt: str, logger: Logger):
-        result = get_target_segments(result)
-        if result == "":
+        repaired_result = get_target_segments(result)
+        if not repaired_result:
             if origin_prompt.strip() != "":
                 logger.error("result为空值但原文不为空")
                 raise AgentResultError("result为空值但原文不为空")
             return []
         try:
-            repaired_result = json_repair.loads(result)
             if not isinstance(repaired_result, list):
                 raise AgentResultError(f"GlossaryAgent返回结果不是list的json形式, result: {result}")
             return repaired_result

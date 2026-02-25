@@ -209,6 +209,7 @@ class Client:
             translate_regions: Optional[List[str]] = None,
             convert_engine: Literal["identity", "mineru", "docling", "mineru_deploy"] = "identity",
             mineru_token: str = "",
+            md2docx_engine: Literal["python", "pandoc", "auto"] | None = "auto",
             model_version: Literal["pipeline", "vlm"] = "vlm",
             formula_ocr: bool = True,
             code_ocr: bool = True,
@@ -279,6 +280,7 @@ class Client:
             # --- 解析引擎 (PDF/OCR) ---
             convert_engine: Literal["identity", "mineru", "docling", "mineru_deploy"] = "identity",
             mineru_token: str = "",
+            md2docx_engine: Literal["python", "pandoc", "auto"] | None = "auto",
             model_version: Literal["pipeline", "vlm"] = "vlm",
             formula_ocr: bool = True,
             code_ocr: bool = True,

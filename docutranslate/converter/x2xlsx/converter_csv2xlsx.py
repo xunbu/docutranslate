@@ -7,8 +7,7 @@ from dataclasses import dataclass
 from io import BytesIO, StringIO
 from typing import Hashable
 
-# 引入 chardet 用于编码检测
-import chardet
+import charset_normalizer
 import openpyxl
 
 from docutranslate.converter.x2xlsx.base import X2XlsxConverter, X2XlsxConverterConfig
@@ -47,7 +46,7 @@ class ConverterCsv2Xlsx(X2XlsxConverter):
         try:
             # --- 1. 自动检测文件编码 ---
             # 为提高性能，只取文件头部一部分进行检测
-            detection_result = chardet.detect(document.content[:4096])
+            detection_result = charset_normalizer.detect(document.content[:4096])
             encoding = detection_result['encoding'] or 'utf-8'  # 提供一个默认值
             confidence = detection_result['confidence']
             self.logger.info(f"检测到文件编码为: {encoding} (置信度: {confidence:.2%})")

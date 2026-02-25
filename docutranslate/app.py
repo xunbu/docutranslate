@@ -7,7 +7,6 @@ import binascii
 import json
 import logging
 import os
-import shutil
 import socket
 import tempfile
 import time
@@ -21,8 +20,6 @@ from typing import (
     Optional,
     Literal,
     TYPE_CHECKING,
-    Type,
-    TypeAlias,  # Added TypeAlias
 )
 
 import httpx
@@ -55,244 +52,34 @@ from pydantic import (
 )
 
 from docutranslate import __version__
-from docutranslate.agents.glossary_agent import GlossaryAgentConfig
-from docutranslate.core.schemas import TranslatePayload, MarkdownWorkflowParams, TextWorkflowParams, JsonWorkflowParams, \
-    XlsxWorkflowParams, DocxWorkflowParams, SrtWorkflowParams, EpubWorkflowParams, HtmlWorkflowParams, \
-    AssWorkflowParams, PPTXWorkflowParams
+from docutranslate.core.schemas import TranslatePayload
 from docutranslate.exporter.md.types import ConvertEngineType
-# --- 核心代码 Imports ---
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
-from docutranslate.workflow.ass_workflow import AssWorkflow, AssWorkflowConfig
-from docutranslate.workflow.base import Workflow
-from docutranslate.workflow.docx_workflow import DocxWorkflow, DocxWorkflowConfig
-from docutranslate.workflow.epub_workflow import EpubWorkflow, EpubWorkflowConfig
-from docutranslate.workflow.html_workflow import HtmlWorkflow, HtmlWorkflowConfig
-# ----------------------
-from docutranslate.workflow.interfaces import DocxExportable, EpubExportable
-from docutranslate.workflow.interfaces import (
-    HTMLExportable,
-    MDFormatsExportable,
-    TXTExportable,
-    JsonExportable,
-    XlsxExportable,
-    SrtExportable,
-    CsvExportable,
-    AssExportable,
-    PPTXExportable,  # Added PPTXExportable
-)
-from docutranslate.workflow.json_workflow import JsonWorkflow, JsonWorkflowConfig
-from docutranslate.workflow.md_based_workflow import (
-    MarkdownBasedWorkflow,
-    MarkdownBasedWorkflowConfig,
-)
-# --- 新增的 Import ---
-from docutranslate.workflow.pptx_workflow import PPTXWorkflow, PPTXWorkflowConfig
-from docutranslate.workflow.srt_workflow import SrtWorkflow, SrtWorkflowConfig
-from docutranslate.workflow.txt_workflow import TXTWorkflow, TXTWorkflowConfig
-from docutranslate.workflow.xlsx_workflow import XlsxWorkflow, XlsxWorkflowConfig
-
-if DOCLING_EXIST or TYPE_CHECKING:
-    from docutranslate.converter.x2md.converter_docling import ConverterDoclingConfig
-from docutranslate.converter.x2md.converter_mineru import ConverterMineruConfig
-from docutranslate.converter.x2md.converter_mineru_deploy import ConverterMineruDeployConfig
-from docutranslate.exporter.md.md2html_exporter import MD2HTMLExporterConfig
-from docutranslate.exporter.txt.txt2html_exporter import TXT2HTMLExporterConfig
-from docutranslate.translator.ai_translator.md_translator import MDTranslatorConfig
-from docutranslate.translator.ai_translator.txt_translator import TXTTranslatorConfig
-from docutranslate.translator.ai_translator.json_translator import JsonTranslatorConfig
-from docutranslate.exporter.js.json2html_exporter import Json2HTMLExporterConfig
-from docutranslate.translator.ai_translator.xlsx_translator import XlsxTranslatorConfig
-from docutranslate.exporter.xlsx.xlsx2html_exporter import Xlsx2HTMLExporterConfig
-from docutranslate.translator.ai_translator.docx_translator import DocxTranslatorConfig
-from docutranslate.exporter.docx.docx2html_exporter import Docx2HTMLExporterConfig
-from docutranslate.translator.ai_translator.srt_translator import SrtTranslatorConfig
-from docutranslate.exporter.srt.srt2html_exporter import Srt2HTMLExporterConfig
-from docutranslate.translator.ai_translator.epub_translator import EpubTranslatorConfig
-from docutranslate.exporter.epub.epub2html_exporter import Epub2HTMLExporterConfig
-from docutranslate.translator.ai_translator.html_translator import HtmlTranslatorConfig
-from docutranslate.translator.ai_translator.ass_translator import AssTranslatorConfig
-from docutranslate.exporter.ass.ass2html_exporter import Ass2HTMLExporterConfig
-from docutranslate.translator.ai_translator.pptx_translator import PPTXTranslatorConfig
-from docutranslate.exporter.pptx.pptx2html_exporter import PPTX2HTMLExporterConfig
 
 from docutranslate.logger import global_logger
 from docutranslate.translator import default_params
 from docutranslate.utils.resource_utils import resource_path
 
-# --- 全局配置 ---
-tasks_state: Dict[str, Dict[str, Any]] = {}
-tasks_log_queues: Dict[str, asyncio.Queue] = {}
-tasks_log_histories: Dict[str, List[str]] = {}
-MAX_LOG_HISTORY = 200
-httpx_client: httpx.AsyncClient
+# Shared server layer imports
+from docutranslate.server import (
+    TranslationService,
+    get_translation_service,
+    MEDIA_TYPES,
+)
 
-# --- Workflow字典 ---
-WORKFLOW_DICT: Dict[str, Type[Workflow]] = {
-    "markdown_based": MarkdownBasedWorkflow,
-    "txt": TXTWorkflow,
-    "json": JsonWorkflow,
-    "xlsx": XlsxWorkflow,
-    "docx": DocxWorkflow,
-    "srt": SrtWorkflow,
-    "epub": EpubWorkflow,
-    "html": HtmlWorkflow,
-    "ass": AssWorkflow,
-    "pptx": PPTXWorkflow,  # Added PPTXWorkflow
-}
-
-# --- 媒体类型映射 ---
-MEDIA_TYPES = {
-    "html": "text/html; charset=utf-8",
-    "markdown": "text/markdown; charset=utf-8",
-    "markdown_zip": "application/zip",
-    "txt": "text/plain; charset=utf-8",
-    "json": "application/json; charset=utf-8",
-    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "csv": "text/csv; charset=utf-8",
-    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "srt": "text/plain; charset=utf-8",
-    "epub": "application/epub+zip",
-    "ass": "text/plain; charset=utf-8",
-    "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",  # Added PPTX MIME
-}
+# MCP integration imports (optional)
+try:
+    from docutranslate.mcp import get_sse_app
+    MCP_AVAILABLE = True
+except ImportError:
+    MCP_AVAILABLE = False
 
 
-# --- 辅助函数 ---
-def _create_default_task_state() -> Dict[str, Any]:
-    """创建新的默认任务状态，存储 workflow 实例而不是具体内容"""
-    return {
-        "is_processing": False,
-        "status_message": "空闲",
-        "error_flag": False,
-        "download_ready": False,
-        "workflow_instance": None,  # 仅在处理期间使用
-        "original_filename_stem": None,
-        "task_start_time": 0,
-        "task_end_time": 0,
-        "current_task_ref": None,
-        "original_filename": None,
-        "temp_dir": None,  # 用于存储临时文件的目录
-        "downloadable_files": {},  # 存储可下载文件的路径和名称
-        "attachment_files": {},  # 存储附件文件的路径和标识符
-    }
+# --- Shared Translation Service ---
+translation_service: TranslationService = get_translation_service()
 
 
-def get_workflow_type_from_filename(filename: str) -> str:
-    """根据文件扩展名自动选择 workflow_type"""
-    ext = Path(filename).suffix.lower()
-    if ext in [".pdf", ".png", ".jpg"]:
-        return "markdown_based"
-    elif ext in [".md", ".markdown"]:
-        return "markdown_based"
-    elif ext in [".docx", ".doc"]:
-        return "docx"
-    elif ext in [".csv", ".xlsx", ".xls"]:
-        return "xlsx"
-    elif ext in [".pptx", ".ppt"]:
-        return "pptx"
-    elif ext in [".json"]:
-        return "json"
-    elif ext in [".srt"]:
-        return "srt"
-    elif ext in [".ass"]:
-        return "ass"
-    elif ext in [".epub"]:
-        return "epub"
-    elif ext in [".html", ".htm"]:
-        return "html"
-    elif ext in [".txt"]:
-        return "txt"
-    else:
-        return "txt"
-
-
-# --- 日志处理器 ---
-class QueueAndHistoryHandler(logging.Handler):
-    def __init__(
-            self,
-            queue_ref: asyncio.Queue,
-            history_list_ref: List[str],
-            max_history_items: int,
-            task_id: str,
-    ):
-        super().__init__()
-        self.queue = queue_ref
-        self.history_list = history_list_ref
-        self.max_history = max_history_items
-        self.task_id = task_id
-
-    def emit(self, record: logging.LogRecord):
-        log_entry = self.format(record)
-        print(f"[{self.task_id}] {log_entry}")
-        self.history_list.append(log_entry)
-        if len(self.history_list) > self.max_history:
-            del self.history_list[: len(self.history_list) - self.max_history]
-        if self.queue is not None:
-            try:
-                main_loop = getattr(app.state, "main_event_loop", None)
-                if main_loop and main_loop.is_running():
-                    main_loop.call_soon_threadsafe(self.queue.put_nowait, log_entry)
-                else:
-                    self.queue.put_nowait(log_entry)
-            except asyncio.QueueFull:
-                print(f"[{self.task_id}] Log queue is full. Log dropped: {log_entry}")
-            except Exception as e:
-                print(
-                    f"[{self.task_id}] Error putting log to queue: {e}. Log: {log_entry}"
-                )
-
-
-# --- 应用生命周期事件 ---
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    global httpx_client
-    app.state.main_event_loop = asyncio.get_running_loop()
-    httpx_client = httpx.AsyncClient()
-    tasks_state.clear()
-    tasks_log_queues.clear()
-    tasks_log_histories.clear()
-    global_logger.propagate = False
-    global_logger.setLevel(logging.INFO)
-    print("应用启动完成，多任务状态已初始化。")
-    if hasattr(app.state, "port_to_use"):
-        print(f"服务接口文档: http://127.0.0.1:{app.state.port_to_use}/docs")
-        print(f"请用浏览器访问 http://127.0.0.1:{app.state.port_to_use}\n")
-    yield  # 应用运行中...
-
-    # --- 关闭阶段 ---
-    print("正在关闭应用，开始清理资源...")
-
-    # 1. 优先取消所有正在进行的后台任务
-    # 如果不取消，uvicorn 会等待它们完成，导致进程挂起
-    pending_tasks = []
-    for task_id, task_state in tasks_state.items():
-        task_ref = task_state.get("current_task_ref")
-        if task_ref and not task_ref.done():
-            print(f"[{task_id}] 检测到未完成任务，正在强制取消...")
-            task_ref.cancel()
-            pending_tasks.append(task_ref)
-
-    # 等待所有任务完成取消操作 (捕获 CancelledError 避免报错)
-    if pending_tasks:
-        await asyncio.gather(*pending_tasks, return_exceptions=True)
-
-    # 2. 关闭 HTTP 客户端连接
-    await httpx_client.aclose()
-
-    # 3. 清理所有任务的临时目录
-    for task_id, task_state in tasks_state.items():
-        temp_dir = task_state.get("temp_dir")
-        if temp_dir and os.path.isdir(temp_dir):
-            try:
-                # ignore_errors=True 防止 Windows 上因文件被短暂占用导致的删除失败报错
-                shutil.rmtree(temp_dir, ignore_errors=True)
-                print(f"[{task_id}] 临时目录已清理: {temp_dir}")
-            except Exception as e:
-                print(f"[{task_id}] 清理临时目录 '{temp_dir}' 时出错: {e}")
-    print("应用关闭，资源已彻底释放。")
-
-
-# --- FastAPI 应用和路由设置 ---
+# --- FastAPI application and router setup ---
 tags_metadata = [
     {
         "name": "Service API",
@@ -307,6 +94,40 @@ tags_metadata = [
         "description": "测试用接口。",
     },
 ]
+
+
+# --- Application lifespan ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global httpx_client
+    app.state.main_event_loop = asyncio.get_running_loop()
+    httpx_client = httpx.AsyncClient()
+
+    # Initialize the translation service
+    translation_service.initialize(httpx_client, app.state.main_event_loop)
+    translation_service.clear_all()
+
+    global_logger.propagate = False
+    global_logger.setLevel(logging.INFO)
+    print("应用启动完成，多任务状态已初始化。")
+    if hasattr(app.state, "port_to_use"):
+        print(f"服务接口文档: http://127.0.0.1:{app.state.port_to_use}/docs")
+        print(f"请用浏览器访问 http://127.0.0.1:{app.state.port_to_use}\n")
+        if hasattr(app.state,"with_mcp"):
+            print(f"MCP SSE endpoint available at: http://127.0.0.1:{app.state.port_to_use}/mcp/sse")
+
+    yield  # Application running...
+
+    # --- Shutdown phase ---
+    print("正在关闭应用，开始清理资源...")
+
+    # Cleanup all tasks via translation service
+    await translation_service.cleanup_all()
+
+    # Close HTTP client
+    await httpx_client.aclose()
+    print("应用关闭，资源已彻底释放。")
+
 
 app = FastAPI(
     docs_url=None,
@@ -332,17 +153,64 @@ DocuTranslate 后端服务 API，提供文档翻译、状态查询、结果下�
 """,
     version=__version__,
 )
-# mimetypes.add_type("application/wasm", ".wasm")
 service_router = APIRouter(prefix="/service", tags=["Service API"])
 STATIC_DIR = resource_path("static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
+
+# ===================================================================
+# --- MCP Integration (optional) ---
+# ===================================================================
+
+def setup_mcp_integration(
+    enable: bool = False,
+    host: str = "127.0.0.1",
+    port: int = 8000,
+) -> Optional[TranslationService]:
+    """
+    Setup MCP integration with shared translation service.
+
+    Args:
+        enable: Whether to enable MCP SSE endpoint
+        host: Host for MCP
+        port: Port for MCP
+
+    Returns:
+        TranslationService instance if MCP is enabled, None otherwise
+    """
+    if not enable or not MCP_AVAILABLE:
+        return None
+
+    try:
+        print("Setting up MCP integration...")
+
+        # Mount MCP at /mcp path - pass the shared translation service
+        # and the actual host/port that the web server is running on
+        mcp_app = get_sse_app(
+            translation_service=translation_service,
+            host=host,
+            port=port,
+        )
+        app.mount("/mcp", mcp_app, name="mcp")
+
+        return translation_service
+    except Exception as e:
+        print(f"Failed to setup MCP integration: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
+def get_mcp_translation_service() -> Optional[TranslationService]:
+    """Get the shared translation service (if available)."""
+    return translation_service
+
+
 # ===================================================================
 # --- Pydantic Models for Service API ---
-# =================================================================
+# ===================================================================
 
 
-# 4. 创建最终的请求体模型
 class TranslateServiceRequest(BaseModel):
     file_name: str = Field(
         ...,
@@ -359,7 +227,7 @@ class TranslateServiceRequest(BaseModel):
         ],
     )
     file_content: str = Field(
-        ..., description="Base64编码的文件内容。", examples=["JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PC9..."]
+        ..., description="Base64编码的文件内容。", examples=["JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PC/..."]
     )
     payload: TranslatePayload = Field(
         ..., description="包含工作流类型和相应参数的载荷。"
@@ -370,7 +238,7 @@ class TranslateServiceRequest(BaseModel):
             "examples": [
                 {
                     "file_name": "auto_detect_doc.pdf",
-                    "file_content": "JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PC9...",
+                    "file_content": "JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PC/...",
                     "payload": {
                         "workflow_type": "auto",
                         "base_url": "https://api.openai.com/v1",
@@ -380,33 +248,8 @@ class TranslateServiceRequest(BaseModel):
                     },
                 },
                 {
-                    "file_name": "annual_report_203.pdf",
-                    "file_content": "JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PC9...",
-                    "payload": {
-                        "workflow_type": "markdown_based",
-                        "skip_translate": False,
-                        "base_url": "https://api.openai.com/v1",
-                        "api_key": "sk-your-api-key-here",
-                        "model_id": "gpt-4o",
-                        "to_lang": "中文",
-                        "chunk_size": default_params["chunk_size"],
-                        "concurrent": default_params["concurrent"],
-                        "temperature": default_params["temperature"],
-                        "timeout": default_params["timeout"],
-                        "thinking": "default",
-                        "retry": default_params["retry"],
-                        "glossary_generate_enable": False,
-                        "convert_engine": "mineru",
-                        "mineru_token": "your-mineru-token-if-any",
-                        "formula_ocr": True,
-                        "model_version": "vlm",
-                        "rpm": 100,
-                        "tpm": 100000,
-                    },
-                },
-                {
                     "file_name": "local_test.pdf",
-                    "file_content": "JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PC9...",
+                    "file_content": "JVBERi0xLjcKJeLjz9MKMSAwIG9iago8PC/...",
                     "payload": {
                         "workflow_type": "markdown_based",
                         "skip_translate": True,
@@ -417,201 +260,6 @@ class TranslateServiceRequest(BaseModel):
                         "mineru_deploy_formula_enable": True,
                         "mineru_deploy_start_page_id": 0,
                         "mineru_deploy_end_page_id": 5,
-                    },
-                },
-                {
-                    "file_name": "product_info.json",
-                    "file_content": "ewogICAgImlkIjogIjEyMzQ1IiwK...",
-                    "payload": {
-                        "workflow_type": "json",
-                        "skip_translate": False,
-                        "base_url": "https://api.openai.com/v1",
-                        "api_key": "sk-your-api-key-here",
-                        "model_id": "gpt-4o",
-                        "to_lang": "中文",
-                        "chunk_size": default_params["chunk_size"],
-                        "concurrent": default_params["concurrent"],
-                        "temperature": default_params["temperature"],
-                        "timeout": default_params["timeout"],
-                        "thinking": "default",
-                        "retry": default_params["retry"],
-                        "glossary_generate_enable": False,
-                        "json_paths": [
-                            "$.product.name",
-                            "$.product.description",
-                            "$.features[*]",
-                        ],
-                    },
-                },
-                {
-                    "file_name": "product_list.xlsx",
-                    "file_content": "UEsDBBQAAAAIA... (base64-encoded xlsx)",
-                    "payload": {
-                        "workflow_type": "xlsx",
-                        "skip_translate": False,
-                        "base_url": "https://api.openai.com/v1",
-                        "api_key": "sk-your-api-key-here",
-                        "model_id": "gpt-4o",
-                        "to_lang": "中文",
-                        "chunk_size": default_params["chunk_size"],
-                        "concurrent": default_params["concurrent"],
-                        "temperature": default_params["temperature"],
-                        "timeout": default_params["timeout"],
-                        "thinking": "default",
-                        "retry": default_params["retry"],
-                        "glossary_generate_enable": False,
-                        "insert_mode": "replace",
-                        "separator": "\n",
-                        "translate_regions": ["Sheet1!A1:B10", "C:D"],
-                        "glossary_dict": {
-                            "OpenAI": "开放人工智能",
-                            "LLM": "大语言模型",
-                        },
-                    },
-                },
-                {
-                    "file_name": "complex_terms.xlsx",
-                    "file_content": "UEsDBBQAAAAIA... (base64-encoded xlsx)",
-                    "payload": {
-                        "workflow_type": "xlsx",
-                        "base_url": "https://api.openai.com/v1",
-                        "api_key": "sk-your-main-translator-key",
-                        "model_id": "gpt-4o",
-                        "to_lang": "中文",
-                        "retry": default_params["retry"],
-                        "glossary_generate_enable": True,
-                        "glossary_agent_config": {
-                            "base_url": "https://api.openai.com/v1",
-                            "api_key": "sk-your-agent-key-for-glossary",
-                            "model_id": "gpt-4-turbo",
-                            "to_lang": "中文",
-                            "temperature": 0.7,
-                            "concurrent": 30,
-                            "timeout": default_params["timeout"],
-                            "thinking": "default",
-                            "retry": default_params["retry"],
-                            "force_json": False,
-                        },
-                    },
-                },
-                {
-                    "file_name": "contract.docx",
-                    "file_content": "UEsDBBQAAAAIA... (base64-encoded docx)",
-                    "payload": {
-                        "workflow_type": "docx",
-                        "skip_translate": False,
-                        "base_url": "https://api.openai.com/v1",
-                        "api_key": "sk-your-api-key-here",
-                        "model_id": "gpt-4o",
-                        "to_lang": "中文",
-                        "insert_mode": "replace",
-                        "separator": "\n",
-                        "chunk_size": default_params["chunk_size"],
-                        "concurrent": default_params["concurrent"],
-                        "temperature": default_params["temperature"],
-                        "timeout": default_params["timeout"],
-                        "thinking": "default",
-                        "retry": default_params["retry"],
-                    },
-                },
-                {
-                    "file_name": "movie.srt",
-                    "file_content": "MSAKMDA6MDA6MDEsMjAwIC0tPiAwMDowMD...",
-                    "payload": {
-                        "workflow_type": "srt",
-                        "skip_translate": False,
-                        "base_url": "https://api.openai.com/v1",
-                        "api_key": "sk-your-api-key-here",
-                        "model_id": "gpt-4o",
-                        "to_lang": "中文",
-                        "insert_mode": "replace",
-                        "separator": "\n",
-                        "chunk_size": default_params["chunk_size"],
-                        "concurrent": default_params["concurrent"],
-                        "temperature": default_params["temperature"],
-                        "timeout": default_params["timeout"],
-                        "thinking": "default",
-                        "retry": default_params["retry"],
-                    },
-                },
-                {
-                    "file_name": "my_book.epub",
-                    "file_content": "UEsDBBQAAAAIA... (base64-encoded epub)",
-                    "payload": {
-                        "workflow_type": "epub",
-                        "skip_translate": False,
-                        "base_url": "https://api.openai.com/v1",
-                        "api_key": "sk-your-api-key-here",
-                        "model_id": "gpt-4o",
-                        "to_lang": "中文",
-                        "insert_mode": "replace",
-                        "separator": "\n",
-                        "chunk_size": default_params["chunk_size"],
-                        "concurrent": default_params["concurrent"],
-                        "temperature": default_params["temperature"],
-                        "timeout": default_params["timeout"],
-                        "thinking": "default",
-                        "retry": default_params["retry"],
-                    },
-                },
-                {
-                    "file_name": "company_about_us.html",
-                    "file_content": "PGh0bWw+PGhlYWQ+PHRpdGxlPkFib3V0IFVzPC90aXRsZT48L2hlYWQ+PGJvZHk+PGgxPk91ciBDb21wYW55PC9oMT48cD5XZSBhcmUgYSBsZWFkaW5nIHByb3ZpZGVyIG9mIGlubm92YXRpdmUgc29sdXRpb25zLjwvcD48L2JvZHk+PC9odG1sPg==",
-                    "payload": {
-                        "workflow_type": "html",
-                        "skip_translate": False,
-                        "base_url": "https://api.openai.com/v1",
-                        "api_key": "sk-your-api-key-here",
-                        "model_id": "gpt-4o",
-                        "to_lang": "中文",
-                        "insert_mode": "replace",
-                        "separator": " ",
-                        "chunk_size": default_params["chunk_size"],
-                        "concurrent": default_params["concurrent"],
-                        "temperature": default_params["temperature"],
-                        "timeout": default_params["timeout"],
-                        "thinking": "default",
-                        "retry": default_params["retry"],
-                    },
-                },
-                {
-                    "file_name": "dialogue.ass",
-                    "file_content": "U2NyaXB0IEluZm8NC...",
-                    "payload": {
-                        "workflow_type": "ass",
-                        "skip_translate": False,
-                        "base_url": "https://api.openai.com/v1",
-                        "api_key": "sk-your-api-key-here",
-                        "model_id": "gpt-4o",
-                        "to_lang": "中文",
-                        "insert_mode": "replace",
-                        "separator": "\\N",
-                        "chunk_size": default_params["chunk_size"],
-                        "concurrent": default_params["concurrent"],
-                        "temperature": default_params["temperature"],
-                        "timeout": default_params["timeout"],
-                        "thinking": "default",
-                        "retry": default_params["retry"],
-                    },
-                },
-                {
-                    "file_name": "presentation.pptx",
-                    "file_content": "UEsDBBQAAAAIA... (base64-encoded pptx)",
-                    "payload": {
-                        "workflow_type": "pptx",
-                        "skip_translate": False,
-                        "base_url": "https://api.openai.com/v1",
-                        "api_key": "sk-your-api-key-here",
-                        "model_id": "gpt-4o",
-                        "to_lang": "中文",
-                        "insert_mode": "replace",
-                        "separator": "\n",
-                        "chunk_size": default_params["chunk_size"],
-                        "concurrent": default_params["concurrent"],
-                        "temperature": default_params["temperature"],
-                        "timeout": default_params["timeout"],
-                        "thinking": "default",
-                        "retry": default_params["retry"],
                     },
                 },
             ]
@@ -1343,13 +991,11 @@ async def _start_translation_task(
 ):
     # --- 新增: Auto 工作流路由逻辑 ---
     if payload.workflow_type == "auto":
-        print(f"DEBUG [{task_id}] 原始 Payload: {payload.model_dump()}")
         detected_type = get_workflow_type_from_filename(original_filename)
         print(f"[{task_id}] 自动识别工作流: {original_filename} -> {detected_type}")
 
         # 将参数转换为目标具体工作流类型所需的字典
         payload_data = payload.model_dump()
-        print(f"DEBUG [{task_id}] Dump后的数据: {payload_data}")
         payload_data["workflow_type"] = detected_type
 
         # 针对特定格式的默认策略
@@ -1520,7 +1166,7 @@ async def service_translate(
         raise HTTPException(status_code=400, detail=f"无效的Base64文件内容: {e}")
 
     try:
-        response_data = await _start_translation_task(
+        response_data = await translation_service.start_translation(
             task_id=task_id,
             payload=request.payload,
             file_contents=file_contents,
@@ -1545,30 +1191,10 @@ async def service_translate(
     "/translate/file",
     summary="提交翻译任务 (文件上传)",
     description="""
-    通过 `multipart/form-data` 方式上传文件并启动翻译任务。
+通过 `multipart/form-data` 方式上传文件并启动翻译任务。
 
-    此接口适用于直接上传二进制文件（如 PDF, Docx 等），无需先进行 Base64 编码。
-
-    ### 参数说明
-    - **file**: (必须) 要翻译的二进制文件。
-    - **payload**: (必须) 包含工作流配置的 **JSON 字符串**。
-      - 必须包含 `workflow_type` (如 `auto`, `docx`, `markdown_based` 等)。
-      - 其他参数根据 `workflow_type` 不同而变化 (详见 `TranslatePayload` 模型)。
-
-    ### Payload 示例 (JSON String)
-    ```json
-    {
-      "workflow_type": "auto",
-      "base_url": "https://api.openai.com/v1",
-      "api_key": "sk-xxxxxx",
-      "model_id": "gpt-4o",
-      "to_lang": "中文"
-    }
-    ```
-
-    ### 响应
-    返回包含 `task_id` 的 JSON 对象。客户端需使用此 ID 轮询 `/service/status/{task_id}` 接口获取进度。
-    """,
+此接口适用于直接上传二进制文件（如 PDF, Docx 等），无需先进行 Base64 编码。
+""",
     responses={
         200: {
             "description": "翻译任务已成功启动。",
@@ -1603,7 +1229,7 @@ async def service_translate_file(
         raise HTTPException(status_code=500, detail=f"读取上传文件失败: {e}")
 
     try:
-        response_data = await _start_translation_task(
+        response_data = await translation_service.start_translation(
             task_id=task_id,
             payload=payload,
             file_contents=file_contents,
@@ -1627,55 +1253,38 @@ async def service_translate_file(
 @service_router.post(
     "/cancel/{task_id}",
     summary="取消翻译任务",
-    description="""根据任务ID取消一个正在进行中的翻译任务。如果任务已经完成、失败或已经被取消，则会返回错误。""",
+    description="根据任务ID取消一个正在进行中的翻译任务。如果任务已经完成、失败或已经被取消，则会返回错误。",
+    responses={
+        200: {"description": "成功取消任务。"},
+        404: {"description": "任务ID不存在。"},
+        400: {"description": "任务已结束，无法取消。"},
+    },
 )
-async def service_cancel_translate(task_id: str):
-    return _cancel_translation_logic(task_id)
+async def service_cancel_translate(
+        task_id: str = FastApiPath(..., description="要取消的任务ID", examples=["a1b2c3d4"])
+):
+    return translation_service.cancel_task(task_id)
 
 
 @service_router.post(
     "/release/{task_id}",
     summary="释放任务资源",
-    description="""根据任务ID释放其在服务器上占用的所有资源，包括状态、日志和缓存的翻译结果文件。如果任务正在进行，会先尝试取消该任务。此操作不可逆。""",
+    description="根据任务ID释放其在服务器上占用的所有资源，包括状态、日志和缓存的翻译结果文件。如果任务正在进行，会先尝试取消该任务。此操作不可逆。",
+    responses={
+        200: {"description": "成功释放任务资源。"},
+        404: {"description": "任务ID不存在。"},
+    },
 )
-async def service_release_task(task_id: str):
-    if task_id not in tasks_state:
+async def service_release_task(
+        task_id: str = FastApiPath(..., description="要释放资源的任务ID", examples=["a1b2c3d4"])
+):
+    result = await translation_service.release_task(task_id)
+    if not result["released"]:
         return JSONResponse(
             status_code=404,
-            content={"released": False, "message": f"找不到任务ID '{task_id}'。"},
+            content=result,
         )
-    task_state = tasks_state.get(task_id)
-    message_parts = []
-    if (
-            task_state
-            and task_state.get("is_processing")
-            and task_state.get("current_task_ref")
-    ):
-        try:
-            print(f"[{task_id}] 任务正在进行中，将在释放前尝试取消。")
-            _cancel_translation_logic(task_id)
-            message_parts.append("任务已被取消。")
-        except HTTPException as e:
-            print(f"[{task_id}] 取消任务时出现预期中的情况（可能已完成）: {e.detail}")
-            message_parts.append(f"任务取消步骤已跳过（可能已完成或取消）。")
-
-    if task_state:
-        temp_dir = task_state.get("temp_dir")
-        if temp_dir and os.path.isdir(temp_dir):
-            try:
-                shutil.rmtree(temp_dir)
-                message_parts.append("临时文件已清理。")
-                print(f"[{task_id}] 临时目录 '{temp_dir}' 已被删除。")
-            except Exception as e:
-                message_parts.append(f"清理临时文件时出错: {e}。")
-                print(f"[{task_id}] 删除临时目录 '{temp_dir}' 时出错: {e}")
-
-    tasks_state.pop(task_id, None)
-    tasks_log_queues.pop(task_id, None)
-    tasks_log_histories.pop(task_id, None)
-    print(f"[{task_id}] 资源已成功释放。")
-    message_parts.append(f"任务 '{task_id}' 的资源已释放。")
-    return JSONResponse(content={"released": True, "message": " ".join(message_parts)})
+    return JSONResponse(content=result)
 
 
 @service_router.get(
@@ -1696,6 +1305,7 @@ async def service_release_task(task_id: str):
                                 "status_message": "正在处理 'annual_report.pdf'...",
                                 "error_flag": False,
                                 "download_ready": False,
+                                "progress_percent": 45,
                                 "original_filename_stem": "annual_report",
                                 "original_filename": "annual_report.pdf",
                                 "task_start_time": 1678889400.0,
@@ -1704,14 +1314,15 @@ async def service_release_task(task_id: str):
                                 "attachment": {},
                             },
                         },
-                        "completed_markdown": {
-                            "summary": "已完成 (Markdown)",
+                        "completed": {
+                            "summary": "已完成",
                             "value": {
                                 "task_id": "b2865b93",
                                 "is_processing": False,
                                 "status_message": "翻译成功！用时 123.45 秒。",
                                 "error_flag": False,
                                 "download_ready": True,
+                                "progress_percent": 100,
                                 "original_filename_stem": "my_paper",
                                 "original_filename": "my_paper.pdf",
                                 "task_start_time": 1678889400.123,
@@ -1719,165 +1330,7 @@ async def service_release_task(task_id: str):
                                 "downloads": {
                                     "html": "/service/download/b2865b93/html",
                                     "markdown": "/service/download/b2865b93/markdown",
-                                    "markdown_zip": "/service/download/b2865b93/markdown_zip",
                                 },
-                                "attachment": {},
-                            },
-                        },
-                        "completed_with_attachment": {
-                            "summary": "已完成 (带附件)",
-                            "value": {
-                                "task_id": "g1h2i3j4",
-                                "is_processing": False,
-                                "status_message": "翻译成功！用时 125.00 秒。",
-                                "error_flag": False,
-                                "download_ready": True,
-                                "original_filename_stem": "complex_document",
-                                "original_filename": "complex_document.docx",
-                                "task_start_time": 1678891000.0,
-                                "task_end_time": 1678891125.0,
-                                "downloads": {
-                                    "docx": "/service/download/g1h2i3j4/docx",
-                                    "html": "/service/download/g1h2i3j4/html",
-                                },
-                                "attachment": {
-                                    "glossary": "/service/attachment/g1h2i3j4/glossary"
-                                },
-                            },
-                        },
-                        "completed_xlsx": {
-                            "summary": "已完成 (XLSX)",
-                            "value": {
-                                "task_id": "d7e8f9a0",
-                                "is_processing": False,
-                                "status_message": "翻译成功！用时 18.99 秒。",
-                                "error_flag": False,
-                                "download_ready": True,
-                                "original_filename_stem": "sales_data",
-                                "original_filename": "sales_data.xlsx",
-                                "task_start_time": 1678889600.0,
-                                "task_end_time": 1678889618.99,
-                                "downloads": {
-                                    "xlsx": "/service/download/d7e8f9a0/xlsx",
-                                    "csv": "/service/download/d7e8f9a0/csv",
-                                    "html": "/service/download/d7e8f9a0/html",
-                                },
-                                "attachment": {},
-                            },
-                        },
-                        "completed_docx": {
-                            "summary": "已完成 (DOCX)",
-                            "value": {
-                                "task_id": "f8a9c1b2",
-                                "is_processing": False,
-                                "status_message": "翻译成功！用时 25.10 秒。",
-                                "error_flag": False,
-                                "download_ready": True,
-                                "original_filename_stem": "contract",
-                                "original_filename": "contract.docx",
-                                "task_start_time": 1678889500.123,
-                                "task_end_time": 1678889525.223,
-                                "downloads": {
-                                    "docx": "/service/download/f8a9c1b2/docx",
-                                    "html": "/service/download/f8a9c1b2/html",
-                                },
-                                "attachment": {},
-                            },
-                        },
-                        "completed_epub": {
-                            "summary": "已完成 (EPUB)",
-                            "value": {
-                                "task_id": "e9b8d7c6",
-                                "is_processing": False,
-                                "status_message": "翻译成功！用时 45.32 秒。",
-                                "error_flag": False,
-                                "download_ready": True,
-                                "original_filename_stem": "my_book",
-                                "original_filename": "my_book.epub",
-                                "task_start_time": 1678890000.0,
-                                "task_end_time": 1678890045.32,
-                                "downloads": {
-                                    "epub": "/service/download/e9b8d7c6/epub",
-                                    "html": "/service/download/e9b8d7c6/html",
-                                },
-                                "attachment": {},
-                            },
-                        },
-                        # --- HTML STATUS EXAMPLE START ---
-                        "completed_html": {
-                            "summary": "已完成 (HTML)",
-                            "value": {
-                                "task_id": "a1b2c3d4",
-                                "is_processing": False,
-                                "status_message": "翻译成功！用时 15.78 秒。",
-                                "error_flag": False,
-                                "download_ready": True,
-                                "original_filename_stem": "about_us",
-                                "original_filename": "about_us.html",
-                                "task_start_time": 1678890100.0,
-                                "task_end_time": 1678890115.78,
-                                "downloads": {
-                                    "html": "/service/download/a1b2c3d4/html"
-                                },
-                                "attachment": {},
-                            },
-                        },
-                        # --- HTML STATUS EXAMPLE END ---
-                        # --- ASS STATUS EXAMPLE START ---
-                        "completed_ass": {
-                            "summary": "已完成 (ASS)",
-                            "value": {
-                                "task_id": "a1b2c3d5",
-                                "is_processing": False,
-                                "status_message": "翻译成功！用时 12.34 秒。",
-                                "error_flag": False,
-                                "download_ready": True,
-                                "original_filename_stem": "dialogue",
-                                "original_filename": "dialogue.ass",
-                                "task_start_time": 1678890200.0,
-                                "task_end_time": 1678890212.34,
-                                "downloads": {
-                                    "ass": "/service/download/a1b2c3d5/ass",
-                                    "html": "/service/download/a1b2c3d5/html",
-                                },
-                                "attachment": {},
-                            },
-                        },
-                        # --- ASS STATUS EXAMPLE END ---
-                        # --- PPTX STATUS EXAMPLE START ---
-                        "completed_pptx": {
-                            "summary": "已完成 (PPTX)",
-                            "value": {
-                                "task_id": "a1b2c3d6",
-                                "is_processing": False,
-                                "status_message": "翻译成功！用时 30.50 秒。",
-                                "error_flag": False,
-                                "download_ready": True,
-                                "original_filename_stem": "presentation",
-                                "original_filename": "presentation.pptx",
-                                "task_start_time": 1678890300.0,
-                                "task_end_time": 1678890330.50,
-                                "downloads": {
-                                    "pptx": "/service/download/a1b2c3d6/pptx",
-                                    "html": "/service/download/a1b2c3d6/html",
-                                },
-                                "attachment": {},
-                            },
-                        },
-                        # --- PPTX STATUS EXAMPLE END ---
-                        "error": {
-                            "summary": "失败",
-                            "value": {
-                                "task_id": "c3d4e5f6",
-                                "is_processing": False,
-                                "status_message": "翻译过程中发生错误: LLM API key is invalid",
-                                "error_flag": True,
-                                "download_ready": False,
-                                "original_filename_stem": "bad_config",
-                                "original_filename": "bad_config.json",
-                                "task_start_time": 1678889600.0,
-                                "task_end_time": 1678889610.0,
-                                "downloads": {},
                                 "attachment": {},
                             },
                         },
@@ -1893,7 +1346,7 @@ async def service_get_status(
             ..., description="要查询状态的任务的ID", examples=["b2865b93"]
         )
 ):
-    task_state = tasks_state.get(task_id)
+    task_state = translation_service.get_task_state(task_id)
     if not task_state:
         raise HTTPException(status_code=404, detail=f"找不到任务ID '{task_id}'。")
 
@@ -1914,6 +1367,7 @@ async def service_get_status(
             "status_message": task_state["status_message"],
             "error_flag": task_state["error_flag"],
             "download_ready": task_state["download_ready"],
+            "progress_percent": task_state.get("progress_percent", 0),
             "original_filename_stem": task_state["original_filename_stem"],
             "original_filename": task_state.get("original_filename"),
             "task_start_time": task_state["task_start_time"],
@@ -1927,21 +1381,16 @@ async def service_get_status(
 @service_router.get(
     "/logs/{task_id}",
     summary="获取任务增量日志",
-    description="""以流式方式获取任务的增量日志。客户端每次调用此接口，都会返回自上次调用以来产生的新日志行。这对于实时展示翻译进度非常有用。如果任务ID不存在，则返回404。""",
+    description="以流式方式获取任务的增量日志。客户端每次调用此接口，都会返回自上次调用以来产生的新日志行。",
+    responses={
+        200: {"description": "成功返回增量日志。"},
+        404: {"description": "任务ID不存在。"},
+    },
 )
-async def service_get_logs(task_id: str):
-    if task_id not in tasks_log_queues:
-        raise HTTPException(
-            status_code=404, detail=f"找不到任务ID '{task_id}' 的日志队列。"
-        )
-    log_queue = tasks_log_queues[task_id]
-    new_logs = []
-    while not log_queue.empty():
-        try:
-            new_logs.append(log_queue.get_nowait())
-            log_queue.task_done()
-        except asyncio.QueueEmpty:
-            break
+async def service_get_logs(
+        task_id: str = FastApiPath(..., description="要获取日志的任务ID", examples=["a1b2c3d4"])
+):
+    new_logs = await translation_service.get_new_logs(task_id)
     return JSONResponse(content={"logs": new_logs})
 
 
@@ -1967,26 +1416,6 @@ FileType = Literal[
     responses={
         200: {
             "description": "成功返回文件流。文件名通过 Content-Disposition 头指定。",
-            "content": {
-                "text/html; charset=utf-8": {"schema": {"type": "string"}},
-                "text/markdown; charset=utf-8": {"schema": {"type": "string"}},
-                "text/plain; charset=utf-8": {"schema": {"type": "string"}},
-                "text/csv; charset=utf-8": {"schema": {"type": "string"}},
-                "application/zip": {"schema": {"type": "string", "format": "binary"}},
-                "application/json": {"schema": {"type": "string", "format": "binary"}},
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": {
-                    "schema": {"type": "string", "format": "binary"}
-                },
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document": {
-                    "schema": {"type": "string", "format": "binary"}
-                },
-                "application/epub+zip": {
-                    "schema": {"type": "string", "format": "binary"}
-                },
-                "application/vnd.openxmlformats-officedocument.presentationml.presentation": {
-                    "schema": {"type": "string", "format": "binary"}
-                },
-            },
         },
         404: {
             "description": "任务ID不存在，或该任务不支持所请求的文件类型，或临时文件已丢失。"
@@ -2004,11 +1433,7 @@ async def service_download_file(
             examples=["html", "json", "csv", "docx", "srt", "epub", "ass", "pptx"],
         ),
 ):
-    task_state = tasks_state.get(task_id)
-    if not task_state:
-        raise HTTPException(status_code=404, detail=f"找不到任务ID '{task_id}'。")
-
-    file_info = task_state.get("downloadable_files", {}).get(file_type)
+    file_info = translation_service.get_downloadable_file_path(task_id, file_type)
     if not file_info or not os.path.exists(file_info.get("path")):
         raise HTTPException(
             status_code=404,
@@ -2029,11 +1454,6 @@ async def service_download_file(
     responses={
         200: {
             "description": "成功返回文件流。文件名通过 Content-Disposition 头指定。",
-            "content": {
-                "application/octet-stream": {
-                    "schema": {"type": "string", "format": "binary"}
-                },
-            },
         },
         404: {
             "description": "任务ID不存在，或该任务没有指定的附件，或临时文件已丢失。"
@@ -2048,11 +1468,7 @@ async def service_download_attachment(
             ..., description="要下载的附件的标识符。", examples=["glossary"]
         ),
 ):
-    task_state = tasks_state.get(task_id)
-    if not task_state:
-        raise HTTPException(status_code=404, detail=f"找不到任务ID '{task_id}'。")
-
-    attachment_info = task_state.get("attachment_files", {}).get(identifier)
+    attachment_info = translation_service.get_attachment_file_path(task_id, identifier)
     if not attachment_info or not os.path.exists(attachment_info.get("path")):
         raise HTTPException(
             status_code=404,
@@ -2061,8 +1477,6 @@ async def service_download_attachment(
 
     file_path = attachment_info["path"]
     filename = attachment_info["filename"]
-
-    # Use a generic media type as attachments can be of various formats
     media_type = "application/octet-stream"
 
     return FileResponse(path=file_path, media_type=media_type, filename=filename)
@@ -2080,44 +1494,6 @@ async def service_download_attachment(
     responses={
         200: {
             "description": "成功返回文件内容。",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "html_base64": {
-                            "summary": "HTML 内容 (Base64)",
-                            "value": {
-                                "file_type": "html",
-                                "filename": "my_doc_translated.html",
-                                "content": "PGh0bWw+PGhlYWQ+...",
-                            },
-                        },
-                        "docx_base64": {
-                            "summary": "DOCX 内容 (Base64)",
-                            "value": {
-                                "file_type": "docx",
-                                "filename": "my_doc_translated.docx",
-                                "content": "UEsDBBQAAAAIA... (base64-encoded string)",
-                            },
-                        },
-                        "epub_base64": {
-                            "summary": "EPUB 内容 (Base64)",
-                            "value": {
-                                "file_type": "epub",
-                                "filename": "my_book_translated.epub",
-                                "content": "UEsDBBQAAAAIA... (base64-encoded string)",
-                            },
-                        },
-                        "pptx_base64": {
-                            "summary": "PPTX 内容 (Base64)",
-                            "value": {
-                                "file_type": "pptx",
-                                "filename": "my_presentation_translated.pptx",
-                                "content": "UEsDBBQAAAAIA... (base64-encoded string)",
-                            },
-                        },
-                    }
-                }
-            },
         },
         404: {
             "description": "任务ID不存在，或该任务不支持所请求的文件类型，或临时文件已丢失。"
@@ -2135,11 +1511,7 @@ async def service_content(
             examples=["html", "json", "csv", "docx", "srt", "epub", "ass", "pptx"],
         ),
 ):
-    task_state = tasks_state.get(task_id)
-    if not task_state:
-        raise HTTPException(status_code=404, detail=f"找不到任务ID '{task_id}'。")
-
-    file_info = task_state.get("downloadable_files", {}).get(file_type)
+    file_info = translation_service.get_downloadable_file_path(task_id, file_type)
     if not file_info or not os.path.exists(file_info.get("path")):
         raise HTTPException(
             status_code=404,
@@ -2165,10 +1537,25 @@ async def service_content(
 
 
 # ===================================================================
-# --- 应用主路由和启动 ---
+# --- Application endpoints ---
 # ===================================================================
+
+
 @service_router.get(
-    "/engin-list", tags=["Application"], description="返回正在进行的可用的转换引擎"
+    "/engin-list",
+    summary="获取可用的转换引擎",
+    description="返回当前服务支持的文档转换引擎列表，包括 MinerU Cloud、MinerU Local 和 Docling（如果已安装）。",
+    tags=["Application"],
+    responses={
+        200: {
+            "description": "成功返回可用的转换引擎列表。",
+            "content": {
+                "application/json": {
+                    "example": ["mineru", "mineru_deploy", "docling"]
+                }
+            }
+        }
+    },
 )
 async def service_get_engin_list():
     engin_list = ["mineru", "mineru_deploy"]
@@ -2178,20 +1565,68 @@ async def service_get_engin_list():
 
 
 @service_router.get(
-    "/task-list", tags=["Application"], description="返回正在进行的task_id列表"
+    "/task-list",
+    summary="获取任务列表",
+    description="返回当前所有正在处理或已完成的翻译任务ID列表。",
+    tags=["Application"],
+    responses={
+        200: {
+            "description": "成功返回任务ID列表。",
+            "content": {
+                "application/json": {
+                    "example": ["a1b2c3d4", "e5f6g7h8"]
+                }
+            }
+        }
+    },
 )
 async def service_get_task_list():
-    return JSONResponse(content=list(tasks_state.keys()))
+    return JSONResponse(content=translation_service.list_tasks())
 
 
 @service_router.get(
-    "/default-params", tags=["Application"], description="返回一些默认参数"
+    "/default-params",
+    summary="获取默认参数",
+    description="返回服务使用的默认参数，包括并发数、分块大小、温度、超时等配置。",
+    tags=["Application"],
+    responses={
+        200: {
+            "description": "成功返回默认参数。",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "chunk_size": 2000,
+                        "concurrent": 10,
+                        "temperature": 0.3,
+                        "timeout": 60,
+                        "retry": 3,
+                        "thinking": "default"
+                    }
+                }
+            }
+        }
+    },
 )
 def service_get_default_params():
     return JSONResponse(content=default_params)
 
 
-@service_router.get("/meta", tags=["Application"], description="返回软件版本号")
+@service_router.get(
+    "/meta",
+    summary="获取应用信息",
+    description="返回当前服务的版本号等元信息。",
+    tags=["Application"],
+    responses={
+        200: {
+            "description": "成功返回应用信息。",
+            "content": {
+                "application/json": {
+                    "example": {"version": "1.0.0"}
+                }
+            }
+        }
+    },
+)
 async def service_get_app_version():
     return JSONResponse(content={"version": __version__})
 
@@ -2200,14 +1635,14 @@ async def service_get_app_version():
     "/flat-translate",
     summary="translate(sync)",
     description="""
-    上传文件并直接等待翻译完成，无需轮询状态。
-    所有参数均已扁平化展开，直接通过 Form 表单提交。
-
-    **注意**: 
-    1. 这是一个同步阻塞接口，大文件翻译时间较长，请确保客户端(如Nginx)超时设置足够长。
-    2. 复杂对象(如术语表字典)需以 JSON 字符串格式传入。
-    """,
-    response_model=None
+上传文件并直接等待翻译完成，无需轮询状态。
+所有参数均已扁平化展开，直接通过 Form 表单提交。
+""",
+    response_model=None,
+    responses={
+        200: {"description": "翻译成功，返回翻译后的文件内容。"},
+        500: {"description": "翻译过程中发生错误。"},
+    },
 )
 async def service_flat_translate(
         request: Request,
@@ -2240,7 +1675,7 @@ async def service_flat_translate(
         formula_ocr: bool = Form(True, description="[PDF] 是否启用公式识别"),
         code_ocr: bool = Form(True, description="[Docling] 是否启用代码块识别"),
         mineru_deploy_base_url: str = Form("http://127.0.0.1:8000", description="[MinerU Local] 服务地址"),
-        mineru_deploy_backend: str = Form("hybrid-auto-engine", description="[MinerU Local] 后端类型: hybrid-auto-engine, pipeline 等"),
+        mineru_deploy_backend: str = Form("hybrid-auto-engine", description="[MinerU Local] 后端类型: pipeline, vlm-auto-engine, vlm-http-client, hybrid-auto-engine, hybrid-http-client"),
         mineru_deploy_parse_method: str = Form("auto", description="[MinerU Local] 解析方法: auto, txt, ocr"),
         mineru_deploy_formula_enable: bool = Form(True, description="[MinerU Local] 是否启用公式"),
         mineru_deploy_table_enable: bool = Form(True, description="[MinerU Local] 是否启用表格"),
@@ -2253,9 +1688,19 @@ async def service_flat_translate(
         glossary_dict_json: Optional[str] = Form("", description="术语表字典 JSON 字符串, 格式: {'原文':'译文'}"),
         glossary_agent_config_json: Optional[str] = Form("", description="术语表 Agent 配置 JSON 字符串 (包含 base_url, model_id 等)")
 ):
-    # -----------------------------------------------------------
-    # 步骤 1: 初始化基础环境与文件读取
-    # -----------------------------------------------------------
+    from docutranslate.core.schemas import (
+        MarkdownWorkflowParams,
+        TextWorkflowParams,
+        JsonWorkflowParams,
+        XlsxWorkflowParams,
+        DocxWorkflowParams,
+        SrtWorkflowParams,
+        EpubWorkflowParams,
+        HtmlWorkflowParams,
+        AssWorkflowParams,
+        PPTXWorkflowParams,
+    )
+
     task_id = uuid.uuid4().hex[:8]
 
     try:
@@ -2264,15 +1709,8 @@ async def service_flat_translate(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"文件读取失败: {e}")
 
-    # -----------------------------------------------------------
-    # 步骤 2: 参数预处理与 JSON 字段解析
-    # -----------------------------------------------------------
-
-    # 2.1 自动工作流检测
     if workflow_type == "auto":
-        # 假设这里有获取后缀的逻辑，或者引用外部函数
         ext = Path(original_filename).suffix.lower().lstrip(".")
-        # 简单的映射逻辑，实际建议复用 auto_workflow 中的逻辑
         if ext in ["md", "pdf"]: workflow_type = "markdown_based"
         elif ext == "txt": workflow_type = "txt"
         elif ext == "json": workflow_type = "json"
@@ -2283,9 +1721,8 @@ async def service_flat_translate(
         elif ext in ["html", "htm"]: workflow_type = "html"
         elif ext == "ass": workflow_type = "ass"
         elif ext == "pptx": workflow_type = "pptx"
-        else: workflow_type = "txt" # 默认回退
+        else: workflow_type = "txt"
 
-    # 2.2 解析 glossary_dict_json
     parsed_glossary_dict = None
     if glossary_dict_json and glossary_dict_json.strip():
         try:
@@ -2295,7 +1732,6 @@ async def service_flat_translate(
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"glossary_dict_json 解析失败: {e}")
 
-    # 2.3 解析 glossary_agent_config_json
     parsed_glossary_agent = None
     if glossary_agent_config_json and glossary_agent_config_json.strip():
         try:
@@ -2303,19 +1739,13 @@ async def service_flat_translate(
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"glossary_agent_config_json 解析失败: {e}")
 
-    # -----------------------------------------------------------
-    # 步骤 3: 构建 Payload 字典
-    # -----------------------------------------------------------
     payload_dict = {
-        # --- 基础参数 ---
         "workflow_type": workflow_type,
         "base_url": base_url,
         "api_key": api_key,
         "model_id": model_id,
         "to_lang": to_lang,
         "skip_translate": skip_translate,
-
-        # --- 控制参数 ---
         "concurrent": concurrent,
         "chunk_size": chunk_size,
         "temperature": temperature,
@@ -2328,21 +1758,15 @@ async def service_flat_translate(
         "rpm": rpm,
         "tpm": tpm,
         "provider": provider,
-
-        # --- 格式参数 ---
         "insert_mode": insert_mode,
         "separator": separator,
         "segment_mode": segment_mode,
         "translate_regions": translate_regions,
-
-        # --- 引擎参数 ---
         "convert_engine": convert_engine,
         "mineru_token": mineru_token,
         "model_version": model_version,
         "formula_ocr": formula_ocr,
         "code_ocr": code_ocr,
-
-        # --- MinerU 本地部署参数 ---
         "mineru_deploy_base_url": mineru_deploy_base_url,
         "mineru_deploy_backend": mineru_deploy_backend,
         "mineru_deploy_parse_method": mineru_deploy_parse_method,
@@ -2352,91 +1776,43 @@ async def service_flat_translate(
         "mineru_deploy_end_page_id": mineru_deploy_end_page_id,
         "mineru_deploy_lang_list": mineru_deploy_lang_list,
         "mineru_deploy_server_url": mineru_deploy_server_url,
-
-        # --- 特殊参数 ---
         "json_paths": json_paths,
         "glossary_generate_enable": glossary_generate_enable,
         "glossary_dict": parsed_glossary_dict,
         "glossary_agent_config": parsed_glossary_agent
     }
 
-    # -----------------------------------------------------------
-    # 步骤 4: 智能填充与清理
-    # -----------------------------------------------------------
-
-    # 4.1 清理空值：移除 None 和空字符串 ""
-    # 这是关键步骤：Form 表单为了 Swagger 美观默认给了 ""，但 Pydantic 模型可能期待 None 以触发其内部逻辑
     payload_dict = {
         k: v for k, v in payload_dict.items()
         if v is not None and (not isinstance(v, str) or v != "")
     }
 
-    # 4.2 特殊默认值处理
-    # 如果是 JSON 类型但没传 path，默认全选
     if workflow_type == "json" and not payload_dict.get("json_paths"):
         payload_dict["json_paths"] = ["$..*"]
 
-    # 4.3 引擎自动选择 (针对 PDF/MD)
     if workflow_type == "markdown_based" and "convert_engine" not in payload_dict:
         ext = Path(original_filename).suffix.lower()
         if ext == ".pdf":
-            # 需要确保 DOCLING_EXIST 变量在当前作用域可用
             payload_dict["convert_engine"] = "mineru" if not DOCLING_EXIST else "docling"
         else:
             payload_dict["convert_engine"] = "identity"
 
-    # -----------------------------------------------------------
-    # 步骤 5: 转换为 Pydantic Payload 对象 (严格校验)
-    # -----------------------------------------------------------
     try:
-        # 使用 TypeAdapter 进行多态校验，将扁平字典转为嵌套的 TranslatePayload 对象
         payload_obj = TypeAdapter(TranslatePayload).validate_python(payload_dict)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"参数配置校验失败: {str(e)}")
 
-    # -----------------------------------------------------------
-    # 步骤 6: 初始化任务状态 (复用 Global State)
-    # -----------------------------------------------------------
-    if task_id not in tasks_state:
-        tasks_state[task_id] = _create_default_task_state()
-        tasks_log_queues[task_id] = asyncio.Queue()
-        tasks_log_histories[task_id] = []
-
-    raw_stem = Path(original_filename).stem
-    safe_stem = raw_stem[:50] if len(raw_stem) > 50 else raw_stem
-
-    tasks_state[task_id].update({
-        "is_processing": True,
-        "status_message": "任务初始化中 (同步模式)...",
-        "error_flag": False,
-        "download_ready": False,
-        "original_filename_stem": safe_stem,
-        "original_filename": original_filename,
-        "task_start_time": time.time(),
-        "task_end_time": 0,
-    })
-
-    # -----------------------------------------------------------
-    # 步骤 7: 执行翻译 (Await 等待完成)
-    # -----------------------------------------------------------
     try:
-        await _perform_translation(
+        await translation_service.start_translation(
             task_id=task_id,
             payload=payload_obj,
             file_contents=file_contents,
             original_filename=original_filename
         )
     except Exception as e:
-        # 异常时的资源清理
-        tasks_state.pop(task_id, None)
-        tasks_log_queues.pop(task_id, None)
-        tasks_log_histories.pop(task_id, None)
         raise HTTPException(status_code=500, detail=f"内部翻译错误: {str(e)}")
 
-    # -----------------------------------------------------------
-    # 步骤 8: 检查结果并构造响应
-    # -----------------------------------------------------------
-    task_state = tasks_state.get(task_id)
+    task_state = translation_service.get_task_state(task_id)
 
     if not task_state:
         raise HTTPException(status_code=500, detail="任务状态丢失")
@@ -2445,11 +1821,22 @@ async def service_flat_translate(
         error_msg = task_state.get("status_message", "未知错误")
         temp_dir = task_state.get("temp_dir")
         if temp_dir and os.path.isdir(temp_dir):
+            import shutil
             shutil.rmtree(temp_dir)
-        tasks_state.pop(task_id, None)
+        await translation_service.release_task(task_id)
         raise HTTPException(status_code=500, detail=f"翻译任务失败: {error_msg}")
 
-    # 构造下载链接
+    task = task_state.get("current_task_ref")
+    if task:
+        await task
+
+    task_state = translation_service.get_task_state(task_id)
+
+    if task_state.get("error_flag"):
+        error_msg = task_state.get("status_message", "未知错误")
+        await translation_service.release_task(task_id)
+        raise HTTPException(status_code=500, detail=f"翻译任务失败: {error_msg}")
+
     base_url_str = str(request.base_url).rstrip("/")
     downloads = {}
     if task_state.get("download_ready") and task_state.get("downloadable_files"):
@@ -2463,7 +1850,6 @@ async def service_flat_translate(
 
     duration = task_state.get("task_end_time", 0) - task_state.get("task_start_time", 0)
 
-    # 返回结果 (任务资源保留在内存中以供下载)
     return JSONResponse(content={
         "status": "success",
         "task_id": task_id,
@@ -2472,6 +1858,11 @@ async def service_flat_translate(
         "downloads": downloads,
         "attachments": attachments
     })
+
+
+# ===================================================================
+# --- Static pages and docs ---
+# ===================================================================
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
@@ -2528,6 +1919,11 @@ async def redoc_html():
 app.include_router(service_router)
 
 
+# ===================================================================
+# --- Run function ---
+# ===================================================================
+
+
 def find_free_port(start_port):
     port = start_port
     while True:
@@ -2538,7 +1934,8 @@ def find_free_port(start_port):
 
 
 def run_app(host=None, port: int | None = None, enable_CORS=False,
-            allow_origin_regex=r"^(https?://.*|null|file://.*)$"):
+            allow_origin_regex=r"^(https?://.*|null|file://.*)$",
+            with_mcp: bool = False):
     initial_port = port or int(os.environ.get("DOCUTRANSLATE_PORT", 8010))
     try:
         port_to_use = find_free_port(initial_port)
@@ -2546,6 +1943,7 @@ def run_app(host=None, port: int | None = None, enable_CORS=False,
             print(f"端口 {initial_port} 被占用，将使用端口 {port_to_use} 代替")
         print(f"正在启动 DocuTranslate WebUI 版本号：{__version__}")
         app.state.port_to_use = port_to_use
+        app.state.with_mcp=with_mcp
         if enable_CORS:
             print(f"已开启跨域，allow_origin_regex：{allow_origin_regex}")
             app.add_middleware(
@@ -2555,6 +1953,17 @@ def run_app(host=None, port: int | None = None, enable_CORS=False,
                 allow_methods=["*"],
                 allow_headers=["*"],
             )
+
+        if with_mcp:
+            # Use the same host and port as the web backend
+            # If host is None, uvicorn defaults to 127.0.0.1
+            mcp_host = host if host is not None else "127.0.0.1"
+            setup_mcp_integration(
+                enable=True,
+                host=mcp_host,
+                port=port_to_use,
+            )
+
         uvicorn.run(app, host=host, port=port_to_use, workers=1)
     except Exception as e:
         print(f"启动失败: {e}")

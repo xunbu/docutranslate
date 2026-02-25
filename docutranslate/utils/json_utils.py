@@ -3,6 +3,8 @@
 import json
 import re
 
+from json_repair import json_repair
+
 
 def get_json_size(js: dict) -> int:
     """计算字典转换成JSON字符串并以UTF-8编码后的字节大小"""
@@ -99,3 +101,27 @@ def fix_json_string(json_string):
 
 if __name__ == '__main__':
     print(get_json_size({"0": ""}))
+
+
+def parse_json_response(result: str) -> dict | list:
+    """
+    统一解析JSON响应，兼容以下格式：
+    1. ```json 代码块 ``` 格式
+    2. 纯 JSON 格式（force_json 模式）
+    3. 被截断的 JSON（使用 json_repair 尝试修复）
+
+    Args:
+        result: 模型返回的原始响应
+
+    Returns:
+        解析后的 dict 或 list
+    """
+    # 1. 尝试从 ```json 代码块 ``` 中提取
+    match = re.search(r'```json(.*)```', result, re.DOTALL)
+    if match:
+        text = match.group(1)
+    else:
+        text = result
+
+    # 2. 使用 json_repair 修复并解析
+    return json_repair.loads(text)

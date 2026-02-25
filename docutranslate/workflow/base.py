@@ -4,17 +4,19 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from logging import Logger
 from pathlib import Path
-from typing import Self, Generic, TypeVar
+from typing import Self, Generic, TypeVar, Optional
 
 from docutranslate.exporter.base import Exporter
 from docutranslate.ir.attachment_manager import AttachMentManager
 from docutranslate.ir.document import Document
 from docutranslate.logger import global_logger
+from docutranslate.progress import ProgressTracker, null_progress
 
 
 @dataclass(kw_only=True)
 class WorkflowConfig:
     logger: Logger = global_logger
+    progress_tracker: Optional[ProgressTracker] = None
 
 
 T_Config = TypeVar("T_Config", bound=WorkflowConfig)
@@ -26,6 +28,7 @@ class Workflow(ABC, Generic[T_Config, T_original, T_Translated]):
     def __init__(self, config: T_Config):
         self.config = config
         self.logger = self.config.logger
+        self.progress_tracker: ProgressTracker = config.progress_tracker or null_progress
         self.document_original: T_original | None = None
         self.document_translated: T_Translated | None = None
         self.attachment = AttachMentManager()

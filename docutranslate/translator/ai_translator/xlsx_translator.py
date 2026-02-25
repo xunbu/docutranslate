@@ -54,12 +54,29 @@ class XlsxTranslator(AiTranslator):
         self.separator = config.separator
         self.translate_regions = config.translate_regions
 
-        # 我们虽然不依赖它查找，但写入新节点时最好还是带上标准命名空间
+        # 注册常用命名空间，防止ElementTree写回时产生 ns0, ns1 等前缀导致Excel报错
         self.NS_MAIN = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
+        self.NS_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+        self.NS_MC = 'http://schemas.openxmlformats.org/markup-compatibility/2006'
+        self.NS_XML = 'http://www.w3.org/XML/1998/namespace'
+
+        # Drawing / VML / Comments namespaces (保留这些注册以防止绘图报错)
+        self.NS_XDR = 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing'
+        self.NS_A = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+        self.NS_VML = 'urn:schemas-microsoft-com:vml'
+
         ET.register_namespace('', self.NS_MAIN)
+        ET.register_namespace('r', self.NS_REL)
+        ET.register_namespace('mc', self.NS_MC)
+        ET.register_namespace('xdr', self.NS_XDR)
+        ET.register_namespace('a', self.NS_A)
+        ET.register_namespace('v', self.NS_VML)
+        ET.register_namespace('x14ac', "http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac")
+        ET.register_namespace('x15', "http://schemas.microsoft.com/office/spreadsheetml/2010/11/main")
+        ET.register_namespace('x15ac', "http://schemas.microsoft.com/office/spreadsheetml/2010/11/ac")
 
     # =========================================================================
-    # 核心辅助方法：忽略命名空间查找
+    # 核心辅助方法
     # =========================================================================
 
     def _tag_is(self, elem: ET.Element, tag_name: str) -> bool:
@@ -73,12 +90,14 @@ class XlsxTranslator(AiTranslator):
                 return child
         return None
 
-    def _find_all_children(self, parent: ET.Element, tag_name: str) -> List[ET.Element]:
-        """查找所有匹配的直接子节点（忽略命名空间）。"""
-        return [child for child in parent if self._tag_is(child, tag_name)]
+    def _sanitize_xml_text(self, text: str) -> str:
+        """移除 Excel XML 不允许的控制字符。"""
+        if not text:
+            return ""
+        # 移除 ASCII 0-8, 11-12, 14-31
+        return re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', text)
 
     def _get_child_text(self, parent: ET.Element, tag_name: str) -> Optional[str]:
-        """获取子节点的文本内容（忽略命名空间）。"""
         child = self._find_child(parent, tag_name)
         return child.text if child is not None else None
 
@@ -93,15 +112,7 @@ class XlsxTranslator(AiTranslator):
         with zf.open("xl/sharedStrings.xml") as f:
             context = ET.iterparse(f, events=("end",))
             for event, elem in context:
-                # 匹配 <si>
                 if self._tag_is(elem, "si"):
-                    # 查找所有 <t>
-                    # 注意：xml.etree 的 findall 只能简单的路径查找，
-                    # 既然我们要忽略命名空间，最好手动遍历子树，但 si 结构简单，
-                    # 这里简化处理：直接遍历 iter 出来的 t 元素（如果在 si 内部）
-                    pass
-                    # 由于 iterparse 是扁平流，很难直接关联 si 和 t。
-                    # 更稳妥的方式是：当 elem 是 si 时，遍历 elem 的 children
                     texts = []
                     for child in elem.iter():
                         if self._tag_is(child, "t") and child.text:
@@ -111,22 +122,16 @@ class XlsxTranslator(AiTranslator):
         return shared_strings
 
     def _get_sheet_mapping(self, zf: zipfile.ZipFile) -> Dict[str, str]:
-        """建立 SheetName -> ZipFilename 的映射（稳健版）"""
         sheet_name_to_rid = {}
         try:
             with zf.open("xl/workbook.xml") as f:
                 root = ET.fromstring(f.read())
-                # 查找所有 sheet 标签
-                # 需递归查找，因为 sheet 通常在 sheets 节点下
                 for sheet in root.iter():
                     if self._tag_is(sheet, "sheet"):
                         name = sheet.get("name")
-                        # id 的属性名通常带有 r: 前缀，这很难忽略命名空间，
-                        # 但 openpyxl 规范里 id 属性几乎总是依赖 relationships 命名空间
-                        # 这里我们尝试遍历属性找到 key 包含 id 的
                         rid = None
                         for k, v in sheet.attrib.items():
-                            if k.endswith("id"):  # 匹配 r:id
+                            if k.endswith("id"):
                                 rid = v
                                 break
                         if name and rid:
@@ -139,7 +144,6 @@ class XlsxTranslator(AiTranslator):
             with zf.open("xl/_rels/workbook.xml.rels") as f:
                 root = ET.fromstring(f.read())
                 for child in root:
-                    # Relationships 里的 tag 也是 Relationship
                     rid = child.get("Id")
                     target = child.get("Target")
                     if rid and target:
@@ -211,6 +215,7 @@ class XlsxTranslator(AiTranslator):
         return False
 
     def _apply_insert_mode(self, original: str, translated: str) -> str:
+        translated = self._sanitize_xml_text(translated)
         if self.insert_mode == "append":
             return f"{original}{self.separator}{translated}"
         elif self.insert_mode == "prepend":
@@ -219,16 +224,14 @@ class XlsxTranslator(AiTranslator):
             return translated
 
     # =========================================================================
-    # 区域处理 (使用 Helper 方法，完全解耦命名空间)
+    # 区域处理
     # =========================================================================
 
     def _get_texts_xml_regions(self, document: Document) -> List[str]:
         texts_to_translate = set()
-
         with zipfile.ZipFile(BytesIO(document.content), 'r') as zf:
             shared_strings = self._get_shared_strings(zf)
             sheet_mapping = self._get_sheet_mapping(zf)
-
             if not sheet_mapping:
                 all_sheets = [n for n in zf.namelist() if n.startswith("xl/worksheets/sheet") and n.endswith(".xml")]
                 for s in all_sheets:
@@ -237,39 +240,30 @@ class XlsxTranslator(AiTranslator):
             boundaries_map = self._parse_region_boundaries(sheet_mapping)
 
             for filename, boundaries in boundaries_map.items():
-                if filename not in zf.namelist():
-                    continue
-
+                if filename not in zf.namelist(): continue
                 with zf.open(filename) as f:
                     context = ET.iterparse(f, events=("end",))
                     for event, elem in context:
-                        # 匹配 <c>
                         if self._tag_is(elem, "c"):
                             r_attr = elem.get('r')
                             t_attr = elem.get('t')
-
                             if r_attr:
                                 try:
                                     row, col = coordinate_to_tuple(r_attr)
                                     if self._is_in_boundaries(col, row, boundaries):
                                         text_found = None
-
-                                        # Shared String
                                         if t_attr == 's':
                                             v_text = self._get_child_text(elem, "v")
                                             if v_text:
                                                 idx = int(v_text)
                                                 if 0 <= idx < len(shared_strings):
                                                     text_found = shared_strings[idx]
-
-                                        # Inline String
                                         elif t_attr == 'inlineStr':
                                             is_node = self._find_child(elem, "is")
                                             if is_node is not None:
                                                 t_text = self._get_child_text(is_node, "t")
                                                 if t_text:
                                                     text_found = t_text
-
                                         if text_found:
                                             texts_to_translate.add(text_found)
                                 except Exception:
@@ -277,7 +271,6 @@ class XlsxTranslator(AiTranslator):
                             elem.clear()
                         elif self._tag_is(elem, "row"):
                             elem.clear()
-
         return list(texts_to_translate)
 
     def _rebuild_xml_regions(self, original_content_bytes: bytes, translation_map: dict) -> bytes:
@@ -286,7 +279,6 @@ class XlsxTranslator(AiTranslator):
             with zipfile.ZipFile(output_zip_io, 'w', zipfile.ZIP_DEFLATED) as zf_out:
                 shared_strings = self._get_shared_strings(zf_in)
                 sheet_mapping = self._get_sheet_mapping(zf_in)
-
                 if not sheet_mapping:
                     all_sheets = [n for n in zf_in.namelist() if
                                   n.startswith("xl/worksheets/sheet") and n.endswith(".xml")]
@@ -303,13 +295,8 @@ class XlsxTranslator(AiTranslator):
                             root = tree.getroot()
                             cells_modified = False
 
-                            # 查找所有 <c>
-                            # 因为 findall 不支持复杂的 tag.endswith，这里我们遍历所有节点
-                            # 对于 parse 加载的树，iter() 是高效的
                             for cell in root.iter():
-                                if not self._tag_is(cell, "c"):
-                                    continue
-
+                                if not self._tag_is(cell, "c"): continue
                                 r_attr = cell.get('r')
                                 t_attr = cell.get('t')
                                 if r_attr:
@@ -317,7 +304,6 @@ class XlsxTranslator(AiTranslator):
                                         row, col = coordinate_to_tuple(r_attr)
                                         if self._is_in_boundaries(col, row, boundaries):
                                             original_text = None
-
                                             if t_attr == 's':
                                                 v_text = self._get_child_text(cell, "v")
                                                 if v_text:
@@ -332,25 +318,23 @@ class XlsxTranslator(AiTranslator):
                                             if original_text and original_text in translation_map:
                                                 final_text = self._apply_insert_mode(original_text,
                                                                                      translation_map[original_text])
-
                                                 # 清空旧内容
                                                 for child in list(cell):
                                                     cell.remove(child)
-
-                                                # 写入新内容 (这里必须使用带有命名空间的标签名，否则Excel不认)
+                                                # 写入新内容 (inlineStr)
                                                 cell.set('t', 'inlineStr')
-                                                # 注意：写入时使用 self.NS_MAIN 是必须的，因为这是标准
                                                 is_node = ET.Element(f"{{{self.NS_MAIN}}}is")
                                                 t_node = ET.SubElement(is_node, f"{{{self.NS_MAIN}}}t")
                                                 t_node.text = final_text
+                                                if '\n' in final_text or final_text.startswith(
+                                                        ' ') or final_text.endswith(' '):
+                                                    t_node.set(f"{{{self.NS_XML}}}space", "preserve")
                                                 cell.append(is_node)
                                                 cells_modified = True
                                     except Exception:
                                         pass
-
                             if cells_modified:
-                                xml_str = ET.tostring(root, encoding='utf-8', xml_declaration=True)
-                                zf_out.writestr(item, xml_str)
+                                zf_out.writestr(item, ET.tostring(root, encoding='utf-8', xml_declaration=True))
                             else:
                                 zf_out.writestr(item, zf_in.read(item.filename))
                     else:
@@ -358,13 +342,14 @@ class XlsxTranslator(AiTranslator):
         return output_zip_io.getvalue()
 
     # =========================================================================
-    # 全文档处理 (同样使用 Helper)
+    # 全文档处理
     # =========================================================================
 
     def _get_texts_xml_all(self, document: Document) -> List[str]:
         texts_to_translate = set()
         try:
             with zipfile.ZipFile(BytesIO(document.content), 'r') as zf:
+                # 1. Shared Strings
                 if "xl/sharedStrings.xml" in zf.namelist():
                     with zf.open("xl/sharedStrings.xml") as f:
                         context = ET.iterparse(f, events=("end",))
@@ -374,6 +359,7 @@ class XlsxTranslator(AiTranslator):
                                     texts_to_translate.add(elem.text)
                                 elem.clear()
 
+                # 2. Worksheets
                 sheet_files = [n for n in zf.namelist() if n.startswith("xl/worksheets/sheet") and n.endswith(".xml")]
                 for sheet_file in sheet_files:
                     with zf.open(sheet_file) as f:
@@ -390,14 +376,26 @@ class XlsxTranslator(AiTranslator):
                             elif self._tag_is(elem, "row"):
                                 elem.clear()
 
+                # 3. Other Content (Tables / Drawings, 但跳过 Comments)
                 for item in zf.infolist():
                     if item.filename.startswith("xl/tables/table"):
                         with zf.open(item.filename) as f:
                             root = ET.fromstring(f.read())
                             for col in root.iter():
-                                if self._tag_is(col, "tableColumn"):
-                                    if col.get('name'):
-                                        texts_to_translate.add(col.get('name'))
+                                if self._tag_is(col, "tableColumn") and col.get('name'):
+                                    texts_to_translate.add(col.get('name'))
+
+                    # [已移除] 批注 (Comments) 的文本提取逻辑，以跳过翻译
+
+                    # 绘图 (Drawings)
+                    elif item.filename.startswith("xl/drawings/drawing") and item.filename.endswith(".xml"):
+                        with zf.open(item.filename) as f:
+                            context = ET.iterparse(f, events=("end",))
+                            for event, elem in context:
+                                if self._tag_is(elem, "t") and elem.text and elem.text.strip():
+                                    texts_to_translate.add(elem.text)
+                                elem.clear()
+
         except Exception as e:
             self.logger.error(f"XML解析失败: {e}", exc_info=True)
         return list(texts_to_translate)
@@ -409,21 +407,46 @@ class XlsxTranslator(AiTranslator):
                 with zipfile.ZipFile(output_zip_io, 'w', zipfile.ZIP_DEFLATED) as zf_out:
                     for item in zf_in.infolist():
                         content = zf_in.read(item.filename)
+                        filename = item.filename
 
-                        if item.filename == "xl/sharedStrings.xml":
+                        # 1. Shared Strings
+                        if filename == "xl/sharedStrings.xml":
                             root = ET.fromstring(content)
                             modified = False
-                            for node in root.iter():
-                                if self._tag_is(node, "t"):
-                                    if node.text in translation_map:
-                                        node.text = self._apply_insert_mode(node.text, translation_map[node.text])
+                            for si in root.iter():
+                                if self._tag_is(si, "si"):
+                                    # 处理直接的 t
+                                    direct_t = self._find_child(si, "t")
+                                    if direct_t is not None and direct_t.text in translation_map:
+                                        new_text = self._apply_insert_mode(direct_t.text,
+                                                                           translation_map[direct_t.text])
+                                        direct_t.text = new_text
+                                        if '\n' in new_text or new_text.strip() != new_text:
+                                            direct_t.set(f"{{{self.NS_XML}}}space", "preserve")
+                                        # 移除拼音
+                                        p_pr = self._find_child(si, "phoneticPr")
+                                        if p_pr is not None: si.remove(p_pr)
                                         modified = True
+
+                                    # 处理 Rich Text runs (<r>)
+                                    for r in si.iter():
+                                        if self._tag_is(r, "r"):
+                                            t_node = self._find_child(r, "t")
+                                            if t_node is not None and t_node.text in translation_map:
+                                                new_text = self._apply_insert_mode(t_node.text,
+                                                                                   translation_map[t_node.text])
+                                                t_node.text = new_text
+                                                if '\n' in new_text or new_text.strip() != new_text:
+                                                    t_node.set(f"{{{self.NS_XML}}}space", "preserve")
+                                                modified = True
+
                             if modified:
                                 zf_out.writestr(item, ET.tostring(root, encoding='utf-8', xml_declaration=True))
                             else:
                                 zf_out.writestr(item, content)
 
-                        elif item.filename.startswith("xl/worksheets/sheet") and item.filename.endswith(".xml"):
+                        # 2. Worksheets
+                        elif filename.startswith("xl/worksheets/sheet") and filename.endswith(".xml"):
                             root = ET.fromstring(content)
                             modified = False
                             for cell in root.iter():
@@ -432,15 +455,19 @@ class XlsxTranslator(AiTranslator):
                                     if is_node is not None:
                                         t_node = self._find_child(is_node, "t")
                                         if t_node is not None and t_node.text in translation_map:
-                                            t_node.text = self._apply_insert_mode(t_node.text,
-                                                                                  translation_map[t_node.text])
+                                            new_text = self._apply_insert_mode(t_node.text,
+                                                                               translation_map[t_node.text])
+                                            t_node.text = new_text
+                                            if '\n' in new_text or new_text.strip() != new_text:
+                                                t_node.set(f"{{{self.NS_XML}}}space", "preserve")
                                             modified = True
                             if modified:
                                 zf_out.writestr(item, ET.tostring(root, encoding='utf-8', xml_declaration=True))
                             else:
                                 zf_out.writestr(item, content)
 
-                        elif item.filename.startswith("xl/tables/table"):
+                        # 3. Tables
+                        elif filename.startswith("xl/tables/table"):
                             root = ET.fromstring(content)
                             modified = False
                             for col in root.iter():
@@ -453,6 +480,31 @@ class XlsxTranslator(AiTranslator):
                                 zf_out.writestr(item, ET.tostring(root, encoding='utf-8', xml_declaration=True))
                             else:
                                 zf_out.writestr(item, content)
+
+                        # [已移除] 批注 (Comments) 的重构逻辑
+                        # 4. Comments: 直接跳过处理，原样写入，防止报错
+
+                        # 5. Drawings (保留处理)
+                        elif filename.startswith("xl/drawings/drawing") and filename.endswith(".xml"):
+                            root = ET.fromstring(content)
+                            modified = False
+                            for elem in root.iter():
+                                if self._tag_is(elem, "p"):  # 匹配 a:p
+                                    for child in list(elem):  # 转为 list 以便支持 remove
+                                        if self._tag_is(child, "r"):  # a:r
+                                            t_node = self._find_child(child, "t")
+                                            if t_node is not None and t_node.text in translation_map:
+                                                new_text = self._apply_insert_mode(t_node.text,
+                                                                                   translation_map[t_node.text])
+                                                t_node.text = new_text
+                                                if '\n' in new_text or new_text.strip() != new_text:
+                                                    t_node.set(f"{{{self.NS_XML}}}space", "preserve")
+                                                modified = True
+                            if modified:
+                                zf_out.writestr(item, ET.tostring(root, encoding='utf-8', xml_declaration=True))
+                            else:
+                                zf_out.writestr(item, content)
+
                         else:
                             zf_out.writestr(item, content)
             return output_zip_io.getvalue()
@@ -471,14 +523,9 @@ class XlsxTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
-            # 1. 获取增量
             glossary_dict_gen = self.glossary_agent.send_segments(original_texts, self.chunk_size)
-
-            # 2. 在 Translator 层统一合并 (SSOT)
             if self.glossary:
                 self.glossary.update(glossary_dict_gen)
-
-            # 3. 将合并后的【完整字典】传给 Agent
             if self.translate_agent and self.glossary:
                 self.translate_agent.update_glossary_dict(self.glossary.glossary_dict)
 
@@ -507,14 +554,9 @@ class XlsxTranslator(AiTranslator):
             return self
 
         if self.glossary_agent:
-            # 1. 获取增量
             glossary_dict_gen = await self.glossary_agent.send_segments_async(original_texts, self.chunk_size)
-
-            # 2. 在 Translator 层统一合并 (SSOT)
             if self.glossary:
                 self.glossary.update(glossary_dict_gen)
-
-            # 3. 将合并后的【完整字典】传给 Agent
             if self.translate_agent and self.glossary:
                 self.translate_agent.update_glossary_dict(self.glossary.glossary_dict)
 

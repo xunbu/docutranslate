@@ -59,6 +59,7 @@ class AgentConfig:
     rpm: int | None = None  # 每分钟请求数限制
     tpm: int | None = None  # 每分钟Token数限制
     provider: ProviderType | None = None
+    progress_callback: callable = None  # 进度回调 (current: int, total: int) -> None
 
 
 class TotalErrorCounter:
@@ -311,6 +312,7 @@ class Agent:
         self.token_counter = TokenCounter(logger=self.logger)
         self.retry = config.retry
         self.system_proxy_enable = config.system_proxy_enable
+        self.progress_callback = config.progress_callback  # 进度回调
 
         # 新增：初始化速率限制器
         self.rate_limiter = RateLimiter(rpm=config.rpm, tpm=config.tpm)
@@ -341,6 +343,35 @@ class Agent:
 
         # 向上取整
         return int(estimated) + 1
+
+    def _sanitize_result(self, text: str) -> str:
+        """
+        清理响应内容：如果内容以 <think>...</think> 开头，移除该部分。
+        使用 DOTALL 模式以匹配跨行的 thinking 内容。
+        """
+        if not text:
+            return text
+        # 匹配开头的 <think> 标签块，允许标签前后有空白字符
+        # .*? 非贪婪匹配，确保只匹配第一个闭合标签
+        return re.sub(r'^\s*<think>.*?</think>', '', text, flags=re.DOTALL)
+
+    def get_continue_prompt(self, accumulated_result: str, prompt: str) -> str:
+        """
+        获取继续获取时的提示词。
+        子类可以重写此方法来自定义继续获取的行为。
+
+        默认行为：直接拼接内容，让模型继续输出。
+        """
+        return f"{prompt}\n\n[系统提示：请继续完成之前的响应。之前已输出内容为：\n---\n{accumulated_result}\n---\n请从中断处继续输出剩余内容。]"
+
+    def merge_continue_result(self, accumulated_result: str, additional_result: str) -> str:
+        """
+        合并继续获取的结果。
+        子类可以重写此方法来处理追加模式的数组合并。
+
+        默认行为：直接拼接字符串。
+        """
+        return accumulated_result + additional_result
 
     def _add_thinking_mode(self, data: dict):
         thinking_mode_result = get_thinking_mode(self.provider, data.get("model"))
@@ -398,6 +429,8 @@ class Agent:
         if continue_count >= MAX_CONTINUE_FETCHES:
             self.logger.warning(
                 f"已达到最大继续获取次数 ({MAX_CONTINUE_FETCHES})，返回已累计结果 ({len(accumulated_result)} 字符)")
+            # 移除可能存在的 <think> 块
+            accumulated_result = self._sanitize_result(accumulated_result)
             return (
                 accumulated_result
                 if result_handler is None
@@ -408,8 +441,8 @@ class Agent:
             f"继续获取剩余内容 (已累计 {len(accumulated_result)} 字符, 第 {continue_count + 1}/{MAX_CONTINUE_FETCHES} 次)...")
 
         # 构造继续请求的提示
-        # 关键：告知模型我们已经获取了部分内容，请继续完成
-        continue_prompt = f"{prompt}\n\n[系统提示：请继续完成之前的响应。之前已输出内容为：\n---\n{accumulated_result}\n---\n请从中断处继续输出剩余内容。]"
+        # 调用子类的 get_continue_prompt 方法，允许子类自定义继续获取的行为
+        continue_prompt = self.get_continue_prompt(accumulated_result, prompt)
 
         if pre_send_handler:
             system_prompt, continue_prompt = pre_send_handler(system_prompt, continue_prompt)
@@ -446,8 +479,8 @@ class Agent:
             )
             self.token_counter.add(input_tokens, cached_tokens, output_tokens, reasoning_tokens)
 
-            # 累加结果
-            accumulated_result += additional_result
+            # 累加结果（使用 merge_continue_result 方法处理追加模式的合并）
+            accumulated_result = self.merge_continue_result(accumulated_result, additional_result)
 
             # 如果仍然是 length，继续获取（限制最大轮数防止无限循环）
             if finish_reason == "length":
@@ -465,17 +498,33 @@ class Agent:
                 )
 
             # 非 length 结束，返回累加结果
-            return (
-                accumulated_result
-                if result_handler is None
-                else result_handler(accumulated_result, prompt, self.logger)
-            )
+            try:
+                # 最终清理结果
+                accumulated_result = self._sanitize_result(accumulated_result)
+                return (
+                    accumulated_result
+                    if result_handler is None
+                    else result_handler(accumulated_result, prompt, self.logger)
+                )
+            except PartialAgentResultError as e:
+                # 继续获取成功但结果部分不完整，返回已合并的部分结果
+                self.logger.warning(f"继续获取完成但结果部分不完整: {e}")
+                if e.partial_result:
+                    return e.partial_result
+                # 如果没有部分结果，尝试从已获取的内容中解析
+                return accumulated_result
+            except AgentResultError as e:
+                # 继续获取成功但结果完全无效
+                self.logger.warning(f"继续获取完成但结果无效: {e}")
+                return accumulated_result
 
         except (httpx.HTTPStatusError, httpx.RequestError, KeyError, IndexError, ValueError) as e:
             self.logger.error(f"继续获取内容失败: {repr(e)}")
             # 退化：返回已获取的部分结果，而不是报错
             if accumulated_result:
                 self.logger.warning(f"API不支持继续获取，返回已获取的部分结果 ({len(accumulated_result)} 字符)")
+                # 即使是部分结果，也尝试清理一下
+                accumulated_result = self._sanitize_result(accumulated_result)
                 return (
                     accumulated_result
                     if result_handler is None
@@ -545,6 +594,7 @@ class Agent:
             elif finish_reason == "length":
                 # 长度限制，尝试继续获取
                 self.logger.warning(f"响应因长度限制被截断，尝试继续获取...")
+                # 注意：这里传入原始result，清理工作在 _continue_fetch_async 最终返回时统一处理
                 return await self._continue_fetch_async(
                     client=client,
                     prompt=prompt,
@@ -559,6 +609,7 @@ class Agent:
             elif finish_reason in ("tool_calls", "function_call"):
                 # 工具调用场景，当前代码可能不支持，直接返回已获取结果
                 self.logger.warning(f"finish_reason 为 '{finish_reason}'，当前不支持工具调用，返回已获取内容")
+                result = self._sanitize_result(result)
                 return result if result else (
                     prompt if error_result_handler is None
                     else error_result_handler(prompt, self.logger)
@@ -584,6 +635,9 @@ class Agent:
 
             if retry_count > 0:
                 self.logger.info(f"重试成功 (第 {retry_count}/{self.retry} 次尝试)。")
+
+            # 清理 <think> 标签后再处理结果
+            result = self._sanitize_result(result)
 
             return (
                 result
@@ -744,6 +798,9 @@ class Agent:
                     nonlocal count
                     count += 1
                     self.logger.info(f"协程-已完成{count}/{total}")
+                    # 调用进度回调
+                    if self.progress_callback:
+                        self.progress_callback(count, total)
                     return result
 
             for p_text in prompts:
@@ -787,6 +844,8 @@ class Agent:
         if continue_count >= MAX_CONTINUE_FETCHES:
             self.logger.warning(
                 f"已达到最大继续获取次数 ({MAX_CONTINUE_FETCHES})，返回已累计结果 ({len(accumulated_result)} 字符)")
+            # 清理
+            accumulated_result = self._sanitize_result(accumulated_result)
             return (
                 accumulated_result
                 if result_handler is None
@@ -797,7 +856,8 @@ class Agent:
             f"继续获取剩余内容 (已累计 {len(accumulated_result)} 字符, 第 {continue_count + 1}/{MAX_CONTINUE_FETCHES} 次)...")
 
         # 构造继续请求的提示
-        continue_prompt = f"{prompt}\n\n[系统提示：请继续完成之前的响应。之前已输出内容为：\n---\n{accumulated_result}\n---\n请从中断处继续输出剩余内容。]"
+        # 调用子类的 get_continue_prompt 方法，允许子类自定义继续获取的行为
+        continue_prompt = self.get_continue_prompt(accumulated_result, prompt)
 
         if pre_send_handler:
             system_prompt, continue_prompt = pre_send_handler(system_prompt, continue_prompt)
@@ -833,7 +893,8 @@ class Agent:
             )
             self.token_counter.add(input_tokens, cached_tokens, output_tokens, reasoning_tokens)
 
-            accumulated_result += additional_result
+            # 累加结果（使用 merge_continue_result 方法处理追加模式的合并）
+            accumulated_result = self.merge_continue_result(accumulated_result, additional_result)
 
             if finish_reason == "length":
                 return self._continue_fetch(
@@ -849,17 +910,33 @@ class Agent:
                     continue_count=continue_count + 1,
                 )
 
-            return (
-                accumulated_result
-                if result_handler is None
-                else result_handler(accumulated_result, prompt, self.logger)
-            )
+            # 非 length 结束，返回累加结果
+            try:
+                # 最终清理结果
+                accumulated_result = self._sanitize_result(accumulated_result)
+                return (
+                    accumulated_result
+                    if result_handler is None
+                    else result_handler(accumulated_result, prompt, self.logger)
+                )
+            except PartialAgentResultError as e:
+                # 继续获取成功但结果部分不完整，返回已合并的部分结果
+                self.logger.warning(f"继续获取完成但结果部分不完整: {e}")
+                if e.partial_result:
+                    return e.partial_result
+                # 如果没有部分结果，尝试从已获取的内容中解析
+                return accumulated_result
+            except AgentResultError as e:
+                # 继续获取成功但结果完全无效
+                self.logger.warning(f"继续获取完成但结果无效: {e}")
+                return accumulated_result
 
         except (httpx.HTTPStatusError, httpx.RequestError, KeyError, IndexError, ValueError) as e:
             self.logger.error(f"继续获取内容失败: {repr(e)}")
             # 退化：返回已获取的部分结果，而不是报错
             if accumulated_result:
                 self.logger.warning(f"API不支持继续获取，返回已获取的部分结果 ({len(accumulated_result)} 字符)")
+                accumulated_result = self._sanitize_result(accumulated_result)
                 return (
                     accumulated_result
                     if result_handler is None
@@ -924,6 +1001,7 @@ class Agent:
             elif finish_reason == "length":
                 # 长度限制，尝试继续获取
                 self.logger.warning(f"响应因长度限制被截断，尝试继续获取...")
+                # 注意：这里传入原始result，清理工作在 _continue_fetch 最终返回时统一处理
                 return self._continue_fetch(
                     client=client,
                     prompt=prompt,
@@ -938,6 +1016,7 @@ class Agent:
             elif finish_reason in ("tool_calls", "function_call"):
                 # 工具调用场景，当前代码可能不支持，直接返回已获取结果
                 self.logger.warning(f"finish_reason 为 '{finish_reason}'，当前不支持工具调用，返回已获取内容")
+                result = self._sanitize_result(result)
                 return result if result else (
                     prompt if error_result_handler is None
                     else error_result_handler(prompt, self.logger)
@@ -963,6 +1042,9 @@ class Agent:
 
             if retry_count > 0:
                 self.logger.info(f"重试成功 (第 {retry_count}/{self.retry} 次尝试)。")
+
+            # 清理 <think> 标签后再处理结果
+            result = self._sanitize_result(result)
 
             return (
                 result
