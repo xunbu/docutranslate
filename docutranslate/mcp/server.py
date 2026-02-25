@@ -645,6 +645,8 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
         translation_service: Optional[TranslationService] = None,
         host: str = "127.0.0.1",
         port: int = 8000,
+        enable_cors: bool = False,
+        allow_origin_regex: str = r"^(https?://.*|null|file://.*)$",
     ):
         """Get the SSE Starlette app for mounting to existing FastAPI.
 
@@ -652,12 +654,26 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             translation_service: Optional TranslationService instance (uses global if not provided)
             host: Host address (optional, not used when mounted)
             port: Port number (optional, not used when mounted)
+            enable_cors: Whether to enable CORS for the SSE app
+            allow_origin_regex: Regex for allowed CORS origins
 
         Returns:
             Starlette application that can be mounted to FastAPI
         """
         mcp = create_mcp_server(host=host, port=port, translation_service=translation_service)
-        return mcp.sse_app()
+        sse_app = mcp.sse_app()
+
+        if enable_cors:
+            from starlette.middleware.cors import CORSMiddleware
+            sse_app.add_middleware(
+                CORSMiddleware,
+                allow_origin_regex=allow_origin_regex,
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+
+        return sse_app
 
 
     def run_mcp_server(

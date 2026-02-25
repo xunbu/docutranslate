@@ -158,6 +158,8 @@ def setup_mcp_integration(
         enable: bool = False,
         host: str = "127.0.0.1",
         port: int = 8000,
+        enable_cors: bool = False,
+        allow_origin_regex: str = r"^(https?://.*|null|file://.*)$",
 ) -> Optional[TranslationService]:
     """
     Setup MCP integration with shared translation service.
@@ -190,6 +192,8 @@ def setup_mcp_integration(
             translation_service=translation_service,
             host=host,
             port=port,
+            enable_cors=enable_cors,
+            allow_origin_regex=allow_origin_regex,
         )
         app.mount("/mcp", mcp_app, name="mcp")
 
@@ -1085,6 +1089,8 @@ def run_app(host=None, port: int | None = None, enable_CORS=False,
                 enable=True,
                 host=mcp_host,
                 port=port_to_use,
+                enable_cors=enable_CORS,
+                allow_origin_regex=allow_origin_regex,
             )
 
         uvicorn.run(app, host=host, port=port_to_use, workers=1)
