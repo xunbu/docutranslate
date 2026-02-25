@@ -30,8 +30,6 @@ packages_to_collect = [
     'docling',
     'pygments',
     'docling_ibm_models',
-    'tiktoken',
-    'tiktoken_ext'  # <--- 新增：必须收集扩展包
 ]
 
 for package in packages_to_collect:
@@ -47,8 +45,6 @@ for package in packages_to_collect:
 try:
     datas += copy_metadata('docling-ibm-models') # 这里必须用连字符(pip名)
     datas += copy_metadata('docling-parse')      # 预防性添加
-    # 也可以预防性添加 tiktoken 的元数据，虽然 collect_all 通常已经处理了
-    datas += copy_metadata('tiktoken')
 except Exception as e:
     print(f"Warning: Failed to copy metadata: {e}")
 
