@@ -1083,8 +1083,8 @@ def run_app(host=None, port: int | None = None, enable_CORS=False,
 
         if with_mcp:
             # Use the same host and port as the web backend
-            # If host is None, uvicorn defaults to 127.0.0.1
-            mcp_host = host if host is not None else "127.0.0.1"
+            # If host is None, use 0.0.0.0 to ensure CORS works correctly
+            mcp_host = host if host is not None else "0.0.0.0"
             setup_mcp_integration(
                 enable=True,
                 host=mcp_host,
