@@ -48,13 +48,14 @@ EXPOSE 8010
 
 # 启动命令
 # 注意：使用 uv run 会在隔离的虚拟环境中运行，这很好
-ENTRYPOINT ["uv", "run", "docutranslate", "-i", "--with-mcp"]
+ENTRYPOINT ["uv", "run", "--no-dev","--no-extra","docling","docutranslate", "-i", "--with-mcp"]
 
 
-#docker build --build-arg DOC_VERSION=1.7.0a1 -t xunbu/docutranslate:v1.7.0a1 -t xunbu/docutranslate:latest .
+#docker build --build-arg DOC_VERSION=1.7.0a2 -t xunbu/docutranslate:v1.7.0a2 -t xunbu/docutranslate:latest .
 #docker push xunbu/docutranslate:v1.6.0
 #docker push xunbu/docutranslate:latest
-#docker run -d -p 8010:8010 xunbu/docutranslate:v1.6.0
+#docker run -d -p 8010:8010 xunbu/docutranslate:v1.7.0a2
+#docker run -d -p 8010:8010 xunbu/docutranslate:v1.7.0a2 --cors
 #docker run -it -p 8010:8010 xunbu/docutranslate:v1.6.0
 # Web UI: http://127.0.0.1:8010
 # MCP SSE: http://127.0.0.1:8010/mcp/sse
