@@ -223,6 +223,9 @@ def create_mcp_server(
         to_lang: Optional[str] = None,
         workflow_type: str = "auto",
         skip_translate: bool = False,
+        glossary_generate_enable: bool = False,
+        glossary_dict_json: str = "",
+        glossary_agent_config_json: str = "",
     ) -> str:
         """Submit a translation task (asynchronous, returns immediately).
         Use get_task_status to check progress. When complete, it will show
@@ -237,6 +240,9 @@ def create_mcp_server(
             to_lang: Target language (default: 中文)
             workflow_type: Workflow type (auto-detected if not specified)
             skip_translate: Skip translation, only parse the document
+            glossary_generate_enable: Enable automatic glossary generation
+            glossary_dict_json: Glossary dictionary JSON string, format: {"原文":"译文"}
+            glossary_agent_config_json: Glossary agent config JSON string (contains base_url, model_id, etc.)
         """
         if not os.path.exists(file_path):
             return f"Error: File not found: {file_path}"
@@ -248,11 +254,35 @@ def create_mcp_server(
         except Exception as e:
             return f"Error reading file: {e}"
 
-        # Build payload dict
+        import json
+
+        # Parse glossary dict if provided
+        parsed_glossary_dict = None
+        if glossary_dict_json and glossary_dict_json.strip():
+            try:
+                parsed_glossary_dict = json.loads(glossary_dict_json)
+                if not isinstance(parsed_glossary_dict, dict):
+                    return "Error: glossary_dict_json must be a dictionary"
+            except Exception as e:
+                return f"Error parsing glossary_dict_json: {e}"
+
+        # Parse glossary agent config if provided
+        parsed_glossary_agent = None
+        if glossary_agent_config_json and glossary_agent_config_json.strip():
+            try:
+                parsed_glossary_agent = json.loads(glossary_agent_config_json)
+            except Exception as e:
+                return f"Error parsing glossary_agent_config_json: {e}"
+
+        # Build payload dict - use AutoWorkflowParams with extra=allow
+        # This avoids validation errors for workflow-specific optional fields
         payload_dict = {
             "workflow_type": workflow_type,
             "to_lang": to_lang or "中文",
             "skip_translate": skip_translate,
+            "glossary_generate_enable": glossary_generate_enable,
+            "glossary_dict": parsed_glossary_dict,
+            "glossary_agent_config": parsed_glossary_agent,
         }
 
         # Add optional AI config if provided
@@ -264,7 +294,7 @@ def create_mcp_server(
             payload_dict["model_id"] = model_id
 
         try:
-            # Validate and create payload
+            # Validate and create payload - AutoWorkflowParams allows extra fields
             payload = TypeAdapter(TranslatePayload).validate_python(payload_dict)
         except Exception as e:
             return f"Error validating parameters: {e}"
@@ -455,6 +485,9 @@ def create_mcp_server(
         to_lang: Optional[str] = None,
         workflow_type: str = "auto",
         skip_translate: bool = False,
+        glossary_generate_enable: bool = False,
+        glossary_dict_json: str = "",
+        glossary_agent_config_json: str = "",
     ) -> str:
         """Translate a document file (synchronous mode - waits for completion).
         Returns task_id and available formats. Use download_file to save files.
@@ -469,6 +502,9 @@ def create_mcp_server(
             to_lang: Target language
             workflow_type: Workflow type (auto-detected if not specified)
             skip_translate: Skip translation, only parse the document
+            glossary_generate_enable: Enable automatic glossary generation
+            glossary_dict_json: Glossary dictionary JSON string, format: {"原文":"译文"}
+            glossary_agent_config_json: Glossary agent config JSON string (contains base_url, model_id, etc.)
         """
         if not os.path.exists(file_path):
             return f"Error: File not found: {file_path}"
@@ -482,6 +518,9 @@ def create_mcp_server(
             to_lang=to_lang,
             workflow_type=workflow_type,
             skip_translate=skip_translate,
+            glossary_generate_enable=glossary_generate_enable,
+            glossary_dict_json=glossary_dict_json,
+            glossary_agent_config_json=glossary_agent_config_json,
         )
 
         if "Error" in submit_result:
@@ -560,6 +599,52 @@ def create_mcp_server(
 
         except Exception as e:
             return f"Error processing content: {str(e)}"
+
+    @mcp.tool()
+    async def load_glossary_file(file_path: str) -> str:
+        """Load a glossary file (JSON or CSV) and return it as a JSON string for use in submit_task.
+
+        Supports:
+        - JSON files with format: {"原文": "译文", "Original": "Translated"}
+        - CSV files with two columns: first column = original, second column = translated
+
+        Args:
+            file_path: Path to the glossary file (.json or .csv)
+        """
+        if not os.path.exists(file_path):
+            return f"Error: File not found: {file_path}"
+
+        import json
+
+        ext = os.path.splitext(file_path)[1].lower()
+
+        try:
+            if ext == ".json":
+                with open(file_path, "r", encoding="utf-8") as f:
+                    glossary_dict = json.load(f)
+                if not isinstance(glossary_dict, dict):
+                    return "Error: JSON file must contain a dictionary"
+
+            elif ext == ".csv":
+                import csv
+                glossary_dict = {}
+                with open(file_path, "r", encoding="utf-8") as f:
+                    reader = csv.reader(f)
+                    for row in reader:
+                        if len(row) >= 2:
+                            key = row[0].strip()
+                            value = row[1].strip()
+                            if key and value:
+                                glossary_dict[key] = value
+
+            else:
+                return f"Error: Unsupported file format: {ext}. Use .json or .csv"
+
+            glossary_json = json.dumps(glossary_dict, ensure_ascii=False)
+            return f"Glossary loaded successfully ({len(glossary_dict)} entries).\n\nUse this in submit_task:\nglossary_dict_json='''{glossary_json}'''"
+
+        except Exception as e:
+            return f"Error loading glossary file: {e}"
 
     @mcp.tool()
     async def get_supported_formats() -> str:
