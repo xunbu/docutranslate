@@ -33,7 +33,7 @@
 
 > When translating `pdf`, it is first converted to markdown. This will **lose** the original layout. Users with strict layout requirements should take note.
 
-> QQ Community Group: 1047781902
+> QQ Community Group: 1047781902 1081128602
 
 **UI Interface**:
 ![UI Interface](/images/UI界面.png)

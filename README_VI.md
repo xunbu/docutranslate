@@ -33,7 +33,7 @@ Một công cụ dịch thuật tệp tin cục bộ gọn nhẹ dựa trên cá
 
 > Khi dịch `pdf`, tệp sẽ được chuyển đổi sang markdown trước. Điều này sẽ làm **mất** bố cục gốc. Người dùng có yêu cầu khắt khe về bố cục nên lưu ý điều này.
 
-> Nhóm Cộng đồng QQ: 1047781902
+> Nhóm Cộng đồng QQ: 1047781902 1081128602
 
 **Giao diện UI**:
 ![UI Interface](/images/UI界面.png)
