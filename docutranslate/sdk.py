@@ -164,6 +164,7 @@ class Client:
             system_proxy_enable: bool = default_params["system_proxy_enable"],
             convert_engine: Literal["identity", "mineru", "docling", "mineru_deploy"] = "identity",
             mineru_token: str = "",
+            extra_body: Optional[str] = None,
             **kwargs
     ):
         """
@@ -176,6 +177,7 @@ class Client:
             "retry": retry, "thinking": thinking,
             "system_proxy_enable": system_proxy_enable,
             "convert_engine": convert_engine, "mineru_token": mineru_token,
+            "extra_body": extra_body,
             **kwargs
         }
         self.defaults = {k: v for k, v in self.defaults.items() if v is not None}
@@ -203,6 +205,7 @@ class Client:
             rpm: Optional[int] = None,
             tpm: Optional[int] = None,
             provider: Optional[Union[ProviderType, str]] = None,
+            extra_body: Optional[str] = None,
             insert_mode: Literal["replace", "append", "prepend"] = "replace",
             separator: str = "\n",
             segment_mode: Literal["line", "paragraph", "none"] = "line",
@@ -270,6 +273,7 @@ class Client:
             rpm: Optional[int] = None,
             tpm: Optional[int] = None,
             provider: Optional[Union[ProviderType, str]] = None,
+            extra_body: Optional[str] = None,
 
             # --- 格式参数 (Docx/Excel/Txt) ---
             insert_mode: Literal["replace", "append", "prepend"] = "replace",

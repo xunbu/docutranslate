@@ -687,6 +687,15 @@
                                                    min="1" :placeholder="t('unlimitedPlaceholder')">
                                         </div>
 
+                                        <div class="mb-3">
+                                            <label class="form-label">Extra Body <small class="text-muted">(JSON)</small></label>
+                                            <textarea class="form-control" v-model="form.extra_body"
+                                                      @input="saveSetting('extra_body', form.extra_body)"
+                                                      rows="2"
+                                                      placeholder='{"user": "your-id", "other_param": "value"}'></textarea>
+                                            <div class="form-text">额外的 API 请求参数，JSON 格式，会合并到请求体中</div>
+                                        </div>
+
                                     </div>
                                 </div>
                             </div>
@@ -827,6 +836,16 @@
                                                            v-model="form.glossary_agent_tpm"
                                                            @input="saveSetting('glossary_agent_tpm', form.glossary_agent_tpm)"
                                                            min="1" :placeholder="t('unlimitedPlaceholder')">
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">Extra Body <small class="text-muted">(JSON)</small></label>
+                                                    <textarea class="form-control"
+                                                              v-model="form.glossary_agent_extra_body"
+                                                              @input="saveSetting('glossary_agent_extra_body', form.glossary_agent_extra_body)"
+                                                              rows="2"
+                                                              placeholder='{"user": "your-id", "other_param": "value"}'></textarea>
+                                                    <div class="form-text">额外的 API 请求参数，JSON 格式，会合并到请求体中</div>
                                                 </div>
 
                                                 <div class="mb-3">
@@ -1486,6 +1505,7 @@
                 retry: 3,
                 rpm: null, // New RPM
                 tpm: null, // New TPM
+                extra_body: '',
                 glossary_generate_enable: false,
                 glossary_agent_custom_prompt: '',
                 glossary_agent_config_choice: 'same',
@@ -1504,7 +1524,8 @@
                 glossary_agent_system_proxy_enable: false,
                 glossary_agent_force_json: false,
                 glossary_agent_rpm: null, // New Glossary Agent RPM
-                glossary_agent_tpm: null  // New Glossary Agent TPM
+                glossary_agent_tpm: null,  // New Glossary Agent TPM
+                glossary_agent_extra_body: ''  // New Glossary Agent extra_body
             });
 
             // Nested Params for specific workflows
@@ -1571,6 +1592,7 @@
                 form.retry = getNum('retry', 3);
                 form.rpm = getNumOrNull('rpm'); // Load RPM
                 form.tpm = getNumOrNull('tpm'); // Load TPM
+                form.extra_body = get('extra_body', ''); // Load extra_body
 
                 // Determine Provider
                 const platObj = KNOWN_PLATFORMS.find(p => p.val === form.platform);
@@ -1596,6 +1618,7 @@
                 form.glossary_agent_force_json = getBool('glossary_agent_force_json', false);
                 form.glossary_agent_rpm = getNumOrNull('glossary_agent_rpm'); // Load Glossary RPM
                 form.glossary_agent_tpm = getNumOrNull('glossary_agent_tpm'); // Load Glossary TPM
+                form.glossary_agent_extra_body = get('glossary_agent_extra_body', ''); // Load Glossary extra_body
 
                 // Determine Glossary Provider
                 const gPlatObj = KNOWN_PLATFORMS.find(p => p.val === form.glossary_agent_platform);
@@ -1662,6 +1685,7 @@
                 s('retry', f.retry);
                 s('rpm', f.rpm || '');
                 s('tpm', f.tpm || '');
+                s('extra_body', f.extra_body || '');
 
                 // 平台相关 (API Key 等)
                 s(`translator_platform_${f.platform}_apikey`, f.api_key);
@@ -1685,6 +1709,7 @@
                 s('glossary_agent_force_json', f.glossary_agent_force_json);
                 s('glossary_agent_rpm', f.glossary_agent_rpm || '');
                 s('glossary_agent_tpm', f.glossary_agent_tpm || '');
+                s('glossary_agent_extra_body', f.glossary_agent_extra_body || '');
 
                 // 术语表平台 Key
                 s(`glossary_agent_platform_${f.glossary_agent_platform}_apikey`, f.glossary_agent_key);
@@ -1942,7 +1967,8 @@
                     glossary_generate_enable: form.glossary_generate_enable,
                     workflow_type: form.workflow_type,
                     rpm: emptyToNull(form.rpm),
-                    tpm: emptyToNull(form.tpm)
+                    tpm: emptyToNull(form.tpm),
+                    extra_body: emptyToNull(form.extra_body)
                 };
 
                 // Agent Config
@@ -1963,7 +1989,8 @@
                         chunk_size: isCustom ? Number(form.glossary_agent_chunk_size) : basePayload.chunk_size,
                         force_json: isCustom ? form.glossary_agent_force_json : basePayload.force_json,
                         rpm: isCustom ? emptyToNull(form.glossary_agent_rpm) : basePayload.rpm,
-                        tpm: isCustom ? emptyToNull(form.glossary_agent_tpm) : basePayload.tpm
+                        tpm: isCustom ? emptyToNull(form.glossary_agent_tpm) : basePayload.tpm,
+                        extra_body: isCustom ? emptyToNull(form.glossary_agent_extra_body) : basePayload.extra_body
                     };
                 }
 

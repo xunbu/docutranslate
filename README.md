@@ -219,6 +219,7 @@ print(f"Exported content length: {len(base64_content)}")
 | **force_json** | `bool` | `False` | Force JSON output mode |
 | **rpm** | `int` | - | Requests per minute limit |
 | **tpm** | `int` | - | Tokens per minute limit |
+| **extra_body** | `str` | - | Additional request body parameters in JSON string format, will be merged into API request |
 | **thinking** | `str` | `"auto"` | Thinking mode: `"auto"`, `"none"`, `"block"` |
 | **custom_prompt** | `str` | - | Custom prompt for translation |
 | **system_proxy_enable** | `bool` | `False` | Enable system proxy |

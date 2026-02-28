@@ -197,6 +197,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             glossary_generate_enable: bool = False,
             glossary_dict_json: str = "",
             glossary_agent_config_json: str = "",
+            extra_body_json: str = "",
         ) -> str:
             """Submit a translation task (asynchronous, returns immediately).
             Use get_task_status to check progress. When complete, it will show
@@ -214,6 +215,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 glossary_generate_enable: Enable automatic glossary generation
                 glossary_dict_json: Glossary dictionary JSON string, format: {"原文":"译文"}
                 glossary_agent_config_json: Glossary agent config JSON string (contains base_url, model_id, etc.)
+                extra_body_json: Extra request body parameters JSON string, will be merged into API request
             """
             if not os.path.exists(file_path):
                 return f"Error: File not found: {file_path}"
@@ -245,6 +247,15 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 except Exception as e:
                     return f"Error parsing glossary_agent_config_json: {e}"
 
+            # Parse extra_body if provided
+            if extra_body_json and extra_body_json.strip():
+                try:
+                    parsed_extra = json.loads(extra_body_json)
+                    if not isinstance(parsed_extra, dict):
+                        return "Error: extra_body_json must be a JSON object"
+                except Exception as e:
+                    return f"Error parsing extra_body_json: {e}"
+
             # Build payload dict - use AutoWorkflowParams with extra=allow
             # This avoids validation errors for workflow-specific optional fields
             payload_dict = {
@@ -255,6 +266,9 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 "glossary_dict": parsed_glossary_dict,
                 "glossary_agent_config": parsed_glossary_agent,
             }
+            # Add extra_body if provided
+            if extra_body_json and extra_body_json.strip():
+                payload_dict["extra_body"] = extra_body_json
 
             # Add optional AI config if provided
             if api_key:
@@ -459,6 +473,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             glossary_generate_enable: bool = False,
             glossary_dict_json: str = "",
             glossary_agent_config_json: str = "",
+            extra_body_json: str = "",
         ) -> str:
             """Translate a document file (synchronous mode - waits for completion).
             Returns task_id and available formats. Use download_file to save files.
@@ -476,6 +491,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 glossary_generate_enable: Enable automatic glossary generation
                 glossary_dict_json: Glossary dictionary JSON string, format: {"原文":"译文"}
                 glossary_agent_config_json: Glossary agent config JSON string (contains base_url, model_id, etc.)
+                extra_body_json: Extra request body parameters JSON string, will be merged into API request
             """
             if not os.path.exists(file_path):
                 return f"Error: File not found: {file_path}"
@@ -492,6 +508,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 glossary_generate_enable=glossary_generate_enable,
                 glossary_dict_json=glossary_dict_json,
                 glossary_agent_config_json=glossary_agent_config_json,
+                extra_body_json=extra_body_json,
             )
 
             if "Error" in submit_result:

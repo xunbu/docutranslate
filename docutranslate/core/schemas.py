@@ -91,6 +91,9 @@ class GlossaryAgentConfigPayload(BaseModel):
     provider: Optional[ProviderType] = Field(
         default=None, description="LLM供应商标识", examples=[None]
     )
+    extra_body: Optional[str] = Field(
+        default="", description="JSON字符串格式的额外请求体参数，会合并到API请求中"
+    )
 
 
 # 1. 定义所有工作流共享的基础参数
@@ -179,6 +182,9 @@ class BaseWorkflowParams(BaseModel):
     )
     provider: Optional[ProviderType] = Field(
         default=None, description="LLM供应商标识", examples=[None]
+    )
+    extra_body: Optional[str] = Field(
+        default="", description="JSON字符串格式的额外请求体参数，会合并到API请求中"
     )
 
     @model_validator(mode="before")

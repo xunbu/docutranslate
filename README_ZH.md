@@ -220,6 +220,7 @@ print(f"导出内容长度: {len(base64_content)}")
 | **force_json** | `bool` | `False` | 强制 JSON 输出模式 |
 | **rpm** | `int` | - | 每分钟请求数限制 |
 | **tpm** | `int` | - | 每分钟 Token 数限制 |
+| **extra_body** | `str` | - | JSON字符串格式的额外请求体参数，会合并到API请求中 |
 | **thinking** | `str` | `"auto"` | 思考模式：`"auto"`、`"none"`、`"block"` |
 | **custom_prompt** | `str` | - | 自定义翻译提示词 |
 | **system_proxy_enable** | `bool` | `False` | 启用系统代理 |

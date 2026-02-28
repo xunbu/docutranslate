@@ -5,5 +5,6 @@ default_params = {
     "temperature": 0.7,
     "timeout": 1200,
     "retry": 2,
-    "system_proxy_enable": False
+    "system_proxy_enable": False,
+    "extra_body": ""
 }

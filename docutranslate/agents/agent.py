@@ -60,6 +60,7 @@ class AgentConfig:
     tpm: int | None = None  # 每分钟Token数限制
     provider: ProviderType | None = None
     progress_callback: callable = None  # 进度回调 (current: int, total: int) -> None
+    extra_body: str | None = None  # JSON字符串格式的额外请求体参数
 
 
 class TotalErrorCounter:
@@ -318,6 +319,7 @@ class Agent:
         self.rate_limiter = RateLimiter(rpm=config.rpm, tpm=config.tpm)
 
         self.provider = config.provider if config.provider is not None else get_provider_by_domain(self.domain)
+        self.extra_body = config.extra_body
 
     def _estimate_tokens(self, text: str) -> int:
         """
@@ -405,6 +407,15 @@ class Agent:
             self._add_thinking_mode(data)
         if json_format:
             data["response_format"] = {"type": "json_object"}
+        # Apply extra_body if provided
+        if self.extra_body and self.extra_body.strip():
+            try:
+                import json
+                extra = json.loads(self.extra_body)
+                if isinstance(extra, dict):
+                    data.update(extra)
+            except (json.JSONDecodeError, ValueError):
+                self.logger.warning(f"Failed to parse extra_body JSON: {self.extra_body}")
         return headers, data
 
     async def _continue_fetch_async(
