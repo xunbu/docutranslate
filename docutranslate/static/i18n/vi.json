@@ -182,5 +182,6 @@
   "providerLabel": "Nhà cung cấp",
   "extraBodyLabel": "Extra Body",
   "extraBodyPlaceholder": "Ví dụ: {\"enable_thinking\": true}",
-  "extraBodyHelp": "Tham số yêu cầu API bổ sung ở định dạng JSON, sẽ được hợp nhất vào nội dung yêu cầu. Ví dụ cho Alibaba Cloud: {\"enable_thinking\": false}"
+  "extraBodyHelp": "Tham số yêu cầu API bổ sung ở định dạng JSON, sẽ được hợp nhất vào nội dung yêu cầu. Ví dụ cho Alibaba Cloud: {\"enable_thinking\": false}",
+  "extraBodyTooltip": "Tham số yêu cầu API bổ sung ở định dạng JSON, sẽ được hợp nhất vào nội dung yêu cầu. Ví dụ cho Alibaba Cloud: {\"enable_thinking\": false}"
 }

@@ -585,7 +585,7 @@
                                                     <label class="form-check-label">{{ t('forceJson') }}</label>
                                                 </div>
                                                 <i class="bi bi-question-circle ms-2" data-bs-toggle="tooltip"
-                                                   :title="t('forceJsonTooltip')"></i>
+                                                   :data-bs-title="t('forceJsonTooltip')"></i>
                                             </div>
                                         </div>
                                     </div>
@@ -632,7 +632,7 @@
                                         <div class="mb-3">
                                             <label class="form-label">{{ t('thinkingModeLabel') }}</label>
                                             <i class="bi bi-question-circle ms-2" data-bs-toggle="tooltip"
-                                               :title="t('thinkingModeTooltip')"></i>
+                                               :data-bs-title="t('thinkingModeTooltip')"></i>
                                             <div class="btn-group w-100" role="group">
                                                 <input type="radio" class="btn-check" value="enable" id="thinkEn"
                                                        v-model="form.thinking"
@@ -688,12 +688,14 @@
                                         </div>
 
                                         <div class="mb-3">
-                                            <label class="form-label">{{ t('extraBodyLabel') }} <small class="text-muted">(JSON)</small></label>
+                                            <label class="form-label">{{ t('extraBodyLabel') }} <small class="text-muted">(JSON)</small>
+                                                <i class="bi bi-question-circle ms-2" data-bs-toggle="tooltip"
+                                                   :data-bs-title="t('extraBodyTooltip')"></i>
+                                            </label>
                                             <textarea class="form-control" v-model="form.extra_body"
                                                       @input="saveSetting('extra_body', form.extra_body)"
                                                       rows="2"
                                                       :placeholder="t('extraBodyPlaceholder')"></textarea>
-                                            <div class="form-text">{{ t('extraBodyHelp') }}</div>
                                         </div>
 
                                     </div>
@@ -966,7 +968,7 @@
                                             <div class="log-area" v-html="task.logs" :id="'log-' + task.uiId"></div>
                                             <button type="button" class="btn btn-sm btn-outline-secondary copy-log-btn"
                                                     @click="copyLog($event, task.logs)" data-bs-toggle="tooltip"
-                                                    :title="t('copyLogsTooltip')">
+                                                    :data-bs-title="t('copyLogsTooltip')">
                                                 <i class="bi bi-clipboard"></i>
                                             </button>
                                         </div>
@@ -1146,7 +1148,7 @@
             </div>
             <button class="btn btn-sm btn-outline-secondary ms-2"
                     :class="{active: syncScrollEnabled, 'btn-primary': syncScrollEnabled}" @click="toggleSyncScroll"
-                    :title="t('syncScrollTooltip')"><i class="bi"
+                    data-bs-toggle="tooltip" :data-bs-title="t('syncScrollTooltip')"><i class="bi"
                                                        :class="syncScrollEnabled ? 'bi-link' : 'bi-link-45deg'"></i>
             </button>
 
