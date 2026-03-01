@@ -1099,4 +1099,4 @@ def run_app(host=None, port: int | None = None, enable_CORS=False,
 
 
 if __name__ == "__main__":
-    run_app()
+    run_app(with_mcp=True)
