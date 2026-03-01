@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies with uv
         run: |
           rm uv.lock
-          uv sync --no-dev
+          uv sync --no-dev --extra mcp
 
       # 第 5 步: 安装 UPX (简化版本)
       - name: Install UPX

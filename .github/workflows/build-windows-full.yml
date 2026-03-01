@@ -34,7 +34,7 @@ jobs:
 
       # 第 4 步: 安装依赖
       - name: Install dependencies with uv
-        run: uv sync
+        run: uv sync --no-dev --all-extras
 
       # 第 5 步: 安装 UPX (简化版本)
       - name: Install UPX
