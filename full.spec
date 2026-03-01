@@ -7,8 +7,6 @@ import docutranslate
 datas = []
 binaries = []
 
-# --- 核心修改 1: 添加 tiktoken_ext.openai_public 到隐式导入 ---
-# 必须显式导入这个模块，否则 tiktoken 找不到 cl100k_base 编码
 hiddenimports = [
     'markdown.extensions.tables',
     'pymdownx.arithmatex',
@@ -18,13 +16,8 @@ hiddenimports = [
     'docling_ibm_models',
     'docling_parse',
     'cv2',
-    'tiktoken_ext.openai_public'  # <--- 新增：确保编码插件被识别
 ]
 
-# --- 核心修改 2: 在列表中添加 'tiktoken_ext' ---
-# tiktoken: 核心库
-# tiktoken_ext: 包含编码定义文件 (解决 Unknown encoding 问题)
-# easyocr, docling 等: 其他依赖
 packages_to_collect = [
     'easyocr',
     'docling',
