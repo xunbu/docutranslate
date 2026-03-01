@@ -193,18 +193,23 @@ class RateLimiter:
             time.sleep(wait_time + 0.1)
 
 
-def extract_token_info(response_data: dict) -> tuple[int, int, int, int]:
-    """(保持原样) 从API响应中提取token信息"""
+def extract_token_info(response_data: dict) -> tuple[int, int, int, int, int]:
+    """从API响应中提取token信息
+    返回: (input_tokens, cached_tokens, output_tokens, reasoning_tokens, total_tokens)
+    """
     if "usage" not in response_data:
-        return 0, 0, 0, 0
+        return 0, 0, 0, 0, 0
 
     usage = response_data["usage"]
+    print(usage)
     input_tokens = usage.get("prompt_tokens", 0)
     output_tokens = usage.get("completion_tokens", 0)
+    total_tokens = usage.get("total_tokens", 0)
 
     cached_tokens = 0
     reasoning_tokens = 0
     try:
+        # 尝试多种可能的 cached_tokens 字段位置
         if (
                 "input_tokens_details" in usage
                 and "cached_tokens" in usage["input_tokens_details"]
@@ -218,6 +223,7 @@ def extract_token_info(response_data: dict) -> tuple[int, int, int, int]:
         elif "prompt_cache_hit_tokens" in usage:
             cached_tokens = usage["prompt_cache_hit_tokens"]
 
+        # 尝试多种可能的 reasoning_tokens 字段位置
         if (
                 "output_tokens_details" in usage
                 and "reasoning_tokens" in usage["output_tokens_details"]
@@ -228,9 +234,14 @@ def extract_token_info(response_data: dict) -> tuple[int, int, int, int]:
                 and "reasoning_tokens" in usage["completion_tokens_details"]
         ):
             reasoning_tokens = usage["completion_tokens_details"]["reasoning_tokens"]
-        return input_tokens, cached_tokens, output_tokens, reasoning_tokens
-    except TypeError:
-        return -1, -1, -1, -1
+        else:
+            # Gemini特殊处理: 如果total_tokens大于prompt+completion，差额很可能是思考token
+            if total_tokens > 0 and (input_tokens + output_tokens) > 0 and total_tokens > (input_tokens + output_tokens):
+                reasoning_tokens = total_tokens - (input_tokens + output_tokens)
+
+        return input_tokens, cached_tokens, output_tokens, reasoning_tokens, total_tokens
+    except (TypeError, KeyError, AttributeError):
+        return -1, -1, -1, -1, -1
 
 
 class TokenCounter:
@@ -249,13 +260,18 @@ class TokenCounter:
             cached_tokens: int,
             output_tokens: int,
             reasoning_tokens: int,
+            api_total_tokens: int = 0,
     ):
         with self.lock:
             self.input_tokens += input_tokens
             self.cached_tokens += cached_tokens
             self.output_tokens += output_tokens
             self.reasoning_tokens += reasoning_tokens
-            self.total_tokens += input_tokens + output_tokens
+            # 如果API返回了total_tokens，优先使用；否则自己计算
+            if api_total_tokens > 0:
+                self.total_tokens += api_total_tokens
+            else:
+                self.total_tokens += input_tokens + output_tokens
 
     def get_stats(self):
         with self.lock:
@@ -380,10 +396,22 @@ class Agent:
         if thinking_mode_result is None:
             return
         field_thinking, val_enable, val_disable = thinking_mode_result
+
+        # 获取要设置的值
         if self.thinking == "enable":
-            data[field_thinking] = val_enable
+            value = val_enable
         elif self.thinking == "disable":
-            data[field_thinking] = val_disable
+            value = val_disable
+        else:
+            return
+
+        # 特殊处理 extra_body 类型：不是设置 data["extra_body"]，而是直接合并到 data 中
+        if field_thinking == "extra_body":
+            if isinstance(value, dict):
+                data.update(value)
+        else:
+            # 普通字段直接设置
+            data[field_thinking] = value
 
     def _prepare_request_data(
             self, prompt: str, system_prompt: str, temperature=None, top_p=0.9, json_format=False
@@ -403,11 +431,12 @@ class Agent:
             "temperature": temperature,
             "top_p": top_p,
         }
+
+        # 先应用思考模式
         if self.thinking != "default":
             self._add_thinking_mode(data)
-        if json_format:
-            data["response_format"] = {"type": "json_object"}
-        # Apply extra_body if provided
+
+        # 再应用用户的 extra_body（用户配置优先，可以覆盖思考模式）
         if self.extra_body and self.extra_body.strip():
             try:
                 import json
@@ -416,6 +445,10 @@ class Agent:
                     data.update(extra)
             except (json.JSONDecodeError, ValueError):
                 self.logger.warning(f"Failed to parse extra_body JSON: {self.extra_body}")
+
+        if json_format:
+            data["response_format"] = {"type": "json_object"}
+
         return headers, data
 
     async def _continue_fetch_async(
@@ -485,10 +518,10 @@ class Agent:
             message = choice.get("message", {})
             additional_result = message.get("content", "")
 
-            input_tokens, cached_tokens, output_tokens, reasoning_tokens = (
+            input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens = (
                 extract_token_info(response_data)
             )
-            self.token_counter.add(input_tokens, cached_tokens, output_tokens, reasoning_tokens)
+            self.token_counter.add(input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens)
 
             # 累加结果（使用 merge_continue_result 方法处理追加模式的合并）
             accumulated_result = self.merge_continue_result(accumulated_result, additional_result)
@@ -636,12 +669,12 @@ class Agent:
                 # 其他未知的 finish_reason，记录警告并返回结果
                 self.logger.warning(f"未知的 finish_reason: '{finish_reason}'，返回已获取内容")
 
-            input_tokens, cached_tokens, output_tokens, reasoning_tokens = (
+            input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens = (
                 extract_token_info(response_data)
             )
 
             self.token_counter.add(
-                input_tokens, cached_tokens, output_tokens, reasoning_tokens
+                input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens
             )
 
             if retry_count > 0:
@@ -899,10 +932,10 @@ class Agent:
             message = choice.get("message", {})
             additional_result = message.get("content", "")
 
-            input_tokens, cached_tokens, output_tokens, reasoning_tokens = (
+            input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens = (
                 extract_token_info(response_data)
             )
-            self.token_counter.add(input_tokens, cached_tokens, output_tokens, reasoning_tokens)
+            self.token_counter.add(input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens)
 
             # 累加结果（使用 merge_continue_result 方法处理追加模式的合并）
             accumulated_result = self.merge_continue_result(accumulated_result, additional_result)
@@ -1043,12 +1076,12 @@ class Agent:
                 # 其他未知的 finish_reason，记录警告并返回结果
                 self.logger.warning(f"未知的 finish_reason: '{finish_reason}'，返回已获取内容")
 
-            input_tokens, cached_tokens, output_tokens, reasoning_tokens = (
+            input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens = (
                 extract_token_info(response_data)
             )
 
             self.token_counter.add(
-                input_tokens, cached_tokens, output_tokens, reasoning_tokens
+                input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens
             )
 
             if retry_count > 0:

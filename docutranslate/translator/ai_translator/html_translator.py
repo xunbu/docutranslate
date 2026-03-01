@@ -74,6 +74,7 @@ class HtmlTranslator(AiTranslator):
                 rpm=config.rpm,
                 tpm=config.tpm,
                 provider=config.provider,
+                extra_body=config.extra_body,
             )
             self.translate_agent = SegmentsTranslateAgent(agent_config)
         self.insert_mode = config.insert_mode

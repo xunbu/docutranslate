@@ -179,5 +179,8 @@
   "preview_translatedOnly": "Translation Only Preview",
   "configImportSuccess": "Configuration imported successfully!",
   "configImportError": "Failed to parse config file, please check the file format.",
-  "providerLabel": "Provider"
+  "providerLabel": "Provider",
+  "extraBodyLabel": "Extra Body",
+  "extraBodyPlaceholder": "e.g., {\"enable_thinking\": true}",
+  "extraBodyHelp": "Additional API request parameters in JSON format, will be merged into the request body. Example for Alibaba Cloud: {\"enable_thinking\": false}"
 }

@@ -179,5 +179,8 @@
   "preview_translatedOnly": "Xem trước chỉ bản dịch",
   "configImportSuccess": "Nhập cấu hình thành công!",
   "configImportError": "Không thể phân tích tệp cấu hình, vui lòng kiểm tra định dạng tệp.",
-  "providerLabel": "Nhà cung cấp"
+  "providerLabel": "Nhà cung cấp",
+  "extraBodyLabel": "Extra Body",
+  "extraBodyPlaceholder": "Ví dụ: {\"enable_thinking\": true}",
+  "extraBodyHelp": "Tham số yêu cầu API bổ sung ở định dạng JSON, sẽ được hợp nhất vào nội dung yêu cầu. Ví dụ cho Alibaba Cloud: {\"enable_thinking\": false}"
 }

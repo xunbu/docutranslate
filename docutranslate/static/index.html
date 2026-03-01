@@ -688,12 +688,12 @@
                                         </div>
 
                                         <div class="mb-3">
-                                            <label class="form-label">Extra Body <small class="text-muted">(JSON)</small></label>
+                                            <label class="form-label">{{ t('extraBodyLabel') }} <small class="text-muted">(JSON)</small></label>
                                             <textarea class="form-control" v-model="form.extra_body"
                                                       @input="saveSetting('extra_body', form.extra_body)"
                                                       rows="2"
-                                                      placeholder='{"user": "your-id", "other_param": "value"}'></textarea>
-                                            <div class="form-text">额外的 API 请求参数，JSON 格式，会合并到请求体中</div>
+                                                      :placeholder="t('extraBodyPlaceholder')"></textarea>
+                                            <div class="form-text">{{ t('extraBodyHelp') }}</div>
                                         </div>
 
                                     </div>

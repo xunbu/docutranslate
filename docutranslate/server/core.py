@@ -634,6 +634,7 @@ class TranslationService:
                     "rpm",
                     "tpm",
                     "provider",
+                    "extra_body",
                 },
                 exclude_none=True,
             )
@@ -708,6 +709,7 @@ class TranslationService:
                     "rpm",
                     "tpm",
                     "provider",
+                    "extra_body",
                 },
                 exclude_none=True,
             )
@@ -748,6 +750,7 @@ class TranslationService:
                     "rpm",
                     "tpm",
                     "provider",
+                    "extra_body",
                 },
                 exclude_none=True,
             )
@@ -790,6 +793,7 @@ class TranslationService:
                     "rpm",
                     "tpm",
                     "provider",
+                    "extra_body",
                 },
                 exclude_none=True,
             )
@@ -831,6 +835,7 @@ class TranslationService:
                     "rpm",
                     "tpm",
                     "provider",
+                    "extra_body",
                 },
                 exclude_none=True,
             )
@@ -872,6 +877,7 @@ class TranslationService:
                     "rpm",
                     "tpm",
                     "provider",
+                    "extra_body",
                 },
                 exclude_none=True,
             )
@@ -913,6 +919,7 @@ class TranslationService:
                     "rpm",
                     "tpm",
                     "provider",
+                    "extra_body",
                 },
                 exclude_none=True,
             )
@@ -954,6 +961,7 @@ class TranslationService:
                     "rpm",
                     "tpm",
                     "provider",
+                    "extra_body",
                 },
                 exclude_none=True,
             )
@@ -992,6 +1000,7 @@ class TranslationService:
                     "rpm",
                     "tpm",
                     "provider",
+                    "extra_body",
                 },
                 exclude_none=True,
             )
@@ -1033,6 +1042,7 @@ class TranslationService:
                     "rpm",
                     "tpm",
                     "provider",
+                    "extra_body",
                 },
                 exclude_none=True,
             )

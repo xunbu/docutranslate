@@ -76,6 +76,7 @@ class AiTranslator(Translator[T]):
                     rpm=config.rpm,
                     tpm=config.tpm,
                     provider=config.provider,
+                    extra_body=config.extra_body,
                 )
                 self.glossary_agent = GlossaryAgent(glossary_agent_config)
 

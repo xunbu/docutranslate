@@ -42,6 +42,7 @@ class JsonTranslator(AiTranslator):
                 rpm=config.rpm,
                 tpm=config.tpm,
                 provider=config.provider,
+                extra_body=config.extra_body,
             )
             self.translate_agent = SegmentsTranslateAgent(agent_config)
         self.json_paths = config.json_paths

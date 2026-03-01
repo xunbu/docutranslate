@@ -92,6 +92,7 @@ class TXTTranslator(AiTranslator):
                 tpm=config.tpm,
                 provider=config.provider,
                 progress_callback=progress_callback,
+                extra_body=config.extra_body,
             )
             self.translate_agent = SegmentsTranslateAgent(agent_config)
         self.insert_mode = config.insert_mode

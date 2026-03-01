@@ -179,5 +179,8 @@
   "preview_translatedOnly": "仅译文预览",
   "configImportSuccess": "配置导入成功！",
   "configImportError": "配置文件解析失败，请检查文件格式。",
-  "providerLabel": "接口供应商"
+  "providerLabel": "接口供应商",
+  "extraBodyLabel": "Extra Body",
+  "extraBodyPlaceholder": "例如: {\"enable_thinking\": true}",
+  "extraBodyHelp": "额外的 API 请求参数，JSON 格式，会合并到请求体中。例如阿里云：{\"enable_thinking\": false}"
 }
