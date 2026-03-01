@@ -17,7 +17,7 @@ import sys
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 
 # Shared server layer imports
 from docutranslate.server import (
@@ -198,6 +198,41 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             glossary_dict_json: str = "",
             glossary_agent_config_json: str = "",
             extra_body_json: str = "",
+            # LLM 进阶参数
+            chunk_size: Optional[int] = None,
+            concurrent: Optional[int] = None,
+            temperature: Optional[float] = None,
+            timeout: Optional[int] = None,
+            thinking: Optional[str] = None,
+            retry: Optional[int] = None,
+            system_proxy_enable: Optional[bool] = None,
+            custom_prompt: str = "",
+            force_json: Optional[bool] = None,
+            rpm: Optional[int] = None,
+            tpm: Optional[int] = None,
+            provider: Optional[str] = None,
+            # Markdown 工作流参数
+            convert_engine: Optional[str] = None,
+            md2docx_engine: Optional[str] = None,
+            mineru_token: str = "",
+            model_version: Optional[str] = None,
+            formula_ocr: Optional[bool] = None,
+            code_ocr: Optional[bool] = None,
+            mineru_deploy_base_url: Optional[str] = None,
+            mineru_deploy_backend: Optional[str] = None,
+            mineru_deploy_parse_method: Optional[str] = None,
+            mineru_deploy_table_enable: Optional[bool] = None,
+            mineru_deploy_formula_enable: Optional[bool] = None,
+            mineru_deploy_start_page_id: Optional[int] = None,
+            mineru_deploy_end_page_id: Optional[int] = None,
+            mineru_deploy_lang_list: Optional[List[str]] = None,
+            mineru_deploy_server_url: str = "",
+            # 其他工作流参数
+            insert_mode: Optional[str] = None,
+            separator: Optional[str] = None,
+            segment_mode: Optional[str] = None,
+            translate_regions: Optional[List[str]] = None,
+            json_paths: Optional[List[str]] = None,
         ) -> str:
             """Submit a translation task (asynchronous, returns immediately).
             Use get_task_status to check progress. When complete, it will show
@@ -216,6 +251,38 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 glossary_dict_json: Glossary dictionary JSON string, format: {"原文":"译文"}
                 glossary_agent_config_json: Glossary agent config JSON string (contains base_url, model_id, etc.)
                 extra_body_json: Extra request body parameters JSON string, will be merged into API request
+                chunk_size: Text chunk size for translation
+                concurrent: Number of concurrent requests
+                temperature: LLM temperature parameter
+                timeout: Request timeout in seconds
+                thinking: Thinking mode (default, enable, disable)
+                retry: Number of retries for failed chunks
+                system_proxy_enable: Enable system proxy
+                custom_prompt: Custom system prompt
+                force_json: Force JSON output
+                rpm: RPM limit (Requests Per Minute)
+                tpm: TPM limit (Tokens Per Minute)
+                provider: LLM provider identifier
+                convert_engine: PDF conversion engine (identity, mineru, docling, mineru_deploy)
+                md2docx_engine: Markdown to docx engine (python, pandoc, auto)
+                mineru_token: MinerU Cloud API Token
+                model_version: MinerU Cloud model version (pipeline, vlm)
+                formula_ocr: Enable formula OCR
+                code_ocr: Enable code block OCR
+                mineru_deploy_base_url: MinerU local deployment base URL
+                mineru_deploy_backend: MinerU local backend type
+                mineru_deploy_parse_method: MinerU parse method (auto, txt, ocr)
+                mineru_deploy_table_enable: Enable table parsing
+                mineru_deploy_formula_enable: Enable formula parsing
+                mineru_deploy_start_page_id: Start page ID
+                mineru_deploy_end_page_id: End page ID
+                mineru_deploy_lang_list: Language list
+                mineru_deploy_server_url: MinerU Server URL
+                insert_mode: Insert mode (replace, append, prepend)
+                separator: Separator for append/prepend
+                segment_mode: [Txt only] Segment mode (line, paragraph, none)
+                translate_regions: [Xlsx only] Translation regions list
+                json_paths: [Json only] JsonPath expressions list
             """
             if not os.path.exists(file_path):
                 return f"Error: File not found: {file_path}"
@@ -277,6 +344,76 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 payload_dict["base_url"] = base_url
             if model_id:
                 payload_dict["model_id"] = model_id
+
+            # Add LLM advanced parameters if provided
+            if chunk_size is not None:
+                payload_dict["chunk_size"] = chunk_size
+            if concurrent is not None:
+                payload_dict["concurrent"] = concurrent
+            if temperature is not None:
+                payload_dict["temperature"] = temperature
+            if timeout is not None:
+                payload_dict["timeout"] = timeout
+            if thinking is not None:
+                payload_dict["thinking"] = thinking
+            if retry is not None:
+                payload_dict["retry"] = retry
+            if system_proxy_enable is not None:
+                payload_dict["system_proxy_enable"] = system_proxy_enable
+            if custom_prompt:
+                payload_dict["custom_prompt"] = custom_prompt
+            if force_json is not None:
+                payload_dict["force_json"] = force_json
+            if rpm is not None:
+                payload_dict["rpm"] = rpm
+            if tpm is not None:
+                payload_dict["tpm"] = tpm
+            if provider:
+                payload_dict["provider"] = provider
+
+            # Add Markdown workflow parameters if provided
+            if convert_engine:
+                payload_dict["convert_engine"] = convert_engine
+            if md2docx_engine:
+                payload_dict["md2docx_engine"] = md2docx_engine
+            if mineru_token:
+                payload_dict["mineru_token"] = mineru_token
+            if model_version:
+                payload_dict["model_version"] = model_version
+            if formula_ocr is not None:
+                payload_dict["formula_ocr"] = formula_ocr
+            if code_ocr is not None:
+                payload_dict["code_ocr"] = code_ocr
+            if mineru_deploy_base_url:
+                payload_dict["mineru_deploy_base_url"] = mineru_deploy_base_url
+            if mineru_deploy_backend:
+                payload_dict["mineru_deploy_backend"] = mineru_deploy_backend
+            if mineru_deploy_parse_method:
+                payload_dict["mineru_deploy_parse_method"] = mineru_deploy_parse_method
+            if mineru_deploy_table_enable is not None:
+                payload_dict["mineru_deploy_table_enable"] = mineru_deploy_table_enable
+            if mineru_deploy_formula_enable is not None:
+                payload_dict["mineru_deploy_formula_enable"] = mineru_deploy_formula_enable
+            if mineru_deploy_start_page_id is not None:
+                payload_dict["mineru_deploy_start_page_id"] = mineru_deploy_start_page_id
+            if mineru_deploy_end_page_id is not None:
+                payload_dict["mineru_deploy_end_page_id"] = mineru_deploy_end_page_id
+            if mineru_deploy_lang_list:
+                payload_dict["mineru_deploy_lang_list"] = mineru_deploy_lang_list
+            if mineru_deploy_server_url:
+                payload_dict["mineru_deploy_server_url"] = mineru_deploy_server_url
+
+            # Add other workflow parameters if provided
+            if insert_mode:
+                payload_dict["insert_mode"] = insert_mode
+            if separator:
+                payload_dict["separator"] = separator
+            if segment_mode:
+                payload_dict["segment_mode"] = segment_mode
+            if translate_regions:
+                payload_dict["translate_regions"] = translate_regions
+            if json_paths:
+                payload_dict["json_paths"] = json_paths
 
             try:
                 # Validate and create payload - AutoWorkflowParams allows extra fields
@@ -474,6 +611,41 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             glossary_dict_json: str = "",
             glossary_agent_config_json: str = "",
             extra_body_json: str = "",
+            # LLM 进阶参数
+            chunk_size: Optional[int] = None,
+            concurrent: Optional[int] = None,
+            temperature: Optional[float] = None,
+            timeout: Optional[int] = None,
+            thinking: Optional[str] = None,
+            retry: Optional[int] = None,
+            system_proxy_enable: Optional[bool] = None,
+            custom_prompt: str = "",
+            force_json: Optional[bool] = None,
+            rpm: Optional[int] = None,
+            tpm: Optional[int] = None,
+            provider: Optional[str] = None,
+            # Markdown 工作流参数
+            convert_engine: Optional[str] = None,
+            md2docx_engine: Optional[str] = None,
+            mineru_token: str = "",
+            model_version: Optional[str] = None,
+            formula_ocr: Optional[bool] = None,
+            code_ocr: Optional[bool] = None,
+            mineru_deploy_base_url: Optional[str] = None,
+            mineru_deploy_backend: Optional[str] = None,
+            mineru_deploy_parse_method: Optional[str] = None,
+            mineru_deploy_table_enable: Optional[bool] = None,
+            mineru_deploy_formula_enable: Optional[bool] = None,
+            mineru_deploy_start_page_id: Optional[int] = None,
+            mineru_deploy_end_page_id: Optional[int] = None,
+            mineru_deploy_lang_list: Optional[List[str]] = None,
+            mineru_deploy_server_url: str = "",
+            # 其他工作流参数
+            insert_mode: Optional[str] = None,
+            separator: Optional[str] = None,
+            segment_mode: Optional[str] = None,
+            translate_regions: Optional[List[str]] = None,
+            json_paths: Optional[List[str]] = None,
         ) -> str:
             """Translate a document file (synchronous mode - waits for completion).
             Returns task_id and available formats. Use download_file to save files.
@@ -492,6 +664,38 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 glossary_dict_json: Glossary dictionary JSON string, format: {"原文":"译文"}
                 glossary_agent_config_json: Glossary agent config JSON string (contains base_url, model_id, etc.)
                 extra_body_json: Extra request body parameters JSON string, will be merged into API request
+                chunk_size: Text chunk size for translation
+                concurrent: Number of concurrent requests
+                temperature: LLM temperature parameter
+                timeout: Request timeout in seconds
+                thinking: Thinking mode (default, enable, disable)
+                retry: Number of retries for failed chunks
+                system_proxy_enable: Enable system proxy
+                custom_prompt: Custom system prompt
+                force_json: Force JSON output
+                rpm: RPM limit (Requests Per Minute)
+                tpm: TPM limit (Tokens Per Minute)
+                provider: LLM provider identifier
+                convert_engine: PDF conversion engine (identity, mineru, docling, mineru_deploy)
+                md2docx_engine: Markdown to docx engine (python, pandoc, auto)
+                mineru_token: MinerU Cloud API Token
+                model_version: MinerU Cloud model version (pipeline, vlm)
+                formula_ocr: Enable formula OCR
+                code_ocr: Enable code block OCR
+                mineru_deploy_base_url: MinerU local deployment base URL
+                mineru_deploy_backend: MinerU local backend type
+                mineru_deploy_parse_method: MinerU parse method (auto, txt, ocr)
+                mineru_deploy_table_enable: Enable table parsing
+                mineru_deploy_formula_enable: Enable formula parsing
+                mineru_deploy_start_page_id: Start page ID
+                mineru_deploy_end_page_id: End page ID
+                mineru_deploy_lang_list: Language list
+                mineru_deploy_server_url: MinerU Server URL
+                insert_mode: Insert mode (replace, append, prepend)
+                separator: Separator for append/prepend
+                segment_mode: [Txt only] Segment mode (line, paragraph, none)
+                translate_regions: [Xlsx only] Translation regions list
+                json_paths: [Json only] JsonPath expressions list
             """
             if not os.path.exists(file_path):
                 return f"Error: File not found: {file_path}"
@@ -509,6 +713,38 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 glossary_dict_json=glossary_dict_json,
                 glossary_agent_config_json=glossary_agent_config_json,
                 extra_body_json=extra_body_json,
+                chunk_size=chunk_size,
+                concurrent=concurrent,
+                temperature=temperature,
+                timeout=timeout,
+                thinking=thinking,
+                retry=retry,
+                system_proxy_enable=system_proxy_enable,
+                custom_prompt=custom_prompt,
+                force_json=force_json,
+                rpm=rpm,
+                tpm=tpm,
+                provider=provider,
+                convert_engine=convert_engine,
+                md2docx_engine=md2docx_engine,
+                mineru_token=mineru_token,
+                model_version=model_version,
+                formula_ocr=formula_ocr,
+                code_ocr=code_ocr,
+                mineru_deploy_base_url=mineru_deploy_base_url,
+                mineru_deploy_backend=mineru_deploy_backend,
+                mineru_deploy_parse_method=mineru_deploy_parse_method,
+                mineru_deploy_table_enable=mineru_deploy_table_enable,
+                mineru_deploy_formula_enable=mineru_deploy_formula_enable,
+                mineru_deploy_start_page_id=mineru_deploy_start_page_id,
+                mineru_deploy_end_page_id=mineru_deploy_end_page_id,
+                mineru_deploy_lang_list=mineru_deploy_lang_list,
+                mineru_deploy_server_url=mineru_deploy_server_url,
+                insert_mode=insert_mode,
+                separator=separator,
+                segment_mode=segment_mode,
+                translate_regions=translate_regions,
+                json_paths=json_paths,
             )
 
             if "Error" in submit_result:
@@ -552,6 +788,47 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             base_url: str = "",
             model_id: str = "",
             to_lang: Optional[str] = None,
+            workflow_type: str = "auto",
+            skip_translate: bool = False,
+            glossary_generate_enable: bool = False,
+            glossary_dict_json: str = "",
+            glossary_agent_config_json: str = "",
+            extra_body_json: str = "",
+            # LLM 进阶参数
+            chunk_size: Optional[int] = None,
+            concurrent: Optional[int] = None,
+            temperature: Optional[float] = None,
+            timeout: Optional[int] = None,
+            thinking: Optional[str] = None,
+            retry: Optional[int] = None,
+            system_proxy_enable: Optional[bool] = None,
+            custom_prompt: str = "",
+            force_json: Optional[bool] = None,
+            rpm: Optional[int] = None,
+            tpm: Optional[int] = None,
+            provider: Optional[str] = None,
+            # Markdown 工作流参数
+            convert_engine: Optional[str] = None,
+            md2docx_engine: Optional[str] = None,
+            mineru_token: str = "",
+            model_version: Optional[str] = None,
+            formula_ocr: Optional[bool] = None,
+            code_ocr: Optional[bool] = None,
+            mineru_deploy_base_url: Optional[str] = None,
+            mineru_deploy_backend: Optional[str] = None,
+            mineru_deploy_parse_method: Optional[str] = None,
+            mineru_deploy_table_enable: Optional[bool] = None,
+            mineru_deploy_formula_enable: Optional[bool] = None,
+            mineru_deploy_start_page_id: Optional[int] = None,
+            mineru_deploy_end_page_id: Optional[int] = None,
+            mineru_deploy_lang_list: Optional[List[str]] = None,
+            mineru_deploy_server_url: str = "",
+            # 其他工作流参数
+            insert_mode: Optional[str] = None,
+            separator: Optional[str] = None,
+            segment_mode: Optional[str] = None,
+            translate_regions: Optional[List[str]] = None,
+            json_paths: Optional[List[str]] = None,
         ) -> str:
             """Translate content provided as base64 encoded data (synchronous mode).
             Returns task_id and available formats. Use download_file to save files.
@@ -563,6 +840,44 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 base_url: AI platform base URL
                 model_id: Model ID to use
                 to_lang: Target language
+                workflow_type: Workflow type (auto-detected if not specified)
+                skip_translate: Skip translation, only parse the document
+                glossary_generate_enable: Enable automatic glossary generation
+                glossary_dict_json: Glossary dictionary JSON string, format: {"原文":"译文"}
+                glossary_agent_config_json: Glossary agent config JSON string (contains base_url, model_id, etc.)
+                extra_body_json: Extra request body parameters JSON string, will be merged into API request
+                chunk_size: Text chunk size for translation
+                concurrent: Number of concurrent requests
+                temperature: LLM temperature parameter
+                timeout: Request timeout in seconds
+                thinking: Thinking mode (default, enable, disable)
+                retry: Number of retries for failed chunks
+                system_proxy_enable: Enable system proxy
+                custom_prompt: Custom system prompt
+                force_json: Force JSON output
+                rpm: RPM limit (Requests Per Minute)
+                tpm: TPM limit (Tokens Per Minute)
+                provider: LLM provider identifier
+                convert_engine: PDF conversion engine (identity, mineru, docling, mineru_deploy)
+                md2docx_engine: Markdown to docx engine (python, pandoc, auto)
+                mineru_token: MinerU Cloud API Token
+                model_version: MinerU Cloud model version (pipeline, vlm)
+                formula_ocr: Enable formula OCR
+                code_ocr: Enable code block OCR
+                mineru_deploy_base_url: MinerU local deployment base URL
+                mineru_deploy_backend: MinerU local backend type
+                mineru_deploy_parse_method: MinerU parse method (auto, txt, ocr)
+                mineru_deploy_table_enable: Enable table parsing
+                mineru_deploy_formula_enable: Enable formula parsing
+                mineru_deploy_start_page_id: Start page ID
+                mineru_deploy_end_page_id: End page ID
+                mineru_deploy_lang_list: Language list
+                mineru_deploy_server_url: MinerU Server URL
+                insert_mode: Insert mode (replace, append, prepend)
+                separator: Separator for append/prepend
+                segment_mode: [Txt only] Segment mode (line, paragraph, none)
+                translate_regions: [Xlsx only] Translation regions list
+                json_paths: [Json only] JsonPath expressions list
             """
             try:
                 # Decode content
@@ -581,8 +896,44 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                         base_url=base_url,
                         model_id=model_id,
                         to_lang=to_lang,
-                        workflow_type="auto",
-                        skip_translate=False,
+                        workflow_type=workflow_type,
+                        skip_translate=skip_translate,
+                        glossary_generate_enable=glossary_generate_enable,
+                        glossary_dict_json=glossary_dict_json,
+                        glossary_agent_config_json=glossary_agent_config_json,
+                        extra_body_json=extra_body_json,
+                        chunk_size=chunk_size,
+                        concurrent=concurrent,
+                        temperature=temperature,
+                        timeout=timeout,
+                        thinking=thinking,
+                        retry=retry,
+                        system_proxy_enable=system_proxy_enable,
+                        custom_prompt=custom_prompt,
+                        force_json=force_json,
+                        rpm=rpm,
+                        tpm=tpm,
+                        provider=provider,
+                        convert_engine=convert_engine,
+                        md2docx_engine=md2docx_engine,
+                        mineru_token=mineru_token,
+                        model_version=model_version,
+                        formula_ocr=formula_ocr,
+                        code_ocr=code_ocr,
+                        mineru_deploy_base_url=mineru_deploy_base_url,
+                        mineru_deploy_backend=mineru_deploy_backend,
+                        mineru_deploy_parse_method=mineru_deploy_parse_method,
+                        mineru_deploy_table_enable=mineru_deploy_table_enable,
+                        mineru_deploy_formula_enable=mineru_deploy_formula_enable,
+                        mineru_deploy_start_page_id=mineru_deploy_start_page_id,
+                        mineru_deploy_end_page_id=mineru_deploy_end_page_id,
+                        mineru_deploy_lang_list=mineru_deploy_lang_list,
+                        mineru_deploy_server_url=mineru_deploy_server_url,
+                        insert_mode=insert_mode,
+                        separator=separator,
+                        segment_mode=segment_mode,
+                        translate_regions=translate_regions,
+                        json_paths=json_paths,
                     )
 
             except Exception as e:

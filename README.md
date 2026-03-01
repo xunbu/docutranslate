@@ -51,7 +51,7 @@ For users who want to get started quickly, we provide integration packages on [G
 - **DocuTranslate**: Standard version. Uses `minerU` (online or locally deployed) for PDF parsing. Supports local minerU API calls. (Recommended)
 - **DocuTranslate_full**: Full version. Includes the built-in `docling` local PDF parsing engine. Choose this version if you need offline PDF parsing without minerU.
 
-## Installation
+## Quick Start
 
 ### Using pip
 
@@ -59,8 +59,15 @@ For users who want to get started quickly, we provide integration packages on [G
 # Basic installation
 pip install docutranslate
 
-# If you need to use docling for local PDF parsing
+# Install mcp extension
+pip install docutranslate[mcp]
+
+# Install docling extension
 pip install docutranslate[docling]
+
+docutranslate -i
+
+#docutranslate -i --with-mcp
 ```
 
 ### Using uv
@@ -72,8 +79,15 @@ uv init
 # Basic installation
 uv add docutranslate
 
+# Install mcp extension
+uv add docutranslate[mcp]
+
 # Install docling extension
 uv add docutranslate[docling]
+
+uv run --no-dev docutranslate -i
+
+#uv run --no-dev docutranslate -i --with-mcp
 ```
 
 ### Using git
@@ -84,27 +98,20 @@ git clone https://github.com/xunbu/docutranslate.git
 
 cd docutranslate
 
-uv sync
+uv sync --no-dev
+# uv sync --no-dev --extra mcp
+# uv sync --no-dev --extra docling
+# uv sync --no-dev --all-extras
 
 ```
 
 ### Using docker
 
 ```bash
-docker run -d -p 8010:8010 xunbu/docutranslate:latest
+docker run -d -p 8010:8010 xunbu/docutranslate:latest #does not support docling
 # docker run -it -p 8010:8010 xunbu/docutranslate:latest
 # docker run -it -p 8010:8010 xunbu/docutranslate:v1.5.4
 ```
-
-## Core Concept: Workflow
-
-DocuTranslate uses a **Workflow** system - each workflow is a complete translation pipeline for a specific file type.
-
-**Basic flow:**
-1. Select workflow based on file type
-2. Configure the workflow (LLM, parsing engine, output format)
-3. Execute translation
-4. Save results
 
 ## Start Web UI and API Service
 
@@ -113,23 +120,20 @@ For ease of use, DocuTranslate provides a fully functional Web Interface and RES
 **Start the Service:**
 
 ```bash
-# Start service, defaults to listening on port 8010
-docutranslate -i
-
-# Start on a specific port
-docutranslate -i -p 8011
-
-# Allow CORS requests
-docutranslate -i --cors
-
-
-# You can also specify the port via environment variable
-export DOCUTRANSLATE_PORT=8011
-docutranslate -i
+  docutranslate -i                           (Start GUI, default local access)
+  docutranslate -i --host 0.0.0.0            (Allow access from other devices on LAN)
+  docutranslate -i -p 8081                   (Specify port number)
+  docutranslate -i --cors                    (Enable default CORS settings)
+  docutranslate -i --with-mcp                (Start GUI with MCP SSE endpoint, shared queue, shared port)
+  docutranslate --mcp                         (Start MCP server, stdio mode)
+  docutranslate --mcp --transport sse         (Start MCP server, SSE mode)
+  docutranslate --mcp --transport sse --mcp-host MCP_HOST   --mcp-port MCP_PORT  (Start MCP server, SSE mode)
+  docutranslate --mcp --transport streamable-http  (Start MCP server, Streamable HTTP mode)
 ```
 
 - **Interactive Interface**: After starting the service, please visit `http://127.0.0.1:8010` (or your specified port) in your browser.
 - **API Documentation**: Full API documentation (Swagger UI) is located at `http://127.0.0.1:8010/docs`.
+- MCP: SSE service endpoint is at `http://127.0.0.1:8010/mcp/sse` (started with --with-mcp) or `http://127.0.0.1:8000/mcp/sse` (started with --mcp)
 
 ## Usage Examples
 
@@ -287,7 +291,6 @@ For more control, use the Workflow API directly. Each workflow follows the same 
 # 5. await workflow.translate_async()
 # 6. workflow.save_as_*(name=...) or export_to_*(...)
 ```
-
 #### Available Workflows and Output Methods
 
 | Workflow | Inputs | save_as_* | export_to_* | Key Config Options |

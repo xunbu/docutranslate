@@ -846,7 +846,8 @@ async def service_flat_translate(
         glossary_generate_enable: bool = Form(False, description="是否开启术语表自动生成"),
         glossary_dict_json: Optional[str] = Form("", description="术语表字典 JSON 字符串, 格式: {'原文':'译文'}"),
         glossary_agent_config_json: Optional[str] = Form("",
-                                                         description="术语表 Agent 配置 JSON 字符串 (包含 base_url, model_id 等)")
+                                                         description="术语表 Agent 配置 JSON 字符串 (包含 base_url, model_id 等)"),
+        extra_body_json: Optional[str] = Form("", description="额外请求体参数 JSON 字符串, 会合并到 API 请求中")
 ):
     task_id = uuid.uuid4().hex[:8]
 
@@ -871,6 +872,15 @@ async def service_flat_translate(
             parsed_glossary_agent = json.loads(glossary_agent_config_json)
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"glossary_agent_config_json 解析失败: {e}")
+
+    # Parse extra_body if provided - validate but keep as string
+    if extra_body_json and extra_body_json.strip():
+        try:
+            parsed_extra = json.loads(extra_body_json)
+            if not isinstance(parsed_extra, dict):
+                raise HTTPException(status_code=400, detail="extra_body_json 必须是 JSON 对象")
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"extra_body_json 解析失败: {e}")
 
     payload_dict = {
         "workflow_type": workflow_type,
@@ -914,6 +924,10 @@ async def service_flat_translate(
         "glossary_dict": parsed_glossary_dict,
         "glossary_agent_config": parsed_glossary_agent
     }
+
+    # Add extra_body if provided
+    if extra_body_json and extra_body_json.strip():
+        payload_dict["extra_body"] = extra_body_json
 
     payload_dict = {
         k: v for k, v in payload_dict.items()
