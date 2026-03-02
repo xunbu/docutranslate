@@ -309,8 +309,54 @@ class TranslationService:
             detected_type = get_workflow_type_from_filename(original_filename)
             print(f"[{task_id}] 自动识别工作流: {original_filename} -> {detected_type}")
 
-            payload_data = payload.model_dump()
-            payload_data["workflow_type"] = detected_type
+            # 关键修复：完全手动构造 payload_data，不依赖 model_dump
+            # 这样可以确保所有字段都正确传递，不会因为 exclude_none 或其他原因丢失
+            payload_data = {
+                "workflow_type": detected_type,
+            }
+
+            # 从 BaseWorkflowParams 复制所有字段
+            base_fields = [
+                "skip_translate", "base_url", "api_key", "model_id", "to_lang",
+                "chunk_size", "concurrent", "temperature", "timeout", "thinking", "retry",
+                "system_proxy_enable", "custom_prompt", "glossary_dict",
+                "glossary_generate_enable", "glossary_agent_config",
+                "force_json", "rpm", "tpm", "provider", "extra_body"
+            ]
+            for field_name in base_fields:
+                if hasattr(payload, field_name):
+                    value = getattr(payload, field_name)
+                    if value is not None and value != "":
+                        payload_data[field_name] = value
+
+            # 从 UniversalParamsMixin 复制所有字段（关键！）
+            universal_fields = [
+                "convert_engine", "mineru_token", "model_version", "formula_ocr", "code_ocr",
+                "mineru_deploy_base_url", "mineru_deploy_backend", "mineru_deploy_parse_method",
+                "mineru_deploy_table_enable", "mineru_deploy_formula_enable",
+                "mineru_deploy_start_page_id", "mineru_deploy_end_page_id",
+                "mineru_deploy_lang_list", "mineru_deploy_server_url",
+                "insert_mode", "separator", "translate_regions", "json_paths", "md2docx_engine"
+            ]
+            for field_name in universal_fields:
+                if hasattr(payload, field_name):
+                    value = getattr(payload, field_name)
+                    if value is not None:
+                        # 注意：mineru_token 即使是空字符串也要保留，因为 MarkdownWorkflowParams 的默认值是空字符串
+                        # 但如果用户明确传入了 token（非空），我们需要保留它
+                        if isinstance(value, str) and value == "" and field_name != "mineru_token":
+                            continue  # 跳过空字符串，除了 mineru_token
+                        payload_data[field_name] = value
+                        print(f"[{task_id}] 复制字段 {field_name}: {type(value).__name__}" +
+                              (f" (len={len(value)})" if isinstance(value, str) else ""))
+
+            # 调试日志
+            print(f"[{task_id}] payload_data keys: {sorted(payload_data.keys())}")
+            if "mineru_token" in payload_data:
+                token = payload_data["mineru_token"]
+                print(f"[{task_id}] mineru_token in payload_data (length: {len(token)}, starts with: {token[:20] if len(token) > 20 else token}...)")
+            if "convert_engine" in payload_data:
+                print(f"[{task_id}] convert_engine: {payload_data['convert_engine']}")
 
             if detected_type == "json" and not payload_data.get("json_paths"):
                 payload_data["json_paths"] = ["$..*"]
@@ -323,6 +369,14 @@ class TranslationService:
 
             try:
                 payload = TypeAdapter(TranslatePayload).validate_python(payload_data)
+                # 验证后再次检查
+                if hasattr(payload, "mineru_token"):
+                    token = payload.mineru_token
+                    print(f"[{task_id}] After validation: mineru_token present (length: {len(token) if token else 0})")
+                    if token:
+                        print(f"[{task_id}] mineru_token starts with: {token[:20] if len(token) > 20 else token}")
+                if hasattr(payload, "convert_engine"):
+                    print(f"[{task_id}] After validation: convert_engine={payload.convert_engine}")
             except Exception as e:
                 raise HTTPException(status_code=400, detail=f"自动转换工作流参数失败: {e}")
 
@@ -645,9 +699,13 @@ class TranslationService:
 
             converter_config = None
             if payload.convert_engine == "mineru":
+                token = payload.mineru_token or ""
+                task_logger.info(f"Creating ConverterMineruConfig with mineru_token (length: {len(token)})")
+                if token:
+                    task_logger.info(f"mineru_token starts with: {token[:20] if len(token) > 20 else token}")
                 converter_config = ConverterMineruConfig(
                     logger=task_logger,
-                    mineru_token=payload.mineru_token,
+                    mineru_token=token,
                     formula_ocr=payload.formula_ocr,
                     model_version=payload.model_version,
                 )

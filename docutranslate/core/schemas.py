@@ -224,17 +224,17 @@ class UniversalParamsMixin(BaseModel):
     formula_ocr: Optional[bool] = None
     code_ocr: Optional[bool] = None
 
-    # MinerU Deploy 相关
+    # MinerU Deploy 相关 - 设置默认值避免 None 导致的验证错误
     mineru_deploy_base_url: Optional[str] = None
     mineru_deploy_backend: Optional[Literal[
         "pipeline", "vlm-auto-engine", "vlm-http-client",
         "hybrid-auto-engine", "hybrid-http-client"
     ]] = None
     mineru_deploy_parse_method: Optional[Literal["auto", "txt", "ocr"]] = None
-    mineru_deploy_table_enable: Optional[bool] = None
-    mineru_deploy_formula_enable: Optional[bool] = None
-    mineru_deploy_start_page_id: Optional[int] = None
-    mineru_deploy_end_page_id: Optional[int] = None
+    mineru_deploy_table_enable: bool = True
+    mineru_deploy_formula_enable: bool = True
+    mineru_deploy_start_page_id: int = 0
+    mineru_deploy_end_page_id: int = 99999
     mineru_deploy_lang_list: Optional[List[str]] = None
     mineru_deploy_server_url: Optional[str] = None
 
