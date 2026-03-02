@@ -44,7 +44,7 @@ except Exception as e:
 # 然后添加您的自定义资源（避免重复）
 # 注意：确保 .venv 路径在您当前的构建环境中是存在的
 custom_datas = [
-    ('./.venv/Lib/site-packages/docling_parse/pdf_resources_v2', 'docling_parse/pdf_resources_v2'),
+    ('./.venv/Lib/site-packages/docling_parse/pdf_resources', 'docling_parse/pdf_resources'),
     ('./docutranslate/static', 'docutranslate/static'),
     ('./docutranslate/template', 'docutranslate/template')
 ]
