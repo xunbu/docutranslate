@@ -1501,10 +1501,10 @@
                 custom_to_lang: '',
                 thinking: 'disable',
                 custom_prompt: '',
-                chunk_size: 1000,
-                concurrent: 5,
-                temperature: 0.1,
-                retry: 3,
+                chunk_size: 4000,
+                concurrent: 30,
+                temperature: 0.7,
+                retry: 2,
                 rpm: null, // New RPM
                 tpm: null, // New TPM
                 extra_body: '',
@@ -1518,10 +1518,10 @@
                 glossary_agent_provider: 'api.openai.com', // Default glossary provider
                 glossary_agent_to_lang: 'Simplified Chinese',
                 glossary_agent_custom_to_lang: '',
-                glossary_agent_chunk_size: 1000,
-                glossary_agent_concurrent: 5,
+                glossary_agent_chunk_size: 4000,
+                glossary_agent_concurrent: 30,
                 glossary_agent_temperature: 0.7,
-                glossary_agent_retry: 3,
+                glossary_agent_retry: 2,
                 glossary_agent_thinking: 'default',
                 glossary_agent_system_proxy_enable: false,
                 glossary_agent_force_json: false,
@@ -1544,7 +1544,7 @@
             });
 
             // Load config from localStorage
-            const loadConfig = () => {
+            const loadConfig = (defaults = {}) => {
                 const get = (k, def) => localStorage.getItem(k) || def;
                 const getBool = (k, def) => {
                     const v = localStorage.getItem(k);
@@ -1582,19 +1582,19 @@
                 form.code_ocr = getBool('translator_code_ocr', true);
                 form.skip_translate = getBool('translator_skip_translate', false);
                 form.platform = get('translator_platform_last_platform', 'https://api.302.ai/v1');
-                form.system_proxy_enable = getBool('translator_system_proxy_enable', false);
+                form.system_proxy_enable = getBool('translator_system_proxy_enable', defaults.system_proxy_enable ?? false);
                 form.force_json = getBool('translator_force_json', false);
                 form.to_lang = get('translator_to_lang', 'Simplified Chinese');
                 form.custom_to_lang = get('translator_custom_to_lang', '');
-                form.thinking = get('translator_thinking_mode', 'disable');
+                form.thinking = get('translator_thinking_mode', defaults.thinking ?? 'disable');
                 form.custom_prompt = get('custom_prompt', '');
-                form.chunk_size = getNum('chunk_size', 1000);
-                form.concurrent = getNum('concurrent', 5);
-                form.temperature = getNum('temperature', 0.1);
-                form.retry = getNum('retry', 3);
+                form.chunk_size = getNum('chunk_size', defaults.chunk_size ?? 4000);
+                form.concurrent = getNum('concurrent', defaults.concurrent ?? 30);
+                form.temperature = getNum('temperature', defaults.temperature ?? 0.7);
+                form.retry = getNum('retry', defaults.retry ?? 2);
                 form.rpm = getNumOrNull('rpm'); // Load RPM
                 form.tpm = getNumOrNull('tpm'); // Load TPM
-                form.extra_body = get('extra_body', ''); // Load extra_body
+                form.extra_body = get('extra_body', defaults.extra_body ?? ''); // Load extra_body
 
                 // Determine Provider
                 const platObj = KNOWN_PLATFORMS.find(p => p.val === form.platform);
@@ -1611,16 +1611,16 @@
                 form.glossary_agent_platform = get('glossary_agent_platform_last_platform', 'https://api.302.ai/v1');
                 form.glossary_agent_to_lang = get('glossary_agent_to_lang', 'Simplified Chinese');
                 form.glossary_agent_custom_to_lang = get('glossary_agent_custom_to_lang', '');
-                form.glossary_agent_chunk_size = getNum('glossary_agent_chunk_size', 1000);
-                form.glossary_agent_concurrent = getNum('glossary_agent_concurrent', 5);
-                form.glossary_agent_temperature = getNum('glossary_agent_temperature', 0.7);
-                form.glossary_agent_retry = getNum('glossary_agent_retry', 3);
-                form.glossary_agent_thinking = get('glossary_agent_thinking_mode', 'default');
-                form.glossary_agent_system_proxy_enable = getBool('glossary_agent_system_proxy_enable', false);
+                form.glossary_agent_chunk_size = getNum('glossary_agent_chunk_size', defaults.chunk_size ?? 1000);
+                form.glossary_agent_concurrent = getNum('glossary_agent_concurrent', defaults.concurrent ?? 5);
+                form.glossary_agent_temperature = getNum('glossary_agent_temperature', defaults.temperature ?? 0.7);
+                form.glossary_agent_retry = getNum('glossary_agent_retry', defaults.retry ?? 3);
+                form.glossary_agent_thinking = get('glossary_agent_thinking_mode', defaults.thinking ?? 'default');
+                form.glossary_agent_system_proxy_enable = getBool('glossary_agent_system_proxy_enable', defaults.system_proxy_enable ?? false);
                 form.glossary_agent_force_json = getBool('glossary_agent_force_json', false);
                 form.glossary_agent_rpm = getNumOrNull('glossary_agent_rpm'); // Load Glossary RPM
                 form.glossary_agent_tpm = getNumOrNull('glossary_agent_tpm'); // Load Glossary TPM
-                form.glossary_agent_extra_body = get('glossary_agent_extra_body', ''); // Load Glossary extra_body
+                form.glossary_agent_extra_body = get('glossary_agent_extra_body', defaults.extra_body ?? ''); // Load Glossary extra_body
 
                 // Determine Glossary Provider
                 const gPlatObj = KNOWN_PLATFORMS.find(p => p.val === form.glossary_agent_platform);
@@ -2451,7 +2451,7 @@
                     console.error("Backend init failed", e);
                 }
 
-                loadConfig();
+                loadConfig(defaultParams);
                 setTheme(localStorage.getItem('theme') || 'auto');
 
                 // Restore tasks
