@@ -532,14 +532,18 @@ class TranslationService:
             filename_stem = task_state["original_filename_stem"]
 
             is_cdn_available = True
-            try:
-                await self.httpx_client.head(
-                    "https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js",
-                    timeout=3,
-                )
-            except (httpx.TimeoutException, httpx.RequestError):
+            if self.httpx_client is not None:
+                try:
+                    await self.httpx_client.head(
+                        "https://s4.zstatic.net/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js",
+                        timeout=3,
+                    )
+                except (httpx.TimeoutException, httpx.RequestError):
+                    is_cdn_available = False
+                    task_logger.warning("CDN连接失败，将使用本地JS进行渲染。")
+            else:
                 is_cdn_available = False
-                task_logger.warning("CDN连接失败，将使用本地JS进行渲染。")
+                task_logger.warning("HTTP客户端未初始化，将使用本地JS进行渲染。")
 
             export_map = self._build_export_map(
                 workflow, filename_stem, is_cdn_available

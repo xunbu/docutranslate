@@ -150,6 +150,9 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
         @mcp.tool()
         async def get_status() -> str:
             """Get current server status and configuration information."""
+            # Ensure service is properly initialized with event loop
+            if service.main_event_loop is None:
+                service.main_event_loop = asyncio.get_running_loop()
             is_configured = bool(client_config.get("api_key") and client_config.get("base_url") and client_config.get("model_id"))
             status_info = {
                 "server": "docutranslate",
@@ -330,6 +333,13 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 translate_regions: [Xlsx only] Translation regions list
                 json_paths: [Json only] JsonPath expressions list
             """
+            # Ensure service is properly initialized with event loop and httpx_client
+            if service.main_event_loop is None:
+                service.main_event_loop = asyncio.get_running_loop()
+            if service.httpx_client is None:
+                import httpx
+                service.httpx_client = httpx.AsyncClient()
+
             if not os.path.exists(file_path):
                 return f"Error: File not found: {file_path}"
 
@@ -770,21 +780,14 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             port: Port number for SSE/streamable-http transport
             translation_service: Optional TranslationService instance (uses global if not provided)
         """
-        # Initialize the translation service with a dummy HTTP client for standalone mode
+        # Initialize the translation service with an HTTP client for standalone mode
         service = translation_service or get_translation_service()
         if service.httpx_client is None:
             import httpx
 
-            async def init_service():
-                service.httpx_client = httpx.AsyncClient()
-                service.main_event_loop = asyncio.get_running_loop()
-
-            try:
-                loop = asyncio.get_running_loop()
-                loop.create_task(init_service())
-            except RuntimeError:
-                # No loop running yet, will be initialized when needed
-                pass
+            # Create httpx client immediately (not async)
+            # The client will be used in async context later
+            service.httpx_client = httpx.AsyncClient()
 
         mcp = create_mcp_server(host=host, port=port, translation_service=service)
 
