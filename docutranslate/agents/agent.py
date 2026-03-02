@@ -201,7 +201,7 @@ def extract_token_info(response_data: dict) -> tuple[int, int, int, int, int]:
         return 0, 0, 0, 0, 0
 
     usage = response_data["usage"]
-    print(usage)
+    # print(usage)
     input_tokens = usage.get("prompt_tokens", 0)
     output_tokens = usage.get("completion_tokens", 0)
     total_tokens = usage.get("total_tokens", 0)
