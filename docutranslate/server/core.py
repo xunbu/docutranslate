@@ -1325,6 +1325,16 @@ class TranslationService:
                 except Exception as e:
                     print(f"[{task_id}] 清理临时目录 '{temp_dir}' 时出错: {e}")
 
+        # Cleanup HTTP client
+        if self.httpx_client is not None:
+            try:
+                await self.httpx_client.aclose()
+                print("[TranslationService] HTTP客户端已关闭")
+            except Exception as e:
+                print(f"[TranslationService] 关闭HTTP客户端时出错: {e}")
+            finally:
+                self.httpx_client = None
+
 
 # Global singleton instance
 _translation_service: Optional[TranslationService] = None

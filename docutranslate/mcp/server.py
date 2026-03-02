@@ -806,6 +806,10 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             uvicorn.run(wrapper_app, host=host, port=port)
         else:
             # Run stdio transport normally
+            # Note: For stdio mode, we rely on:
+            # 1. release_task() to clean up per-task resources (temp files)
+            # 2. OS process termination to clean up httpx client (socket handles)
+            # This is acceptable for short-lived MCP stdio processes
             mcp.run(transport=transport)
 
 
