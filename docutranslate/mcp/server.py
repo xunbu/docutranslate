@@ -122,6 +122,17 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
         # Use provided translation service or get the global one
         service = translation_service or get_translation_service()
 
+        # Client configuration - load from environment variables first
+        client_config = {
+            "api_key": os.environ.get("DOCUTRANSLATE_API_KEY", ""),
+            "base_url": os.environ.get("DOCUTRANSLATE_BASE_URL", ""),
+            "model_id": os.environ.get("DOCUTRANSLATE_MODEL_ID", ""),
+            "to_lang": os.environ.get("DOCUTRANSLATE_TO_LANG", "中文"),
+            "concurrent": int(os.environ.get("DOCUTRANSLATE_CONCURRENT", "10")),
+            "convert_engine": os.environ.get("DOCUTRANSLATE_CONVERT_ENGINE", ""),
+            "mineru_token": os.environ.get("DOCUTRANSLATE_MINERU_TOKEN", ""),
+        }
+
         # Create FastMCP instance
         mcp = FastMCP(
             name=SERVER_NAME,
@@ -139,12 +150,86 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
         @mcp.tool()
         async def get_status() -> str:
             """Get current server status and configuration information."""
+            is_configured = bool(client_config.get("api_key") and client_config.get("base_url") and client_config.get("model_id"))
             status_info = {
                 "server": "docutranslate",
                 "version": __version__,
                 "status": "ready",
+                "client_configured": is_configured,
+                "active_tasks": len(service.tasks_state),
             }
             return f"Server Status:\n{_format_json(status_info)}"
+
+        @mcp.tool()
+        async def configure_client(
+            api_key: Optional[str] = None,
+            base_url: Optional[str] = None,
+            model_id: Optional[str] = None,
+            to_lang: Optional[str] = None,
+            concurrent: Optional[int] = None,
+            convert_engine: Optional[str] = None,
+            mineru_token: Optional[str] = None,
+        ) -> str:
+            """Configure the DocuTranslate client LLM settings.
+            If already configured via environment variables, this tool can override them.
+
+            Args:
+                api_key: AI platform API key
+                base_url: AI platform base URL
+                model_id: Model ID to use
+                to_lang: Target language (default: 中文)
+                concurrent: Number of concurrent requests (default: 10)
+                convert_engine: PDF conversion engine
+                mineru_token: MinerU API token
+            """
+            if api_key is not None:
+                client_config["api_key"] = api_key
+            if base_url is not None:
+                client_config["base_url"] = base_url
+            if model_id is not None:
+                client_config["model_id"] = model_id
+            if to_lang is not None:
+                client_config["to_lang"] = to_lang
+            if concurrent is not None:
+                client_config["concurrent"] = concurrent
+            if convert_engine is not None:
+                client_config["convert_engine"] = convert_engine
+            if mineru_token is not None:
+                client_config["mineru_token"] = mineru_token
+
+            # Check if we have the required config
+            has_required = bool(client_config.get("api_key") and client_config.get("base_url") and client_config.get("model_id"))
+
+            if has_required:
+                return (
+                    "Client configuration updated successfully.\n"
+                    "You can now use submit_task without providing api_key, base_url, and model_id every time."
+                )
+            else:
+                missing = []
+                if not client_config.get("api_key"):
+                    missing.append("api_key")
+                if not client_config.get("base_url"):
+                    missing.append("base_url")
+                if not client_config.get("model_id"):
+                    missing.append("model_id")
+                return (
+                    f"Configuration updated, but missing required fields: {', '.join(missing)}\n"
+                    "Please provide all required fields to use the translation service."
+                )
+
+        @mcp.tool()
+        async def get_client_config() -> str:
+            """Get current client configuration (without sensitive data like API keys)."""
+            # Mask sensitive data
+            masked_config = client_config.copy()
+            if masked_config.get("api_key"):
+                key = masked_config["api_key"]
+                masked_config["api_key"] = key[:4] + "..." + key[-4:] if len(key) > 8 else "****"
+            if masked_config.get("mineru_token"):
+                token = masked_config["mineru_token"]
+                masked_config["mineru_token"] = token[:4] + "..." + token[-4:] if len(token) > 8 else "****"
+            return f"Current Client Configuration:\n{_format_json(masked_config)}"
 
         @mcp.tool()
         async def submit_task(
@@ -286,9 +371,10 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
 
             # Build payload dict - use AutoWorkflowParams with extra=allow
             # This avoids validation errors for workflow-specific optional fields
+            # Use client_config for defaults if parameters not provided
             payload_dict = {
                 "workflow_type": workflow_type,
-                "to_lang": to_lang or "中文",
+                "to_lang": to_lang or client_config["to_lang"] or "中文",
                 "skip_translate": skip_translate,
                 "glossary_generate_enable": glossary_generate_enable,
                 "glossary_dict": parsed_glossary_dict,
@@ -298,19 +384,24 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             if extra_body_json and extra_body_json.strip():
                 payload_dict["extra_body"] = extra_body_json
 
-            # Add optional AI config if provided
-            if api_key:
-                payload_dict["api_key"] = api_key
-            if base_url:
-                payload_dict["base_url"] = base_url
-            if model_id:
-                payload_dict["model_id"] = model_id
+            # Add AI config - use parameter if provided, otherwise use client_config
+            use_api_key = api_key or client_config["api_key"]
+            use_base_url = base_url or client_config["base_url"]
+            use_model_id = model_id or client_config["model_id"]
+
+            if use_api_key:
+                payload_dict["api_key"] = use_api_key
+            if use_base_url:
+                payload_dict["base_url"] = use_base_url
+            if use_model_id:
+                payload_dict["model_id"] = use_model_id
 
             # Add LLM advanced parameters if provided
             if chunk_size is not None:
                 payload_dict["chunk_size"] = chunk_size
-            if concurrent is not None:
-                payload_dict["concurrent"] = concurrent
+            use_concurrent = concurrent if concurrent is not None else client_config["concurrent"]
+            if use_concurrent is not None:
+                payload_dict["concurrent"] = use_concurrent
             if temperature is not None:
                 payload_dict["temperature"] = temperature
             if timeout is not None:
@@ -333,12 +424,14 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 payload_dict["provider"] = provider
 
             # Add Markdown workflow parameters if provided
-            if convert_engine:
-                payload_dict["convert_engine"] = convert_engine
+            use_convert_engine = convert_engine or client_config["convert_engine"]
+            if use_convert_engine:
+                payload_dict["convert_engine"] = use_convert_engine
             if md2docx_engine:
                 payload_dict["md2docx_engine"] = md2docx_engine
-            if mineru_token:
-                payload_dict["mineru_token"] = mineru_token
+            use_mineru_token = mineru_token or client_config["mineru_token"]
+            if use_mineru_token:
+                payload_dict["mineru_token"] = use_mineru_token
             if model_version:
                 payload_dict["model_version"] = model_version
             if formula_ocr is not None:
