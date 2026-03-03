@@ -386,7 +386,7 @@
                                                            autocomplete="new-password" class="form-control"
                                                            :class="{'is-invalid': errors.mineru_token}"
                                                            v-model="form.mineru_token"
-                                                           @input="saveSetting('translator_mineru_token', form.mineru_token); clearError('mineru_token')"
+                                                           @change="saveSetting('translator_mineru_token', form.mineru_token); clearError('mineru_token')"
                                                            :placeholder="t('mineruTokenPlaceholder')">
                                                     <button class="btn btn-outline-secondary" type="button"
                                                             @click="showMineruToken = !showMineruToken"><i class="bi"
@@ -413,7 +413,7 @@
                                                 <input type="url" class="form-control"
                                                        :class="{'is-invalid': errors.mineru_deploy_base_url}"
                                                        v-model="form.mineru_deploy_base_url"
-                                                       @input="saveSetting('mineru_deploy_base_url', form.mineru_deploy_base_url); clearError('mineru_deploy_base_url')"
+                                                       @change="saveSetting('mineru_deploy_base_url', form.mineru_deploy_base_url); clearError('mineru_deploy_base_url')"
                                                        required :placeholder="t('mineruDeployBaseUrlPlaceholder')">
                                             </div>
                                             <div class="mb-3">
@@ -464,7 +464,7 @@
                                                 <label class="form-label">{{ t('mineruDeployServerUrlLabel') }}</label>
                                                 <input type="url" class="form-control"
                                                        v-model="form.mineru_deploy_server_url"
-                                                       @input="saveSetting('mineru_deploy_server_url', form.mineru_deploy_server_url)"
+                                                       @change="saveSetting('mineru_deploy_server_url', form.mineru_deploy_server_url)"
                                                        :placeholder="t('mineruDeployServerUrlPlaceholder')">
                                             </div>
 
@@ -474,7 +474,7 @@
                                                         }}</label>
                                                     <input type="number" class="form-control"
                                                            v-model="form.mineru_deploy_start_page"
-                                                           @input="saveSetting('mineru_deploy_start_page', form.mineru_deploy_start_page)"
+                                                           @change="saveSetting('mineru_deploy_start_page', form.mineru_deploy_start_page)"
                                                            min="0">
                                                 </div>
                                                 <div class="col-md-6 mb-3">
@@ -482,7 +482,7 @@
                                                         }}</label>
                                                     <input type="number" class="form-control"
                                                            v-model="form.mineru_deploy_end_page"
-                                                           @input="saveSetting('mineru_deploy_end_page', form.mineru_deploy_end_page)"
+                                                           @change="saveSetting('mineru_deploy_end_page', form.mineru_deploy_end_page)"
                                                            min="0">
                                                 </div>
                                             </div>
@@ -625,7 +625,7 @@
                                                 <input type="text" class="form-control"
                                                        :class="{'is-invalid': errors.custom_to_lang}"
                                                        v-model="form.custom_to_lang"
-                                                       @input="saveSetting('translator_custom_to_lang', form.custom_to_lang); clearError('custom_to_lang')"
+                                                       @change="saveSetting('translator_custom_to_lang', form.custom_to_lang); clearError('custom_to_lang')"
                                                        :placeholder="t('customLangPlaceholder')">
                                             </div>
                                         </div>
@@ -654,7 +654,7 @@
                                         <div class="mb-3">
                                             <label class="form-label">{{ t('customPromptLabel') }}</label>
                                             <textarea class="form-control" v-model="form.custom_prompt"
-                                                      @input="saveSetting('custom_prompt', form.custom_prompt)" rows="3"
+                                                      @change="saveSetting('custom_prompt', form.custom_prompt)" rows="3"
                                                       :placeholder="t('customPromptPlaceholder')"></textarea>
                                         </div>
 
@@ -676,14 +676,14 @@
                                             <label class="form-label">RPM <small class="text-muted">({{ t('rpmLabel')
                                                 }})</small></label>
                                             <input type="number" class="form-control" v-model="form.rpm"
-                                                   @input="saveSetting('rpm', form.rpm)"
+                                                   @change="saveSetting('rpm', form.rpm)"
                                                    min="1" :placeholder="t('unlimitedPlaceholder')">
                                         </div>
                                         <div class="mb-3">
                                             <label class="form-label">TPM <small class="text-muted">({{ t('tpmLabel')
                                                 }})</small></label>
                                             <input type="number" class="form-control" v-model="form.tpm"
-                                                   @input="saveSetting('tpm', form.tpm)"
+                                                   @change="saveSetting('tpm', form.tpm)"
                                                    min="1" :placeholder="t('unlimitedPlaceholder')">
                                         </div>
 
@@ -693,7 +693,7 @@
                                                    :data-bs-title="t('extraBodyTooltip')"></i>
                                             </label>
                                             <textarea class="form-control" v-model="form.extra_body"
-                                                      @input="saveSetting('extra_body', form.extra_body)"
+                                                      @change="saveSetting('extra_body', form.extra_body)"
                                                       rows="2"
                                                       :placeholder="t('extraBodyPlaceholder')"></textarea>
                                         </div>
@@ -745,7 +745,7 @@
                                                 <label class="form-label">{{ t('glossaryCustomPromptLabel') }}</label>
                                                 <textarea class="form-control"
                                                           v-model="form.glossary_agent_custom_prompt"
-                                                          @input="saveSetting('glossary_agent_custom_prompt', form.glossary_agent_custom_prompt)"
+                                                          @change="saveSetting('glossary_agent_custom_prompt', form.glossary_agent_custom_prompt)"
                                                           rows="3"
                                                           :placeholder="t('glossaryCustomPromptPlaceholder')"></textarea>
                                             </div>
@@ -795,7 +795,7 @@
                                                     <div class="mt-2" v-if="form.glossary_agent_to_lang === 'custom'">
                                                         <input type="text" class="form-control"
                                                                v-model="form.glossary_agent_custom_to_lang"
-                                                               @input="saveSetting('glossary_agent_custom_to_lang', form.glossary_agent_custom_to_lang)"
+                                                               @change="saveSetting('glossary_agent_custom_to_lang', form.glossary_agent_custom_to_lang)"
                                                                :placeholder="t('customLangPlaceholder')">
                                                     </div>
                                                 </div>
@@ -827,7 +827,7 @@
                                                         }})</small></label>
                                                     <input type="number" class="form-control"
                                                            v-model="form.glossary_agent_rpm"
-                                                           @input="saveSetting('glossary_agent_rpm', form.glossary_agent_rpm)"
+                                                           @change="saveSetting('glossary_agent_rpm', form.glossary_agent_rpm)"
                                                            min="1" :placeholder="t('unlimitedPlaceholder')">
                                                 </div>
                                                 <div class="mb-3">
@@ -836,7 +836,7 @@
                                                         }})</small></label>
                                                     <input type="number" class="form-control"
                                                            v-model="form.glossary_agent_tpm"
-                                                           @input="saveSetting('glossary_agent_tpm', form.glossary_agent_tpm)"
+                                                           @change="saveSetting('glossary_agent_tpm', form.glossary_agent_tpm)"
                                                            min="1" :placeholder="t('unlimitedPlaceholder')">
                                                 </div>
 
@@ -844,7 +844,7 @@
                                                     <label class="form-label">Extra Body <small class="text-muted">(JSON)</small></label>
                                                     <textarea class="form-control"
                                                               v-model="form.glossary_agent_extra_body"
-                                                              @input="saveSetting('glossary_agent_extra_body', form.glossary_agent_extra_body)"
+                                                              @change="saveSetting('glossary_agent_extra_body', form.glossary_agent_extra_body)"
                                                               rows="2"
                                                               placeholder='{"user": "your-id", "other_param": "value"}'></textarea>
                                                     <div class="form-text">额外的 API 请求参数，JSON 格式，会合并到请求体中</div>
