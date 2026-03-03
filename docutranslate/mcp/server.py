@@ -289,7 +289,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             Supports PDF, DOCX, XLSX, MD, TXT, JSON, EPUB, SRT, ASS, PPTX, HTML formats.
 
             Args:
-                file_path: Path to the file to translate
+                file_path: Path to the file to translate, or a URL starting with http:// or https://
                 api_key: AI platform API key
                 base_url: AI platform base URL
                 model_id: Model ID to use
@@ -340,15 +340,40 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 import httpx
                 service.httpx_client = httpx.AsyncClient()
 
-            if not os.path.exists(file_path):
-                return f"Error: File not found: {file_path}"
+            # Check if file_path is a URL
+            is_url = file_path.startswith("http://") or file_path.startswith("https://")
+            original_filename = None
 
-            # Read the file
-            try:
-                with open(file_path, "rb") as f:
-                    file_contents = f.read()
-            except Exception as e:
-                return f"Error reading file: {e}"
+            if is_url:
+                # Download from URL directly into memory
+                try:
+                    from urllib.parse import urlparse
+
+                    # Parse URL to get filename
+                    parsed_url = urlparse(file_path)
+                    url_path = parsed_url.path
+                    original_filename = os.path.basename(url_path)
+                    if not original_filename:
+                        original_filename = "downloaded_file"
+
+                    # Download the file directly into memory
+                    response = await service.httpx_client.get(file_path, timeout=300.0)
+                    response.raise_for_status()
+                    file_contents = response.content
+                except Exception as e:
+                    return f"Error downloading file from URL: {e}"
+            else:
+                # Local file - check if exists
+                if not os.path.exists(file_path):
+                    return f"Error: File not found: {file_path}"
+
+                # Read the file
+                try:
+                    with open(file_path, "rb") as f:
+                        file_contents = f.read()
+                    original_filename = os.path.basename(file_path)
+                except Exception as e:
+                    return f"Error reading file: {e}"
 
             import json
 
@@ -486,23 +511,24 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 return f"Error validating parameters: {e}"
 
             # Create task_id and start translation
-            task_id = os.path.basename(file_path)[:8] + "_" + base64.urlsafe_b64encode(os.urandom(4)).decode()[:8]
+            display_file_path = file_path
+            task_id = original_filename[:8] + "_" + base64.urlsafe_b64encode(os.urandom(4)).decode()[:8]
 
             try:
                 # Store original file path for reference
                 if not hasattr(service, "_mcp_output_options"):
                     service._mcp_output_options = {}
                 service._mcp_output_options[task_id] = {
-                    "original_file_path": file_path,
+                    "original_file_path": display_file_path,
                 }
 
                 response = await service.start_translation(
                     task_id=task_id,
                     payload=payload,
                     file_contents=file_contents,
-                    original_filename=os.path.basename(file_path),
+                    original_filename=original_filename,
                 )
-                return f"Translation task submitted successfully.\ntask_id: {task_id}\n\nUse get_task_status to check progress. When completed, it will show all available formats for download."
+                return f"Translation task submitted successfully.\ntask_id: {task_id}\nInput: {display_file_path}\n\nUse get_task_status to check progress. When completed, it will show all available formats for download."
             except Exception as e:
                 return f"Error starting translation: {e}"
 
@@ -655,6 +681,10 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             Args:
                 task_id: The task ID to release
             """
+            # Clean up output options
+            if hasattr(service, "_mcp_output_options") and task_id in service._mcp_output_options:
+                del service._mcp_output_options[task_id]
+
             try:
                 result = await service.release_task(task_id)
                 return f"Task {task_id} released successfully. {result['message']}"
@@ -670,33 +700,70 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             - CSV files with two columns: first column = original, second column = translated
 
             Args:
-                file_path: Path to the glossary file (.json or .csv)
+                file_path: Path to the glossary file (.json or .csv), or a URL starting with http:// or https://
             """
-            if not os.path.exists(file_path):
-                return f"Error: File not found: {file_path}"
-
             import json
+            import io
 
-            ext = os.path.splitext(file_path)[1].lower()
+            # Check if file_path is a URL
+            is_url = file_path.startswith("http://") or file_path.startswith("https://")
+            content_bytes = None
+            ext = None
+
+            if is_url:
+                # Download from URL directly into memory
+                try:
+                    from urllib.parse import urlparse
+
+                    # Parse URL to get filename and extension
+                    parsed_url = urlparse(file_path)
+                    url_path = parsed_url.path
+                    filename = os.path.basename(url_path)
+                    ext = os.path.splitext(filename)[1].lower()
+                    if not ext:
+                        return "Error: Cannot determine file extension from URL"
+
+                    # Ensure httpx_client is available
+                    if service.httpx_client is None:
+                        import httpx
+                        service.httpx_client = httpx.AsyncClient()
+
+                    # Download the file directly into memory
+                    response = await service.httpx_client.get(file_path, timeout=60.0)
+                    response.raise_for_status()
+                    content_bytes = response.content
+                except Exception as e:
+                    return f"Error downloading glossary from URL: {e}"
+            else:
+                # Local file - check if exists
+                if not os.path.exists(file_path):
+                    return f"Error: File not found: {file_path}"
+                ext = os.path.splitext(file_path)[1].lower()
+
+                # Read the file
+                try:
+                    with open(file_path, "rb") as f:
+                        content_bytes = f.read()
+                except Exception as e:
+                    return f"Error reading file: {e}"
 
             try:
                 if ext == ".json":
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        glossary_dict = json.load(f)
+                    glossary_dict = json.loads(content_bytes.decode("utf-8"))
                     if not isinstance(glossary_dict, dict):
                         return "Error: JSON file must contain a dictionary"
 
                 elif ext == ".csv":
                     import csv
                     glossary_dict = {}
-                    with open(file_path, "r", encoding="utf-8") as f:
-                        reader = csv.reader(f)
-                        for row in reader:
-                            if len(row) >= 2:
-                                key = row[0].strip()
-                                value = row[1].strip()
-                                if key and value:
-                                    glossary_dict[key] = value
+                    content_text = content_bytes.decode("utf-8")
+                    reader = csv.reader(io.StringIO(content_text))
+                    for row in reader:
+                        if len(row) >= 2:
+                            key = row[0].strip()
+                            value = row[1].strip()
+                            if key and value:
+                                glossary_dict[key] = value
 
                 else:
                     return f"Error: Unsupported file format: {ext}. Use .json or .csv"
