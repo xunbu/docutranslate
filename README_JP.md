@@ -135,6 +135,54 @@ docker run -d -p 8010:8010 xunbu/docutranslate:latest #doclingをサポートし
 - **API ドキュメント**: 完全な API ドキュメント (Swagger UI) は `http://127.0.0.1:8010/docs` にあります。
 - MCP: SSEサービスエンドポイントは `http://127.0.0.1:8010/mcp/sse` (--with-mcpで起動) または `http://127.0.0.1:8000/mcp/sse` (--mcpで起動)
 
+## MCP 設定
+
+DocuTranslate は MCP（Model Context Protocol）サーバーとして使用できます。詳細なドキュメントについては、[MCP ドキュメント](./docutranslate/mcp/README.md)を参照してください。
+
+### サポートされている環境変数
+
+| 環境変数 | 説明 | 必須 |
+|---------|------|------|
+| `DOCUTRANSLATE_API_KEY` | AI プラットフォーム API キー | はい |
+| `DOCUTRANSLATE_BASE_URL` | AI プラットフォームベース URL | はい |
+| `DOCUTRANSLATE_MODEL_ID` | モデル ID | はい |
+| `DOCUTRANSLATE_TO_LANG` | ターゲット言語（デフォルト: Chinese） | いいえ |
+| `DOCUTRANSLATE_CONCURRENT` | 同時リクエスト数（デフォルト: 10） | いいえ |
+| `DOCUTRANSLATE_CONVERT_ENGINE` | PDF 変換エンジン | いいえ |
+| `DOCUTRANSLATE_MINERU_TOKEN` | MinerU API トークン | いいえ |
+
+### uvx 設定（インストール不要）
+
+```json
+{
+  "mcpServers": {
+    "docutranslate": {
+      "command": "uvx",
+      "args": ["--from", "docutranslate[mcp]", "docutranslate", "--mcp"],
+      "env": {
+        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
+        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
+        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
+        "DOCUTRANSLATE_TO_LANG": "Chinese",
+        "DOCUTRANSLATE_CONCURRENT": "10",
+        "DOCUTRANSLATE_CONVERT_ENGINE": "mineru",
+        "DOCUTRANSLATE_MINERU_TOKEN": "your-mineru-token"
+      }
+    }
+  }
+}
+```
+
+### SSE モード設定
+
+まず、SSE モードで MCP サーバーを起動します：
+
+```bash
+docutranslate --mcp --transport sse --mcp-host 127.0.0.1 --mcp-port 8000
+```
+
+次に、クライアントで SSE エンドポイントを設定します：`http://127.0.0.1:8000/mcp/sse`
+
 ## 使用方法
 
 ### シンプルな Client SDK の使用 (推奨)

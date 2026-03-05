@@ -135,6 +135,54 @@ For ease of use, DocuTranslate provides a fully functional Web Interface and RES
 - **API Documentation**: Full API documentation (Swagger UI) is located at `http://127.0.0.1:8010/docs`.
 - MCP: SSE service endpoint is at `http://127.0.0.1:8010/mcp/sse` (started with --with-mcp) or `http://127.0.0.1:8000/mcp/sse` (started with --mcp)
 
+## MCP Configuration
+
+DocuTranslate can be used as an MCP (Model Context Protocol) server. For detailed documentation, see [MCP Documentation](./docutranslate/mcp/README.md).
+
+### Supported Environment Variables
+
+| Environment Variable | Description | Required |
+|---------------------|-------------|----------|
+| `DOCUTRANSLATE_API_KEY` | AI platform API key | Yes |
+| `DOCUTRANSLATE_BASE_URL` | AI platform base URL | Yes |
+| `DOCUTRANSLATE_MODEL_ID` | Model ID | Yes |
+| `DOCUTRANSLATE_TO_LANG` | Target language (default: Chinese) | No |
+| `DOCUTRANSLATE_CONCURRENT` | Concurrent requests (default: 10) | No |
+| `DOCUTRANSLATE_CONVERT_ENGINE` | PDF conversion engine | No |
+| `DOCUTRANSLATE_MINERU_TOKEN` | MinerU API Token | No |
+
+### uvx Configuration (No Installation Required)
+
+```json
+{
+  "mcpServers": {
+    "docutranslate": {
+      "command": "uvx",
+      "args": ["--from", "docutranslate[mcp]", "docutranslate", "--mcp"],
+      "env": {
+        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
+        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
+        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
+        "DOCUTRANSLATE_TO_LANG": "Chinese",
+        "DOCUTRANSLATE_CONCURRENT": "10",
+        "DOCUTRANSLATE_CONVERT_ENGINE": "mineru",
+        "DOCUTRANSLATE_MINERU_TOKEN": "your-mineru-token"
+      }
+    }
+  }
+}
+```
+
+### SSE Mode Configuration
+
+First start the MCP server in SSE mode:
+
+```bash
+docutranslate --mcp --transport sse --mcp-host 127.0.0.1 --mcp-port 8000
+```
+
+Then configure the SSE endpoint in your client: `http://127.0.0.1:8000/mcp/sse`
+
 ## Usage Examples
 
 ### Using the Simple Client SDK (Recommended)

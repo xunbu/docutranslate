@@ -24,6 +24,28 @@ Always use the Python interpreter from your virtual environment in MCP configura
 docutranslate --mcp
 ```
 
+##### Using uvx (No Installation Required)
+
+```json
+{
+  "mcpServers": {
+    "docutranslate": {
+      "command": "uvx",
+      "args": ["--from", "docutranslate[mcp]", "docutranslate", "--mcp"],
+      "env": {
+        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
+        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
+        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
+        "DOCUTRANSLATE_TO_LANG": "Chinese",
+        "DOCUTRANSLATE_CONCURRENT": "10",
+        "DOCUTRANSLATE_CONVERT_ENGINE": "mineru",
+        "DOCUTRANSLATE_MINERU_TOKEN": "your-mineru-token"
+      }
+    }
+  }
+}
+```
+
 Add to your MCP configuration (**use the full Python path from your virtual environment**):
 
 ```json
@@ -31,7 +53,16 @@ Add to your MCP configuration (**use the full Python path from your virtual envi
   "mcpServers": {
     "docutranslate": {
       "command": "/path/to/your/venv/bin/python",
-      "args": ["-m", "docutranslate.mcp"]
+      "args": ["-m", "docutranslate.mcp"],
+      "env": {
+        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
+        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
+        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
+        "DOCUTRANSLATE_TO_LANG": "Chinese",
+        "DOCUTRANSLATE_CONCURRENT": "10",
+        "DOCUTRANSLATE_CONVERT_ENGINE": "mineru",
+        "DOCUTRANSLATE_MINERU_TOKEN": "your-mineru-token"
+      }
     }
   }
 }
@@ -44,7 +75,16 @@ Add to your MCP configuration (**use the full Python path from your virtual envi
   "mcpServers": {
     "docutranslate": {
       "command": "C:\\path\\to\\your\\venv\\Scripts\\python.exe",
-      "args": ["-m", "docutranslate.mcp"]
+      "args": ["-m", "docutranslate.mcp"],
+      "env": {
+        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
+        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
+        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
+        "DOCUTRANSLATE_TO_LANG": "Chinese",
+        "DOCUTRANSLATE_CONCURRENT": "10",
+        "DOCUTRANSLATE_CONVERT_ENGINE": "mineru",
+        "DOCUTRANSLATE_MINERU_TOKEN": "your-mineru-token"
+      }
     }
   }
 }
@@ -57,7 +97,16 @@ Or if you have `docutranslate` available in PATH:
   "mcpServers": {
     "docutranslate": {
       "command": "docutranslate",
-      "args": ["--mcp"]
+      "args": ["--mcp"],
+      "env": {
+        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
+        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
+        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
+        "DOCUTRANSLATE_TO_LANG": "Chinese",
+        "DOCUTRANSLATE_CONCURRENT": "10",
+        "DOCUTRANSLATE_CONVERT_ENGINE": "mineru",
+        "DOCUTRANSLATE_MINERU_TOKEN": "your-mineru-token"
+      }
     }
   }
 }
@@ -114,25 +163,6 @@ You can pre-configure the MCP server using environment variables, so you don't n
 | `DOCUTRANSLATE_CONVERT_ENGINE` | PDF conversion engine | No |
 | `DOCUTRANSLATE_MINERU_TOKEN` | MinerU API Token | No |
 
-**Setting environment variables in Claude Desktop config:**
-
-```json
-{
-  "mcpServers": {
-    "docutranslate": {
-      "command": "/path/to/your/venv/bin/python",
-      "args": ["-m", "docutranslate", "--mcp"],
-      "env": {
-        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
-        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
-        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
-        "DOCUTRANSLATE_TO_LANG": "Chinese"
-      }
-    }
-  }
-}
-```
-
 ### MCP Tools Reference
 
 | Tool | Description |
@@ -142,8 +172,7 @@ You can pre-configure the MCP server using environment variables, so you don't n
 | `download_file` | Download translated file or attachment to local filesystem |
 | `release_task` | Release task resources (temp files, etc.) |
 | `cancel_task` | Cancel a pending or running task |
-| `translate_file` | Translate a file (synchronous, waits for completion) |
-| `translate_content` | Translate base64 content (synchronous) |
+| `load_glossary_file` | Load a glossary file (JSON or CSV) for use in submit_task |
 | `configure_client` | Configure client LLM settings |
 | `get_client_config` | Get current configuration (without sensitive data) |
 | `get_status` | Get server status and info |
@@ -154,7 +183,7 @@ You can pre-configure the MCP server using environment variables, so you don't n
 Submit a file for translation in async mode, returns task_id immediately without blocking.
 
 **Parameters:**
-- `file_path` (required): Path to the file
+- `file_path` (required): Path to the file, or a URL starting with http:// or https://
 - `api_key`: AI platform API key (overrides client config)
 - `base_url`: AI platform base URL (overrides client config)
 - `model_id`: Model ID (overrides client config)
@@ -162,6 +191,7 @@ Submit a file for translation in async mode, returns task_id immediately without
 - `workflow_type`: Workflow type
 - `convert_engine`: PDF conversion engine
 - `mineru_token`: MinerU API Token
+- And many other advanced parameters...
 
 **Example workflow:**
 ```
@@ -192,9 +222,10 @@ Query the current status of a task.
 
 **Parameters:**
 - `task_id` (required): The task ID to query
+- `wait_seconds`: Maximum seconds to wait for status change before returning (0 = return immediately)
 
 **Returns:**
-- Current status: `pending`, `running`, `completed`, `failed`, `cancelled`
+- Current status: `idle`, `running`, `completed`, `error`
 - Progress percentage (0-100)
 - Available formats when completed
 - Attachments when completed
@@ -223,32 +254,16 @@ Cancel a pending or running task.
 **Parameters:**
 - `task_id` (required): The task ID to cancel
 
-#### `translate_file` - Translate File (Synchronous)
+#### `load_glossary_file` - Load Glossary File
 
-Translate a file synchronously, waits for completion and returns the result.
+Load a glossary file (JSON or CSV) and return it as a JSON string for use in submit_task.
 
-**Parameters:**
-- `file_path` (required): Path to the file
-- `to_lang`: Target language (overrides client config)
-- `workflow_type`: Workflow type
-- `skip_translate`: Parse only, don't translate
-- `output_format`: Output format
-- `output_dir`: Output directory (default: ./output)
-- `output_name`: Output filename (optional, auto-generated)
-- `save_to_file`: Whether to save to file (default: True)
-
-#### `translate_content` - Translate Content (Synchronous)
-
-Translate base64-encoded file content.
+**Supports:**
+- JSON files with format: `{"原文": "译文", "Original": "Translated"}`
+- CSV files with two columns: first column = original, second column = translated
 
 **Parameters:**
-- `content` (required): Base64-encoded file content
-- `filename` (required): Filename (for format detection)
-- `to_lang`: Target language
-- `output_format`: Output format
-- `output_dir`: Output directory (default: ./output)
-- `output_name`: Output filename (optional, auto-generated)
-- `save_to_file`: Whether to save to file (default: True)
+- `file_path` (required): Path to the glossary file (.json or .csv), or a URL starting with http:// or https://
 
 #### `configure_client` - Configure Client
 
@@ -367,6 +382,28 @@ pip install docutranslate[mcp]
 docutranslate --mcp
 ```
 
+##### 使用 uvx（无需安装）
+
+```json
+{
+  "mcpServers": {
+    "docutranslate": {
+      "command": "uvx",
+      "args": ["--from", "docutranslate[mcp]", "docutranslate", "--mcp"],
+      "env": {
+        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
+        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
+        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
+        "DOCUTRANSLATE_TO_LANG": "中文",
+        "DOCUTRANSLATE_CONCURRENT": "10",
+        "DOCUTRANSLATE_CONVERT_ENGINE": "mineru",
+        "DOCUTRANSLATE_MINERU_TOKEN": "your-mineru-token"
+      }
+    }
+  }
+}
+```
+
 在 MCP 配置文件中添加（**推荐使用虚拟环境的完整 Python 路径**）：
 
 ```json
@@ -374,7 +411,16 @@ docutranslate --mcp
   "mcpServers": {
     "docutranslate": {
       "command": "/path/to/your/venv/bin/python",
-      "args": ["-m", "docutranslate.mcp"]
+      "args": ["-m", "docutranslate.mcp"],
+      "env": {
+        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
+        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
+        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
+        "DOCUTRANSLATE_TO_LANG": "中文",
+        "DOCUTRANSLATE_CONCURRENT": "10",
+        "DOCUTRANSLATE_CONVERT_ENGINE": "mineru",
+        "DOCUTRANSLATE_MINERU_TOKEN": "your-mineru-token"
+      }
     }
   }
 }
@@ -387,7 +433,16 @@ docutranslate --mcp
   "mcpServers": {
     "docutranslate": {
       "command": "C:\\path\\to\\your\\venv\\Scripts\\python.exe",
-      "args": ["-m", "docutranslate.mcp"]
+      "args": ["-m", "docutranslate.mcp"],
+      "env": {
+        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
+        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
+        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
+        "DOCUTRANSLATE_TO_LANG": "中文",
+        "DOCUTRANSLATE_CONCURRENT": "10",
+        "DOCUTRANSLATE_CONVERT_ENGINE": "mineru",
+        "DOCUTRANSLATE_MINERU_TOKEN": "your-mineru-token"
+      }
     }
   }
 }
@@ -400,7 +455,16 @@ docutranslate --mcp
   "mcpServers": {
     "docutranslate": {
       "command": "docutranslate",
-      "args": ["--mcp"]
+      "args": ["--mcp"],
+      "env": {
+        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
+        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
+        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
+        "DOCUTRANSLATE_TO_LANG": "中文",
+        "DOCUTRANSLATE_CONCURRENT": "10",
+        "DOCUTRANSLATE_CONVERT_ENGINE": "mineru",
+        "DOCUTRANSLATE_MINERU_TOKEN": "your-mineru-token"
+      }
     }
   }
 }
@@ -457,25 +521,6 @@ docutranslate -i --with-mcp
 | `DOCUTRANSLATE_CONVERT_ENGINE` | PDF 转换引擎 | 否 |
 | `DOCUTRANSLATE_MINERU_TOKEN` | MinerU API Token | 否 |
 
-**在 Claude Desktop 配置中设置环境变量：**
-
-```json
-{
-  "mcpServers": {
-    "docutranslate": {
-      "command": "/path/to/your/venv/bin/python",
-      "args": ["-m", "docutranslate", "--mcp"],
-      "env": {
-        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
-        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
-        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
-        "DOCUTRANSLATE_TO_LANG": "中文"
-      }
-    }
-  }
-}
-```
-
 ### MCP 工具参考
 
 | 工具 | 说明 |
@@ -485,8 +530,7 @@ docutranslate -i --with-mcp
 | `download_file` | 下载翻译文件或附件到本地文件系统 |
 | `release_task` | 释放任务资源（临时文件等） |
 | `cancel_task` | 取消待处理或运行中的任务 |
-| `translate_file` | 翻译文件（同步，等待完成） |
-| `translate_content` | 翻译 base64 内容（同步） |
+| `load_glossary_file` | 加载术语表文件（JSON 或 CSV）用于 submit_task |
 | `configure_client` | 配置客户端 LLM 设置 |
 | `get_client_config` | 获取当前配置（不包含敏感数据） |
 | `get_status` | 获取服务器状态和信息 |
@@ -497,7 +541,7 @@ docutranslate -i --with-mcp
 以异步模式提交文件进行翻译，立即返回 task_id 不阻塞。
 
 **参数：**
-- `file_path` (必需): 文件路径
+- `file_path` (必需): 文件路径，或 http:// 或 https:// 开头的 URL
 - `api_key`: AI 平台 API 密钥（覆盖客户端配置）
 - `base_url`: AI 平台基础 URL（覆盖客户端配置）
 - `model_id`: 模型 ID（覆盖客户端配置）
@@ -505,6 +549,7 @@ docutranslate -i --with-mcp
 - `workflow_type`: 工作流类型
 - `convert_engine`: PDF 转换引擎
 - `mineru_token`: MinerU API Token
+- 以及其他高级参数...
 
 **示例工作流：**
 ```
@@ -535,9 +580,10 @@ docutranslate -i --with-mcp
 
 **参数：**
 - `task_id` (必需): 要查询的任务 ID
+- `wait_seconds`: 等待状态更改的最大秒数（0 = 立即返回）
 
 **返回：**
-- 当前状态：`pending`、`running`、`completed`、`failed`、`cancelled`
+- 当前状态：`idle`、`running`、`completed`、`error`
 - 进度百分比 (0-100)
 - 完成时的可用格式
 - 完成时的附件
@@ -566,32 +612,16 @@ docutranslate -i --with-mcp
 **参数：**
 - `task_id` (必需): 要取消的任务 ID
 
-#### `translate_file` - 翻译文件（同步）
+#### `load_glossary_file` - 加载术语表文件
 
-同步翻译文件，等待完成并返回结果。
+加载术语表文件（JSON 或 CSV）并返回 JSON 字符串供 submit_task 使用。
 
-**参数：**
-- `file_path` (必需): 文件路径
-- `to_lang`: 目标语言（覆盖客户端配置）
-- `workflow_type`: 工作流类型
-- `skip_translate`: 仅解析不翻译
-- `output_format`: 输出格式
-- `output_dir`: 输出目录（默认：./output）
-- `output_name`: 输出文件名（可选，自动生成）
-- `save_to_file`: 是否保存到文件（默认：True）
-
-#### `translate_content` - 翻译内容（同步）
-
-翻译 base64 编码的文件内容。
+**支持：**
+- JSON 文件格式：`{"原文": "译文", "Original": "Translated"}`
+- CSV 文件两列格式：第一列 = 原文，第二列 = 译文
 
 **参数：**
-- `content` (必需): Base64 编码的文件内容
-- `filename` (必需): 文件名（用于格式检测）
-- `to_lang`: 目标语言
-- `output_format`: 输出格式
-- `output_dir`: 输出目录（默认：./output）
-- `output_name`: 输出文件名（可选，自动生成）
-- `save_to_file`: 是否保存到文件（默认：True）
+- `file_path` (必需): 术语表文件路径（.json 或 .csv），或 http:// 或 https:// 开头的 URL
 
 #### `configure_client` - 配置客户端
 

@@ -36,13 +36,13 @@
 > QQ交流群：1047781902 1081128602
 
 **UI界面**：
-![翻译效果](/images/UI界面.png)
+![UI界面](/images/UI界面.png)
 
 **论文翻译**：
-![翻译效果](/images/论文翻译.png)
+![论文翻译](/images/论文翻译.png)
 
 **小说翻译**：
-![翻译效果](/images/小说翻译.png)
+![小说翻译](/images/小说翻译.png)
 
 ## 整合包
 
@@ -68,7 +68,7 @@ pip install docutranslate[docling]
 
 docutranslate -i
 
-#docutranslate -i --with-mcp 
+#docutranslate -i --with-mcp
 ```
 
 ### 使用 uv
@@ -136,6 +136,54 @@ docker run -d -p 8010:8010 xunbu/docutranslate:latest #不支持docling
 - **API 文档**: 完整的 API 文档（Swagger UI）位于 `http://127.0.0.1:8010/docs`。
 - MCP：启用sse服务访问端点位于`http://127.0.0.1:8010/mcp/sse` (--with-mcp方式启动) 或 `http://127.0.0.1:8000/mcp/sse` (--mcp方式启动)
 
+## MCP 配置
+
+DocuTranslate 可以用作 MCP（Model Context Protocol）服务器。详细文档请参考 [MCP 文档](./docutranslate/mcp/README.md)。
+
+### 支持的环境变量
+
+| 环境变量 | 说明 | 必需 |
+|---------|------|------|
+| `DOCUTRANSLATE_API_KEY` | AI 平台 API 密钥 | 是 |
+| `DOCUTRANSLATE_BASE_URL` | AI 平台基础 URL | 是 |
+| `DOCUTRANSLATE_MODEL_ID` | 模型 ID | 是 |
+| `DOCUTRANSLATE_TO_LANG` | 目标语言（默认：中文） | 否 |
+| `DOCUTRANSLATE_CONCURRENT` | 并发请求数（默认：10） | 否 |
+| `DOCUTRANSLATE_CONVERT_ENGINE` | PDF 转换引擎 | 否 |
+| `DOCUTRANSLATE_MINERU_TOKEN` | MinerU API Token | 否 |
+
+### uvx 配置（无需安装）
+
+```json
+{
+  "mcpServers": {
+    "docutranslate": {
+      "command": "uvx",
+      "args": ["--from", "docutranslate[mcp]", "docutranslate", "--mcp"],
+      "env": {
+        "DOCUTRANSLATE_API_KEY": "sk-xxxxxx",
+        "DOCUTRANSLATE_BASE_URL": "https://api.openai.com/v1",
+        "DOCUTRANSLATE_MODEL_ID": "gpt-4o",
+        "DOCUTRANSLATE_TO_LANG": "中文",
+        "DOCUTRANSLATE_CONCURRENT": "10",
+        "DOCUTRANSLATE_CONVERT_ENGINE": "mineru",
+        "DOCUTRANSLATE_MINERU_TOKEN": "your-mineru-token"
+      }
+    }
+  }
+}
+```
+
+### SSE 模式配置
+
+首先以 SSE 模式启动 MCP 服务器：
+
+```bash
+docutranslate --mcp --transport sse --mcp-host 127.0.0.1 --mcp-port 8000
+```
+
+然后在客户端中配置 SSE 端点：`http://127.0.0.1:8000/mcp/sse`
+
 ## 代码使用方式
 
 ### 使用Client SDK (推荐)
@@ -159,7 +207,7 @@ result = client.translate("path/to/your/document.txt")
 print(f"翻译完成！保存位置: {result.save()}")
 
 # 示例 2: 翻译 PDF 文件 (需要指定 mineru_token 或使用本地部署)
-# 方式 A: 使用在线 MinerU (需要申请 token: https://mineru.net/apiManage/token)
+# 方式 A: 使用在线 MinerU (需要 token: https://mineru.net/apiManage/token)
 result = client.translate(
     "path/to/your/document.pdf",
     convert_engine="mineru",
@@ -209,7 +257,7 @@ print(f"导出内容长度: {len(base64_content)}")
 | **to_lang** | `str` | - | 目标语言（如 `"中文"`、`"English"`、`"日本語"`） |
 | **concurrent** | `int` | 10 | 并发 LLM 请求数 |
 | **convert_engine** | `str` | `"mineru"` | PDF 解析引擎：`"mineru"`、`"docling"`、`"mineru_deploy"` |
-| **md2docx_engine** | `str` | `"auto"` | Markdown 转 Docx 引擎：`"python"`（纯 Python）、`"pandoc"`（使用 Pandoc）、`"auto"`（若已安装 Pandoc 则使用，否则用 Python）、`null`（不生成 docx） |
+| **md2docx_engine** | `str` | `"auto"` | Markdown 转 Docx 引擎：`"python"`（纯Python）、`"pandoc"`（使用 Pandoc）、`"auto"`（若已安装 Pandoc 则使用，否则用Python）、`null`（不生成 docx） |
 | **mineru_deploy_base_url** | `str` | - | 本地 minerU API 地址（当 `convert_engine="mineru_deploy"` 时） |
 | **mineru_deploy_parse_method** | `str` | `"auto"` | 本地 minerU 解析方法: `"auto"`, `"txt"`, `"ocr"` |
 | **mineru_deploy_table_enable** | `bool` | `True` | 本地 minerU 是否启用表格识别 |
@@ -281,7 +329,7 @@ asyncio.run(translate_multiple())
 
 ### 使用 Workflow API（高级控制）
 
-如需更精细的控制，可直接使用 Workflow API。所有工作流遵循相同模式：
+如需更精细的控制，可直接使用 Workflow API。所有工作流遵循相同的模式：
 
 ```python
 # 模式:
@@ -294,7 +342,7 @@ asyncio.run(translate_multiple())
 ```
 #### 可用工作流及输出方法
 
-| 工作流 | 输入格式 | save_as_* | export_to_* | 关键配置选项 |
+| 工作流 | 输入格式 | save_as_* | export_to_* | 主要配置选项 |
 |:---|:---|:---|:---|:---|
 | **MarkdownBasedWorkflow** | `.pdf`, `.docx`, `.md`, `.png`, `.jpg` | `html`, `markdown`, `markdown_zip`, `docx` | `html`, `markdown`, `markdown_zip`, `docx` | `convert_engine`, `md2docx_engine`, `translator_config` |
 | **TXTWorkflow** | `.txt` | `txt`, `html` | `txt`, `html` | `translator_config` |
@@ -308,7 +356,7 @@ asyncio.run(translate_multiple())
 
 #### 关键配置选项
 
-**通用 TranslatorConfig 选项：**
+**通用 TranslatorConfig 选项:**
 
 | 选项 | 类型 | 默认值 | 说明 |
 |:---|:---|:---|:---|
@@ -322,7 +370,7 @@ asyncio.run(translate_multiple())
 | `timeout` | `int` | 60 | 请求超时（秒） |
 | `retry` | `int` | 3 | 重试次数 |
 
-**格式特定选项：**
+**格式特定选项:**
 
 | 选项 | 适用工作流 | 说明 |
 |:---|:---|:---|
@@ -418,11 +466,11 @@ if __name__ == "__main__":
 - **json_paths**: JSONPath 表达式用于 JSON 翻译 (例如 `["$.*", "$.name"]`)
 - **separator**: 用于 `"append"` / `"prepend"` 模式的文本分隔符
 
-## 前置条件与配置详解
+## 前提条件与配置详解
 
 ### 1. 获取大模型 API Key
 
-翻译功能依赖于大型语言模型，您需要从相应的 AI 平台获取 `base_url`, `api_key` 和 `model_id`。
+翻译功能依赖于大型语言模型，您需要从相应的 AI 平台获取 `base_url`, `api_key`, 和 `model_id`。
 
 > 推荐模型：火山引擎的`doubao-seed-1-6-flash`、`doubao-seed-1-6`系列、智谱的`glm-4-flash`，阿里云的 `qwen-plus`、`qwen-flash`
 > ，deepseek的`deepseek-chat`等。
@@ -526,7 +574,7 @@ A: 使用 `docutranslate -i -p 8011` 或设置 `DOCUTRANSLATE_PORT=8011`。
 A: 支持，使用 `mineru` 引擎具备 OCR 能力。
 
 **Q: 第一次翻译 PDF 很慢？**
-A: `docling` 首次需要下载模型。使用 Hugging Face 镜像或预下载 artifact。
+A: `docling` 首次需要下载模型。使用 Hugging Face mirror 或预下载 artifact。
 
 **Q: 内网/离线环境使用？**
 A: 可以。使用本地 LLM（Ollama/LM Studio）和本地 minerU 或 docling。
