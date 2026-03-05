@@ -70,14 +70,15 @@ class MD2HTMLExporter(MDExporter):
                 renderMathInElement(document.body, {
                     delimiters: [
                         {left: '\\[', right: '\\]', display: true},
-                        {left: '\\(', right: '\\)', display: false}
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '$', right: '$', display: false}
                     ],
                     throwOnError: false,
                     errorColor: '#F5CF27',
                     macros: { "\\f": "#1f(#2)" },
                     trust: true,
                     strict: false
-                })
+                });
             });
         </script>"""
 
@@ -112,7 +113,7 @@ class MD2HTMLExporter(MDExporter):
 
         content = document.content.decode()
 
-        # 预处理markdown内容，确保$$...$$公式块前后有适当的空行以便正确渲染
+        # 预处理markdown内容
         from docutranslate.utils.markdown_utils import format_markdown_latex
         content = format_markdown_latex(content)
 

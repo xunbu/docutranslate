@@ -272,8 +272,8 @@ def format_markdown_latex(markdown_text: str) -> str:
     这个函数会确保每个 $$...$$ 公式块前后都有适当的空行，
     以便markdown解析器能够正确地识别和渲染这些块级公式。
 
-    简化实现：无论公式块前后是否已有空行，统一添加，
-    然后统一清理多余的空行，这样最简单且最可靠。
+    同时，专门处理HTML表格内部的公式，将 $...$ 转换为 \(...\)，
+    这样markdown解析器就能正确地解析它们了。
 
     Args:
         markdown_text: 包含LaTeX公式的原始Markdown字符串。
@@ -281,16 +281,87 @@ def format_markdown_latex(markdown_text: str) -> str:
     Returns:
         格式化后的Markdown字符串。
     """
-    # 1. 统一在所有公式块前后添加空行
-    processed = re.sub(r'(\$\$[\s\S]*?\$\$)', r'\n\n\1\n\n', markdown_text)
+    # 1. 专门处理HTML表格内部的公式
+    processed = re.sub(r'(<table[\s\S]*?</table>)', process_table_formulas, markdown_text)
 
-    # 2. 清理多余的空行（连续多个换行）
+    # 2. 统一在所有 $$...$$ 公式块前后添加空行（非表格内的公式）
+    processed = re.sub(r'(\$\$[\s\S]*?\$\$)', r'\n\n\1\n\n', processed)
+
+    # 3. 清理多余的空行（连续多个换行）
     processed = re.sub(r'\n\s*\n\s*\n+', '\n\n', processed)
 
-    # 3. 处理字符串开头和结尾的空行
+    # 4. 处理字符串开头和结尾的空行
     processed = processed.strip('\n') + '\n' if processed and processed[-1] != '\n' else processed.strip('\n')
 
     return processed
+
+
+def process_table_formulas(match):
+    """
+    处理HTML表格内部的公式，将 $...$ 转换为 \(...\)。
+    """
+    table_html = match.group(0)
+    # 转换 $...$ 为 \(...\)
+    processed_table = re.sub(r'\$(.*?)\$', r'\\(\1\\)', table_html)
+    # 转换 $$...$$ 为 \[...\]
+    processed_table = re.sub(r'\$\$(.*?)\$\$', r'\\[\1\\]', processed_table)
+    return processed_table
+
+
+def extract_and_process_html_tables(markdown_text: str) -> str:
+    """
+    提取markdown文本中的HTML表格，
+    将表格内部的 $...$ 和 $$...$$ 公式转换为 LaTeX 格式，
+    这样在markdown解析后，KaTeX能够正确地渲染它们。
+    """
+    # 找到所有HTML表格
+    import uuid
+    from bs4 import BeautifulSoup
+
+    tables = []
+    processed_text = markdown_text
+    table_pattern = re.compile(r'<table[\s\S]*?</table>')
+
+    # 找到所有表格并替换为临时占位符
+    temp_markers = []
+    def replace_with_marker(match):
+        temp_id = f"TABLE_{uuid.uuid4().hex}"
+        tables.append((temp_id, match.group()))
+        temp_markers.append(temp_id)
+        return temp_id
+
+    processed_text = table_pattern.sub(replace_with_marker, processed_text)
+
+    # 处理表格内部的公式
+    processed_tables = {}
+    for temp_id, table_html in tables:
+        try:
+            soup = BeautifulSoup(table_html, 'html.parser')
+            # 查找所有的td和th元素
+            cells = soup.find_all(['td', 'th'])
+            for cell in cells:
+                # 处理单元格内的 $...$ 公式
+                if cell.string:
+                    cell.string = re.sub(r'\$(.*?)\$', r'\\(\1\\)', cell.string)
+                    cell.string = re.sub(r'\$\$(.*?)\$\$', r'\\[\1\\]', cell.string)
+                else:
+                    # 处理包含子元素的单元格
+                    for content in cell.contents:
+                        if isinstance(content, str):
+                            processed_content = re.sub(r'\$(.*?)\$', r'\\(\1\\)', content)
+                            processed_content = re.sub(r'\$\$(.*?)\$\$', r'\\[\1\\]', processed_content)
+                            if processed_content != content:
+                                content.replace_with(processed_content)
+            processed_tables[temp_id] = str(soup)
+        except Exception as e:
+            print(f"处理表格时出错: {e}")
+            processed_tables[temp_id] = table_html
+
+    # 将处理后的表格替换回原始位置
+    for temp_id, processed_table in processed_tables.items():
+        processed_text = processed_text.replace(temp_id, processed_table)
+
+    return processed_text
 
 
 if __name__ == '__main__':
