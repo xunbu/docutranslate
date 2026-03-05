@@ -84,6 +84,7 @@ class MD2HTMLExporter(MDExporter):
 
         extensions = [
             'markdown.extensions.tables',
+            'markdown.extensions.nl2br',
             'pymdownx.arithmatex',
             'pymdownx.superfences'
         ]
