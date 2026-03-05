@@ -112,6 +112,10 @@ class MD2HTMLExporter(MDExporter):
 
         content = document.content.decode()
 
+        # 预处理markdown内容，确保$$...$$公式块前后有适当的空行以便正确渲染
+        from docutranslate.utils.markdown_utils import format_markdown_latex
+        content = format_markdown_latex(content)
+
         html_content = markdown.markdown(
             content,
             extensions=extensions,

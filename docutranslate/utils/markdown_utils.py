@@ -265,5 +265,33 @@ def unembed_base64_images_to_zip(markdown: str, markdown_name: str, image_folder
                     zipf.write(file, file.relative_to(folder_path))
     return zip_buffer.getvalue()
 
+def format_markdown_latex(markdown_text: str) -> str:
+    """
+    格式化包含LaTeX数学公式的Markdown文本。
+
+    这个函数会确保每个 $$...$$ 公式块前后都有适当的空行，
+    以便markdown解析器能够正确地识别和渲染这些块级公式。
+
+    简化实现：无论公式块前后是否已有空行，统一添加，
+    然后统一清理多余的空行，这样最简单且最可靠。
+
+    Args:
+        markdown_text: 包含LaTeX公式的原始Markdown字符串。
+
+    Returns:
+        格式化后的Markdown字符串。
+    """
+    # 1. 统一在所有公式块前后添加空行
+    processed = re.sub(r'(\$\$[\s\S]*?\$\$)', r'\n\n\1\n\n', markdown_text)
+
+    # 2. 清理多余的空行（连续多个换行）
+    processed = re.sub(r'\n\s*\n\s*\n+', '\n\n', processed)
+
+    # 3. 处理字符串开头和结尾的空行
+    processed = processed.strip('\n') + '\n' if processed and processed[-1] != '\n' else processed.strip('\n')
+
+    return processed
+
+
 if __name__ == '__main__':
     pass
