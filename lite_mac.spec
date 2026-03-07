@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-from PyInstaller.utils.hooks import collect_data_files
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 import docutranslate
 
 datas = [
@@ -14,6 +14,7 @@ hiddenimports = [
     'pymdownx.superfences',
     'pymdownx.highlight',
     'pygments',
+    *collect_submodules('charset_normalizer'),
 ]
 
 a = Analysis(

@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
-from PyInstaller.utils.hooks import collect_all, copy_metadata
+from PyInstaller.utils.hooks import collect_all, copy_metadata, collect_submodules
 import docutranslate
 
 # 初始化列表
@@ -16,6 +16,7 @@ hiddenimports = [
     'docling_ibm_models',
     'docling_parse',
     'cv2',
+    *collect_submodules('charset_normalizer'),
 ]
 
 packages_to_collect = [
