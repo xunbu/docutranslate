@@ -39,7 +39,7 @@ class ConverterMineruConfig(X2MarkdownConverterConfig):
 
 timeout = httpx.Timeout(
     connect=5.0,  # 连接超时 (建立连接的最长时间)
-    read=3600.0,  # 读取超时 (等待服务器响应的最长时间)
+    read=600.0,  # 读取超时 (等待服务器响应的最长时间)
     write=600.0,  # 写入超时 (发送数据的最长时间)
     pool=1.0  # 从连接池获取连接的超时时间
 )
