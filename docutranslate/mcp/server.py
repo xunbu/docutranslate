@@ -140,8 +140,8 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                          "Step 1: Use submit_task to start a translation task, "
                          "Step 2: Use get_task_status to check progress - when completed, "
                          "it will show all available formats and attachments, "
-                         "Step 3: Use download_file to save translations or attachments, "
-                         "Step 4: Use release_task to clean up resources when done. "
+                         "Step 3: Use download_file to save translations or attachments (set auto_release=True to automatically clean up resources after download), "
+                         "Step 4 (optional): Use release_task to manually clean up resources when done. "
                          "The translation uses the full workflow engine from DocuTranslate.",
             host=host,
             port=port,
@@ -607,6 +607,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             file_name: str,
             output_dir: str = "./output",
             output_name: Optional[str] = None,
+            auto_release: bool = False,
         ) -> str:
             """Download a translated file or attachment to local file system.
 
@@ -615,6 +616,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 file_name: The format name (e.g., 'docx', 'html') or attachment name (e.g., 'glossary') to download
                 output_dir: Output directory for saving the file (default: ./output)
                 output_name: Output filename (optional, auto-generated if not provided)
+                auto_release: Automatically release task resources after successful download (default: False)
             """
             task_state = service.get_task_state(task_id)
             if not task_state:
@@ -658,7 +660,21 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             except Exception as e:
                 return f"Error saving file: {e}"
 
-            return f"File saved successfully:\nFile: {file_name}\nSaved to: {saved_path}"
+            response = f"File saved successfully:\nFile: {file_name}\nSaved to: {saved_path}"
+
+            # Auto release task if requested
+            if auto_release:
+                try:
+                    # Clean up output options
+                    if hasattr(service, "_mcp_output_options") and task_id in service._mcp_output_options:
+                        del service._mcp_output_options[task_id]
+
+                    release_result = await service.release_task(task_id)
+                    response += f"\n\nTask {task_id} released automatically. {release_result['message']}"
+                except Exception as e:
+                    response += f"\n\nWarning: Failed to auto-release task: {e}"
+
+            return response
 
         @mcp.tool()
         async def cancel_task(task_id: str) -> str:
@@ -774,11 +790,6 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             except Exception as e:
                 return f"Error loading glossary file: {e}"
 
-        @mcp.tool()
-        async def get_supported_formats() -> str:
-            """Get list of supported file formats and output options."""
-            formats_info = _get_formats_info()
-            return f"Supported formats:\n{_format_json(formats_info)}"
 
         @mcp.resource("docutranslate://info", name="DocuTranslate Server Information")
         async def get_info_resource() -> str:
