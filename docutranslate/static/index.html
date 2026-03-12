@@ -731,6 +731,11 @@
                                                     }}</span>
                                                 </button>
                                             </div>
+                                            <div class="mt-2">
+                                                <a href="javascript:void(0)" @click="downloadGlossaryTemplate" class="text-decoration-none small">
+                                                    <i class="bi bi-download me-1"></i>{{ t('downloadGlossaryTemplateBtn') }}
+                                                </a>
+                                            </div>
                                         </div>
 
                                         <div class="form-check form-switch mb-3 border-top pt-3">
@@ -1863,6 +1868,10 @@
                 if (glossaryInput.value) glossaryInput.value.value = '';
             };
             const openGlossaryModal = () => new bootstrap.Modal(document.getElementById('glossaryModal')).show();
+            const downloadGlossaryTemplate = () => {
+                // Download template from backend
+                window.open('/service/glossary/template', '_blank');
+            };
 
             // Task Management
             const createNewTask = (backendId = null) => {
@@ -2484,7 +2493,7 @@
                 form, workflowParams, showMineruToken, previewMode, syncScrollEnabled, showIdentityOption,
                 errors, clearError,
                 t, createNewTask, removeTask, clearAllTasks, handleTaskFileSelect, handleTaskFileDrop, toggleTaskState,
-                handleGlossaryFiles, clearGlossary, openGlossaryModal,
+                handleGlossaryFiles, clearGlossary, openGlossaryModal, downloadGlossaryTemplate,
                 openPreview, setPreviewMode, toggleSyncScroll, printPdf, copyLog, getFileIcon,
                 exportConfig, importConfig, setLang, setTheme, capitalize,
                 currentWorkflowConfig, ocrOptions, stepMap,

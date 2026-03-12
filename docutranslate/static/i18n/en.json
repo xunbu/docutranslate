@@ -105,6 +105,7 @@
   "glossaryLabel": "Glossary (Optional)",
   "glossaryHelp": "Select one or more CSV files. Files must contain 'src' and 'dst' headers, representing source and destination terms.",
   "viewGlossaryBtn": "View Glossary",
+  "downloadGlossaryTemplateBtn": "Download Glossary Template",
   "clearGlossaryBtn": "Clear",
   "glossaryGenEnableLabel": "Auto-generate Glossary",
   "glossaryCustomPromptLabel": "Custom Prompt",

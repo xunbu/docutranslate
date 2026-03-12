@@ -36,7 +36,7 @@ from fastapi.openapi.docs import (
     get_swagger_ui_oauth2_redirect_html,
     get_redoc_html,
 )
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import (
     BaseModel,
@@ -635,6 +635,22 @@ async def service_download_attachment(
     media_type = "application/octet-stream"
 
     return FileResponse(path=file_path, media_type=media_type, filename=filename)
+
+
+@service_router.get(
+    "/glossary/template",
+    summary="下载术语表模板",
+    description="下载术语表CSV模板，包含src和dst列，UTF-8 with BOM编码，适合在Excel中直接编辑。",
+)
+async def download_glossary_template():
+    # UTF-8 with BOM header
+    bom = b'\xef\xbb\xbf'
+    content = bom + b"src,dst\n<Source Term>,<Target Term>"
+    return Response(
+        content=content,
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=glossary_template.csv"}
+    )
 
 
 @service_router.get(

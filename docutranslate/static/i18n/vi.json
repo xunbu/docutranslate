@@ -105,6 +105,7 @@
   "glossaryLabel": "Bảng thuật ngữ (Tùy chọn)",
   "glossaryHelp": "Chọn một hoặc nhiều tệp CSV. Các tệp phải chứa tiêu đề 'src' và 'dst', đại diện cho thuật ngữ nguồn và đích.",
   "viewGlossaryBtn": "Xem bảng thuật ngữ",
+  "downloadGlossaryTemplateBtn": "Tải mẫu bảng thuật ngữ",
   "clearGlossaryBtn": "Xóa",
   "glossaryGenEnableLabel": "Tự động tạo bảng thuật ngữ",
   "glossaryCustomPromptLabel": "Prompt tùy chỉnh",

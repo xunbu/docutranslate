@@ -105,6 +105,7 @@
   "glossaryLabel": "术语表 (可选)",
   "glossaryHelp": "选择一个或多个CSV文件。文件需包含'src'和'dst'两列标题，分别代表原文和译文。",
   "viewGlossaryBtn": "查看术语表",
+  "downloadGlossaryTemplateBtn": "下载术语表模板",
   "clearGlossaryBtn": "清空",
   "glossaryGenEnableLabel": "自动生成术语表",
   "glossaryCustomPromptLabel": "自定义Prompt",
