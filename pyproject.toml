@@ -23,12 +23,13 @@ dependencies = [
     "regex>=2025.11.3",
     "charset-normalizer>=3.4.4",
     "html2text>=2024.2.26",
+    "python-dotenv>=1.2.1",
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
 docling = ["opencv-python>=4.12.0.88", "docling>=2.40.0", "hf-xet>=1.1.10"]
-mcp = ["mcp>=1.6.0"]
+mcp = ["mcp>=1.6.0", "python-dotenv>=1.0.0"]
 
 [dependency-groups]
 dev = [

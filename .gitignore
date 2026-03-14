@@ -5,6 +5,7 @@ build/
 dist/
 wheels/
 *.egg-info
+tests/
 tests/resource/
 tests/test_data/
 htmlcov/

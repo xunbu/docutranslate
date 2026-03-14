@@ -649,6 +649,7 @@ dependencies = [
     { name = "pypdf" },
     { name = "pysubs2" },
     { name = "python-docx" },
+    { name = "python-dotenv" },
     { name = "python-pptx" },
     { name = "regex" },
     { name = "srt" },
@@ -663,6 +664,7 @@ docling = [
 ]
 mcp = [
     { name = "mcp" },
+    { name = "python-dotenv" },
 ]
 
 [package.dev-dependencies]
@@ -699,6 +701,8 @@ requires-dist = [
     { name = "pypdf", specifier = ">=6.7.1" },
     { name = "pysubs2", specifier = ">=1.8.0" },
     { name = "python-docx", specifier = ">=1.2.0" },
+    { name = "python-dotenv", specifier = ">=1.2.1" },
+    { name = "python-dotenv", marker = "extra == 'mcp'", specifier = ">=1.0.0" },
     { name = "python-pptx", specifier = ">=1.0.2" },
     { name = "regex", specifier = ">=2025.11.3" },
     { name = "srt", specifier = ">=3.5.3" },

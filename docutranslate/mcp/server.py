@@ -13,11 +13,31 @@ to ensure consistent task management between the Web backend and MCP server.
 import asyncio
 import base64
 import os
-import sys
-import tempfile
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional, List
+
+
+def _load_dotenv():
+    """Load environment variables from .env file if python-dotenv is available"""
+    try:
+        from dotenv import load_dotenv
+        # Try to load .env from current directory first, then parent directories
+        env_path = None
+        current_dir = Path.cwd()
+        for dir_path in [current_dir] + list(current_dir.parents):
+            candidate = dir_path / ".env"
+            if candidate.exists():
+                env_path = candidate
+                break
+        if env_path:
+            load_dotenv(env_path)
+    except ImportError:
+        # python-dotenv not installed, silently skip
+        pass
+
+
+# Load .env file on module import
+_load_dotenv()
 
 # Shared server layer imports
 from docutranslate.server import (
@@ -26,10 +46,8 @@ from docutranslate.server import (
 )
 
 from docutranslate import __version__
-from docutranslate.translator import default_params
 from docutranslate.core.schemas import TranslatePayload
 from pydantic import TypeAdapter
-
 
 # MCP Server configuration
 SERVER_NAME = "docutranslate"
@@ -95,19 +113,19 @@ def _task_state_to_dict(task_id: str, task_state: Optional[Dict[str, Any]]) -> D
 
 try:
     from mcp.server.fastmcp import FastMCP, Context
+
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
     FastMCP = None
     Context = None
 
-
 if MCP_AVAILABLE and FastMCP is not None and Context is not None:
 
     def create_mcp_server(
-        host: str = "127.0.0.1",
-        port: int = 8000,
-        translation_service: Optional[TranslationService] = None,
+            host: str = "127.0.0.1",
+            port: int = 8000,
+            translation_service: Optional[TranslationService] = None,
     ):
         """Create and configure the FastMCP server
 
@@ -153,7 +171,8 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             # Ensure service is properly initialized with event loop
             if service.main_event_loop is None:
                 service.main_event_loop = asyncio.get_running_loop()
-            is_configured = bool(client_config.get("api_key") and client_config.get("base_url") and client_config.get("model_id"))
+            is_configured = bool(
+                client_config.get("api_key") and client_config.get("base_url") and client_config.get("model_id"))
             status_info = {
                 "server": "docutranslate",
                 "version": __version__,
@@ -165,13 +184,13 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
 
         @mcp.tool()
         async def configure_client(
-            api_key: Optional[str] = None,
-            base_url: Optional[str] = None,
-            model_id: Optional[str] = None,
-            to_lang: Optional[str] = None,
-            concurrent: Optional[int] = None,
-            convert_engine: Optional[str] = None,
-            mineru_token: Optional[str] = None,
+                api_key: Optional[str] = None,
+                base_url: Optional[str] = None,
+                model_id: Optional[str] = None,
+                to_lang: Optional[str] = None,
+                concurrent: Optional[int] = None,
+                convert_engine: Optional[str] = None,
+                mineru_token: Optional[str] = None,
         ) -> str:
             """Configure the DocuTranslate client LLM settings.
             If already configured via environment variables, this tool can override them.
@@ -201,7 +220,8 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 client_config["mineru_token"] = mineru_token
 
             # Check if we have the required config
-            has_required = bool(client_config.get("api_key") and client_config.get("base_url") and client_config.get("model_id"))
+            has_required = bool(
+                client_config.get("api_key") and client_config.get("base_url") and client_config.get("model_id"))
 
             if has_required:
                 return (
@@ -236,52 +256,52 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
 
         @mcp.tool()
         async def submit_task(
-            file_path: str,
-            api_key: str = "",
-            base_url: str = "",
-            model_id: str = "",
-            to_lang: Optional[str] = None,
-            workflow_type: str = "auto",
-            skip_translate: bool = False,
-            glossary_generate_enable: bool = False,
-            glossary_dict_json: str = "",
-            glossary_agent_config_json: str = "",
-            extra_body_json: str = "",
-            # LLM 进阶参数
-            chunk_size: Optional[int] = None,
-            concurrent: Optional[int] = None,
-            temperature: Optional[float] = None,
-            timeout: Optional[int] = None,
-            thinking: Optional[str] = None,
-            retry: Optional[int] = None,
-            system_proxy_enable: Optional[bool] = None,
-            custom_prompt: str = "",
-            force_json: Optional[bool] = None,
-            rpm: Optional[int] = None,
-            tpm: Optional[int] = None,
-            provider: Optional[str] = None,
-            # Markdown 工作流参数
-            convert_engine: Optional[str] = None,
-            md2docx_engine: Optional[str] = None,
-            mineru_token: str = "",
-            model_version: Optional[str] = None,
-            formula_ocr: Optional[bool] = None,
-            code_ocr: Optional[bool] = None,
-            mineru_deploy_base_url: Optional[str] = None,
-            mineru_deploy_backend: Optional[str] = None,
-            mineru_deploy_parse_method: Optional[str] = None,
-            mineru_deploy_table_enable: Optional[bool] = None,
-            mineru_deploy_formula_enable: Optional[bool] = None,
-            mineru_deploy_start_page_id: Optional[int] = None,
-            mineru_deploy_end_page_id: Optional[int] = None,
-            mineru_deploy_lang_list: Optional[List[str]] = None,
-            mineru_deploy_server_url: str = "",
-            # 其他工作流参数
-            insert_mode: Optional[str] = None,
-            separator: Optional[str] = None,
-            segment_mode: Optional[str] = None,
-            translate_regions: Optional[List[str]] = None,
-            json_paths: Optional[List[str]] = None,
+                file_path: str,
+                api_key: str = "",
+                base_url: str = "",
+                model_id: str = "",
+                to_lang: Optional[str] = None,
+                workflow_type: str = "auto",
+                skip_translate: bool = False,
+                glossary_generate_enable: bool = False,
+                glossary_dict_json: str = "",
+                glossary_agent_config_json: str = "",
+                extra_body_json: str = "",
+                # LLM 进阶参数
+                chunk_size: Optional[int] = None,
+                concurrent: Optional[int] = None,
+                temperature: Optional[float] = None,
+                timeout: Optional[int] = None,
+                thinking: Optional[str] = None,
+                retry: Optional[int] = None,
+                system_proxy_enable: Optional[bool] = None,
+                custom_prompt: str = "",
+                force_json: Optional[bool] = None,
+                rpm: Optional[int] = None,
+                tpm: Optional[int] = None,
+                provider: Optional[str] = None,
+                # Markdown 工作流参数
+                convert_engine: Optional[str] = None,
+                md2docx_engine: Optional[str] = None,
+                mineru_token: str = "",
+                model_version: Optional[str] = None,
+                formula_ocr: Optional[bool] = None,
+                code_ocr: Optional[bool] = None,
+                mineru_deploy_base_url: Optional[str] = None,
+                mineru_deploy_backend: Optional[str] = None,
+                mineru_deploy_parse_method: Optional[str] = None,
+                mineru_deploy_table_enable: Optional[bool] = None,
+                mineru_deploy_formula_enable: Optional[bool] = None,
+                mineru_deploy_start_page_id: Optional[int] = None,
+                mineru_deploy_end_page_id: Optional[int] = None,
+                mineru_deploy_lang_list: Optional[List[str]] = None,
+                mineru_deploy_server_url: str = "",
+                # 其他工作流参数
+                insert_mode: Optional[str] = None,
+                separator: Optional[str] = None,
+                segment_mode: Optional[str] = None,
+                translate_regions: Optional[List[str]] = None,
+                json_paths: Optional[List[str]] = None,
         ) -> str:
             """Submit a translation task (asynchronous, returns immediately).
             Use get_task_status to check progress. When complete, it will show
@@ -555,7 +575,8 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                     task_state = service.get_task_state(task_id)
                     if not task_state:
                         break
-                    if task_state.get("is_processing") != initial_processing or task_state.get("progress_percent", 0) != initial_progress:
+                    if task_state.get("is_processing") != initial_processing or task_state.get("progress_percent",
+                                                                                               0) != initial_progress:
                         break
 
             status_dict = _task_state_to_dict(task_id, task_state)
@@ -590,8 +611,10 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                         response_parts.append(f"  - {name}: {info['filename']}")
 
                 response_parts.append("")
-                response_parts.append("Use download_file to save translations or attachments to your local file system.")
-                response_parts.append("After downloading all needed files, use release_task to clean up temporary files.")
+                response_parts.append(
+                    "Use download_file to save translations or attachments to your local file system.")
+                response_parts.append(
+                    "After downloading all needed files, use release_task to clean up temporary files.")
                 response_parts.append("")
                 response_parts.append("Full status details:")
                 response_parts.append(_format_json(status_dict))
@@ -603,11 +626,11 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
 
         @mcp.tool()
         async def download_file(
-            task_id: str,
-            file_name: str,
-            output_dir: str = "./output",
-            output_name: Optional[str] = None,
-            auto_release: bool = False,
+                task_id: str,
+                file_name: str,
+                output_dir: str = "./output",
+                output_name: Optional[str] = None,
+                auto_release: bool = False,
         ) -> str:
             """Download a translated file or attachment to local file system.
 
@@ -790,7 +813,6 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             except Exception as e:
                 return f"Error loading glossary file: {e}"
 
-
         @mcp.resource("docutranslate://info", name="DocuTranslate Server Information")
         async def get_info_resource() -> str:
             """Information about the DocuTranslate MCP server"""
@@ -810,11 +832,11 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
 
 
     def get_sse_app(
-        translation_service: Optional[TranslationService] = None,
-        host: str = "127.0.0.1",
-        port: int = 8000,
-        enable_cors: bool = False,
-        allow_origin_regex: str = r"^(https?://.*|null|file://.*)$",
+            translation_service: Optional[TranslationService] = None,
+            host: str = "127.0.0.1",
+            port: int = 8000,
+            enable_cors: bool = False,
+            allow_origin_regex: str = r"^(https?://.*|null|file://.*)$",
     ):
         """Get the SSE Starlette app for mounting to existing FastAPI.
 
@@ -845,10 +867,10 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
 
 
     def run_mcp_server(
-        transport: str = "stdio",
-        host: str = "127.0.0.1",
-        port: int = 8000,
-        translation_service: Optional[TranslationService] = None,
+            transport: str = "stdio",
+            host: str = "127.0.0.1",
+            port: int = 8000,
+            translation_service: Optional[TranslationService] = None,
     ):
         """Run the MCP server (entry point)
 
@@ -934,11 +956,13 @@ else:
     # MCP dependencies not installed - define placeholder functions
     MCP_AVAILABLE = False
 
+
     def _mcp_not_available(*args, **kwargs):
         raise ImportError(
             "MCP dependencies not installed. "
             "Install with: pip install docutranslate[mcp]"
         )
+
 
     create_mcp_server = _mcp_not_available
     get_sse_app = _mcp_not_available
