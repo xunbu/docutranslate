@@ -26,7 +26,7 @@ class Translator(ABC, Generic[T]):
 
     def __init__(self, config: TranslatorConfig | None = None):
         self.config = config
-        self.logger = config.logger or global_logger
+        self.logger = config.logger if config else global_logger
         self.progress_tracker = config.progress_tracker if config else None
 
     @abstractmethod

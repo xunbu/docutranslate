@@ -157,12 +157,25 @@ class SegmentsTranslateAgent(Agent):
 
             # 如果都是列表，合并并去重
             if isinstance(accumulated, list) and isinstance(additional, list):
+                # 先过滤和展平两个列表，只保留 dict 元素
+                def flatten_and_filter(arr):
+                    result = []
+                    for item in arr:
+                        if isinstance(item, dict):
+                            result.append(item)
+                        elif isinstance(item, list):
+                            result.extend(flatten_and_filter(item))
+                    return result
+
+                accumulated = flatten_and_filter(accumulated)
+                additional = flatten_and_filter(additional)
+
                 # 收集 accumulated 中的 ID
-                existing_ids = {item.get("id") for item in accumulated if "id" in item}
+                existing_ids = {item.get("id") for item in accumulated if isinstance(item, dict) and "id" in item}
 
                 # 只添加 additional 中不重复的 ID
                 for item in additional:
-                    if item.get("id") not in existing_ids:
+                    if isinstance(item, dict) and "id" in item and item.get("id") not in existing_ids:
                         accumulated.append(item)
                         existing_ids.add(item.get("id"))
 
@@ -195,14 +208,25 @@ class SegmentsTranslateAgent(Agent):
             if isinstance(repaired_result, dict):
                 repaired_array = [{"id": k, "t": v} for k, v in repaired_result.items()]
             elif isinstance(repaired_result, list):
-                repaired_array = repaired_result
+                # 过滤并展平：只保留 dict 类型的元素，跳过 list 或其他类型
+                def flatten_and_filter(arr):
+                    result = []
+                    for item in arr:
+                        if isinstance(item, dict):
+                            result.append(item)
+                        elif isinstance(item, list):
+                            result.extend(flatten_and_filter(item))
+                        # 其他类型直接跳过
+                    return result
+                repaired_array = flatten_and_filter(repaired_result)
             else:
                 raise AgentResultError(f"Agent返回结果不是array的json形式, result: {result}")
 
             # 检查是否与原文完全相同（疑似翻译失败）
             # 按ID排序后比较，确保可靠性
             sorted_original = sorted([{"id": k, "t": v} for k, v in original_chunk.items()], key=lambda x: x["id"])
-            sorted_result = sorted(repaired_array, key=lambda x: x.get("id", ""))
+            # 只对有 id 的元素排序
+            sorted_result = sorted([x for x in repaired_array if isinstance(x, dict) and "id" in x], key=lambda x: x.get("id", ""))
             if sorted_original == sorted_result:
                 raise AgentResultError("翻译结果与原文完全相同，疑似翻译失败，将进行重试。")
 

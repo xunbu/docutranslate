@@ -118,12 +118,25 @@ You are a professional glossary extractor
 
             # 如果都是列表，合并并去重
             if isinstance(accumulated, list) and isinstance(additional, list):
+                # 先过滤和展平两个列表，只保留 dict 元素
+                def flatten_and_filter(arr):
+                    result = []
+                    for item in arr:
+                        if isinstance(item, dict):
+                            result.append(item)
+                        elif isinstance(item, list):
+                            result.extend(flatten_and_filter(item))
+                    return result
+
+                accumulated = flatten_and_filter(accumulated)
+                additional = flatten_and_filter(additional)
+
                 # 收集 accumulated 中的 src
-                existing_srcs = {item.get("src") for item in accumulated if "src" in item}
+                existing_srcs = {item.get("src") for item in accumulated if isinstance(item, dict) and "src" in item}
 
                 # 只添加 additional 中不重复的 src
                 for item in additional:
-                    if item.get("src") not in existing_srcs:
+                    if isinstance(item, dict) and "src" in item and item.get("src") not in existing_srcs:
                         accumulated.append(item)
                         existing_srcs.add(item.get("src"))
 
@@ -143,7 +156,16 @@ You are a professional glossary extractor
         try:
             if not isinstance(repaired_result, list):
                 raise AgentResultError(f"GlossaryAgent返回结果不是list的json形式, result: {result}")
-            return repaired_result
+            # 过滤和展平：只保留 dict 类型的元素
+            def flatten_and_filter(arr):
+                result = []
+                for item in arr:
+                    if isinstance(item, dict):
+                        result.append(item)
+                    elif isinstance(item, list):
+                        result.extend(flatten_and_filter(item))
+                return result
+            return flatten_and_filter(repaired_result)
         except (RuntimeError, JSONDecodeError) as e:
             raise AgentResultError(f"结果不能正确解析: {e.__repr__()}")
 

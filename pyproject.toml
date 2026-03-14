@@ -31,7 +31,17 @@ docling = ["opencv-python>=4.12.0.88", "docling>=2.40.0", "hf-xet>=1.1.10"]
 mcp = ["mcp>=1.6.0"]
 
 [dependency-groups]
-dev = ["opencv-python>=4.12.0.88","docling>=2.40.0", "hf-xet>=1.1.10"]
+dev = [
+    "opencv-python>=4.12.0.88",
+    "docling>=2.40.0",
+    "hf-xet>=1.1.10",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
+    "pytest-mock>=3.15.1",
+    "pytest-env>=1.5.0",
+    "coverage>=7.13.4",
+    "pytest-cov>=7.0.0",
+]
 [project.scripts]
 docutranslate = "docutranslate.cli:main"
 
@@ -49,3 +59,21 @@ docutranslate = ["static/**", "template/**"]
 
 [tool.setuptools.dynamic]
 version = { attr = "docutranslate.__version__" }
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=docutranslate --cov-report=term --cov-report=html:htmlcov"
+env = [
+    "DOCUTRANSLATE_BASE_URL=https://api.openai.com/v1",
+    "DOCUTRANSLATE_API_KEY=test-api-key",
+    "DOCUTRANSLATE_MODEL_ID=gpt-4o",
+    "DOCUTRANSLATE_TO_LANG=中文",
+    "DOCUTRANSLATE_CONCURRENT=10",
+    "DOCUTRANSLATE_CONVERT_ENGINE=",
+    "DOCUTRANSLATE_MINERU_TOKEN=test-mineru-token",
+    "DOCUTRANSLATE_PROXY_ENABLED=false"
+]

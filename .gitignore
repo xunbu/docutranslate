@@ -6,7 +6,13 @@ dist/
 wheels/
 *.egg-info
 tests/resource/
-tests/
+tests/test_data/
+htmlcov/
+.coverage
+.pytest_cache/
+*.pyc
+__pycache__/
+check/
 docutranslate/output/
 # Virtual environments
 .venv
