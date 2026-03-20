@@ -165,6 +165,8 @@ class Client:
             convert_engine: Literal["identity", "mineru", "docling", "mineru_deploy"] = "identity",
             mineru_token: str = "",
             extra_body: Optional[str] = None,
+            temperature: Optional[float] = None,
+            top_p: Optional[float] = None,
             **kwargs
     ):
         """
@@ -178,6 +180,8 @@ class Client:
             "system_proxy_enable": system_proxy_enable,
             "convert_engine": convert_engine, "mineru_token": mineru_token,
             "extra_body": extra_body,
+            "temperature": temperature,
+            "top_p": top_p,
             **kwargs
         }
         self.defaults = {k: v for k, v in self.defaults.items() if v is not None}
@@ -196,6 +200,7 @@ class Client:
             concurrent: Optional[int] = None,
             chunk_size: Optional[int] = None,
             temperature: Optional[float] = None,
+            top_p: Optional[float] = None,
             timeout: Optional[int] = None,
             retry: Optional[int] = None,
             thinking: Optional[ThinkingMode] = None,
@@ -264,6 +269,7 @@ class Client:
             concurrent: Optional[int] = None,
             chunk_size: Optional[int] = None,
             temperature: Optional[float] = None,
+            top_p: Optional[float] = None,
             timeout: Optional[int] = None,
             retry: Optional[int] = None,
             thinking: Optional[ThinkingMode] = None,

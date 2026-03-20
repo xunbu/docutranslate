@@ -61,6 +61,9 @@ class GlossaryAgentConfigPayload(BaseModel):
     temperature: float = Field(
         default=0.7, description="用于术语表生成的Agent的温度参数。"
     )
+    top_p: float = Field(
+        default=0.9, description="用于术语表生成的Agent的核采样参数。"
+    )
     concurrent: int = Field(default=30, description="Agent的最大并发请求数。")
     timeout: int = Field(
         default=default_params["timeout"], description="等待API回复的时间（秒）。"
@@ -138,6 +141,9 @@ class BaseWorkflowParams(BaseModel):
     )
     temperature: float = Field(
         default=default_params["temperature"], description="LLM温度参数。"
+    )
+    top_p: float = Field(
+        default=default_params["top_p"], description="LLM核采样参数。"
     )
     timeout: int = Field(
         default=default_params["timeout"], description="等待API回复的时间（秒）。"

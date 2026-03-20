@@ -667,6 +667,9 @@
                                         <slider-control label="Temperature" v-model="form.temperature"
                                                         save-key="temperature" :default-val="defaultParams.temperature"
                                                         :min="0" :max="2" :step="0.1" :t="t"></slider-control>
+                                        <slider-control label="Top-P" v-model="form.top_p"
+                                                        save-key="top_p" :default-val="defaultParams.top_p"
+                                                        :min="0" :max="1" :step="0.05" :t="t"></slider-control>
                                         <slider-control :label="t('retryLabel')" v-model="form.retry" save-key="retry"
                                                         :default-val="defaultParams.retry" :min="1" :max="6" :step="1"
                                                         :t="t"></slider-control>
@@ -819,6 +822,10 @@
                                                                 v-model="form.glossary_agent_temperature"
                                                                 save-key="glossary_agent_temperature" :default-val="0.7"
                                                                 :min="0" :max="2" :step="0.1" :t="t"></slider-control>
+                                                <slider-control label="Top-P"
+                                                                v-model="form.glossary_agent_top_p"
+                                                                save-key="glossary_agent_top_p" :default-val="0.9"
+                                                                :min="0" :max="1" :step="0.05" :t="t"></slider-control>
                                                 <slider-control :label="t('retryLabel')"
                                                                 v-model="form.glossary_agent_retry"
                                                                 save-key="glossary_agent_retry"
@@ -1509,6 +1516,7 @@
                 chunk_size: 4000,
                 concurrent: 30,
                 temperature: 0.7,
+                top_p: 0.9,
                 retry: 2,
                 rpm: null, // New RPM
                 tpm: null, // New TPM
@@ -1526,6 +1534,7 @@
                 glossary_agent_chunk_size: 4000,
                 glossary_agent_concurrent: 30,
                 glossary_agent_temperature: 0.7,
+                glossary_agent_top_p: 0.9,
                 glossary_agent_retry: 2,
                 glossary_agent_thinking: 'default',
                 glossary_agent_system_proxy_enable: false,
@@ -1596,6 +1605,7 @@
                 form.chunk_size = getNum('chunk_size', defaults.chunk_size ?? 4000);
                 form.concurrent = getNum('concurrent', defaults.concurrent ?? 30);
                 form.temperature = getNum('temperature', defaults.temperature ?? 0.7);
+                form.top_p = getNum('top_p', defaults.top_p ?? 0.9);
                 form.retry = getNum('retry', defaults.retry ?? 2);
                 form.rpm = getNumOrNull('rpm'); // Load RPM
                 form.tpm = getNumOrNull('tpm'); // Load TPM
@@ -1619,6 +1629,7 @@
                 form.glossary_agent_chunk_size = getNum('glossary_agent_chunk_size', defaults.chunk_size ?? 1000);
                 form.glossary_agent_concurrent = getNum('glossary_agent_concurrent', defaults.concurrent ?? 5);
                 form.glossary_agent_temperature = getNum('glossary_agent_temperature', defaults.temperature ?? 0.7);
+                form.glossary_agent_top_p = getNum('glossary_agent_top_p', 0.9);
                 form.glossary_agent_retry = getNum('glossary_agent_retry', defaults.retry ?? 3);
                 form.glossary_agent_thinking = get('glossary_agent_thinking_mode', defaults.thinking ?? 'default');
                 form.glossary_agent_system_proxy_enable = getBool('glossary_agent_system_proxy_enable', defaults.system_proxy_enable ?? false);
@@ -1689,6 +1700,7 @@
                 s('chunk_size', f.chunk_size);
                 s('concurrent', f.concurrent);
                 s('temperature', f.temperature);
+                s('top_p', f.top_p);
                 s('retry', f.retry);
                 s('rpm', f.rpm || '');
                 s('tpm', f.tpm || '');
@@ -1710,6 +1722,7 @@
                 s('glossary_agent_chunk_size', f.glossary_agent_chunk_size);
                 s('glossary_agent_concurrent', f.glossary_agent_concurrent);
                 s('glossary_agent_temperature', f.glossary_agent_temperature);
+                s('glossary_agent_top_p', f.glossary_agent_top_p);
                 s('glossary_agent_retry', f.glossary_agent_retry);
                 s('glossary_agent_thinking_mode', f.glossary_agent_thinking);
                 s('glossary_agent_system_proxy_enable', f.glossary_agent_system_proxy_enable);
@@ -1970,6 +1983,7 @@
                     chunk_size: Number(form.chunk_size),
                     concurrent: Number(form.concurrent),
                     temperature: Number(form.temperature),
+                    top_p: Number(form.top_p),
                     retry: Number(form.retry),
                     custom_prompt: emptyToNull(form.custom_prompt),
                     glossary_dict: Object.keys(glossaryData.value).length ? glossaryData.value : null,
@@ -1993,6 +2007,7 @@
                         to_lang: isCustom ? (form.glossary_agent_to_lang === 'custom' ? form.glossary_agent_custom_to_lang : form.glossary_agent_to_lang) : basePayload.to_lang,
                         custom_prompt: emptyToNull(form.glossary_agent_custom_prompt),
                         temperature: isCustom ? Number(form.glossary_agent_temperature) : basePayload.temperature,
+                        top_p: isCustom ? Number(form.glossary_agent_top_p) : basePayload.top_p,
                         concurrent: isCustom ? Number(form.glossary_agent_concurrent) : basePayload.concurrent,
                         retry: isCustom ? Number(form.glossary_agent_retry) : basePayload.retry,
                         thinking: isCustom ? form.glossary_agent_thinking : basePayload.thinking,

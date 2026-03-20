@@ -47,6 +47,7 @@ class MDTranslator(AiTranslator):
                                                   api_key=config.api_key,
                                                   model_id=config.model_id,
                                                   temperature=config.temperature,
+                                                  top_p=config.top_p,
                                                   thinking=config.thinking,
                                                   concurrent=config.concurrent,
                                                   timeout=config.timeout,

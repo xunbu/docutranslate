@@ -50,6 +50,7 @@ class AgentConfig:
     api_key: str | None = None
     model_id: str
     temperature: float = 0.7
+    top_p: float = 0.9
     concurrent: int = 30
     timeout: int = 1200
     thinking: ThinkingMode = "disable"
@@ -319,6 +320,7 @@ class Agent:
         self.model_id = config.model_id.strip()
         self.system_prompt = ""
         self.temperature = config.temperature
+        self.top_p = config.top_p
         self.max_concurrent = config.concurrent
         self.timeout = httpx.Timeout(connect=5, read=config.timeout, write=300, pool=10)
         self.thinking = config.thinking
@@ -414,10 +416,12 @@ class Agent:
             data[field_thinking] = value
 
     def _prepare_request_data(
-            self, prompt: str, system_prompt: str, temperature=None, top_p=0.9, json_format=False
+            self, prompt: str, system_prompt: str, temperature=None, top_p=None, json_format=False
     ):
         if temperature is None:
             temperature = self.temperature
+        if top_p is None:
+            top_p = self.top_p
         headers = {
             "Content-Type": "application/json",
             "Authorization": f"Bearer {self.key}",
@@ -611,7 +615,6 @@ class Agent:
         current_partial_result = None
         input_tokens = 0
         output_tokens = 0
-
         try:
             response = await client.post(
                 f"{self.baseurl}/chat/completions",

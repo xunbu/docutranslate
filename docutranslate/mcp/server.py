@@ -271,6 +271,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 chunk_size: Optional[int] = None,
                 concurrent: Optional[int] = None,
                 temperature: Optional[float] = None,
+                top_p: Optional[float] = None,
                 timeout: Optional[int] = None,
                 thinking: Optional[str] = None,
                 retry: Optional[int] = None,
@@ -459,6 +460,8 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 payload_dict["concurrent"] = use_concurrent
             if temperature is not None:
                 payload_dict["temperature"] = temperature
+            if top_p is not None:
+                payload_dict["top_p"] = top_p
             if timeout is not None:
                 payload_dict["timeout"] = timeout
             if thinking is not None:
