@@ -27,6 +27,29 @@ MAX_CONTINUE_FETCHES = 2  # 响应被截断时，最多继续获取的次数
 ThinkingMode = Literal["enable", "disable", "default"]
 
 
+def _parse_response_json(response: httpx.Response) -> dict:
+    """
+    解析API响应，正确处理前缀空行（如DeepSeek API在高负载时返回的空行）
+
+    Args:
+        response: httpx.Response 对象
+
+    Returns:
+        解析后的 JSON 字典
+
+    Raises:
+        json.JSONDecodeError: 如果响应无法解析为 JSON
+    """
+    text = response.text
+    # 跳过开头的空行和空白字符，找到第一个非空白字符
+    # 这可以处理 DeepSeek API 返回的前缀空行
+    stripped_text = text.lstrip()
+    if not stripped_text:
+        raise json.JSONDecodeError("Expecting value", text, 0)
+    # 从第一个非空白字符开始解析
+    return json.loads(stripped_text)
+
+
 class AgentResultError(ValueError):
     """一个特殊的异常，用于表示结果由AI正常返回，但返回的结果有问题。该错误不计入总错误数"""
 
@@ -509,7 +532,7 @@ class Agent:
                 timeout=self.timeout,
             )
             response.raise_for_status()
-            response_data = response.json()
+            response_data = _parse_response_json(response)
 
             # 安全提取 choices 和 content
             choices = response_data.get("choices", [])
@@ -623,7 +646,7 @@ class Agent:
                 timeout=self.timeout,
             )
             response.raise_for_status()
-            response_data = response.json()
+            response_data = _parse_response_json(response)
 
             # 检查 finish_reason
             choices = response_data.get("choices", [])
@@ -713,7 +736,17 @@ class Agent:
                 await asyncio.sleep(5)
 
         except httpx.RequestError as e:
-            self.logger.error(f"AI请求连接错误 (async): {repr(e)}")
+            # 根据错误类型给出更清晰的提示
+            if isinstance(e, httpx.ReadError):
+                self.logger.error(f"AI请求读取响应失败 (async): {type(e).__name__}: {e} (可能是服务器关闭连接或网络中断)")
+            elif isinstance(e, httpx.ConnectError):
+                self.logger.error(f"AI请求连接失败 (async): {type(e).__name__}: {e} (无法连接到服务器，请检查网络或base_url)")
+            elif isinstance(e, httpx.WriteError):
+                self.logger.error(f"AI请求发送数据失败 (async): {type(e).__name__}: {e}")
+            elif isinstance(e, httpx.TimeoutException):
+                self.logger.error(f"AI请求超时 (async): {type(e).__name__}: {e} (请求超过{self.timeout}秒未完成)")
+            else:
+                self.logger.error(f"AI请求连接错误 (async): {type(e).__name__}: {e}")
             should_retry = True
             is_hard_error = True
         except (KeyError, IndexError, ValueError, json.JSONDecodeError) as e:
@@ -922,7 +955,7 @@ class Agent:
                 timeout=self.timeout,
             )
             response.raise_for_status()
-            response_data = response.json()
+            response_data = _parse_response_json(response)
 
             # 安全提取 choices 和 content
             choices = response_data.get("choices", [])
@@ -1030,7 +1063,7 @@ class Agent:
                 timeout=self.timeout,
             )
             response.raise_for_status()
-            response_data = response.json()
+            response_data = _parse_response_json(response)
 
             # 检查 finish_reason
             choices = response_data.get("choices", [])
@@ -1116,7 +1149,17 @@ class Agent:
                 time.sleep(5)
 
         except httpx.RequestError as e:
-            self.logger.error(f"AI请求连接错误 (sync): {repr(e)}\nprompt:{prompt}")
+            # 根据错误类型给出更清晰的提示
+            if isinstance(e, httpx.ReadError):
+                self.logger.error(f"AI请求读取响应失败 (sync): {type(e).__name__}: {e} (可能是服务器关闭连接或网络中断)\nprompt:{prompt}")
+            elif isinstance(e, httpx.ConnectError):
+                self.logger.error(f"AI请求连接失败 (sync): {type(e).__name__}: {e} (无法连接到服务器，请检查网络或base_url)\nprompt:{prompt}")
+            elif isinstance(e, httpx.WriteError):
+                self.logger.error(f"AI请求发送数据失败 (sync): {type(e).__name__}: {e}\nprompt:{prompt}")
+            elif isinstance(e, httpx.TimeoutException):
+                self.logger.error(f"AI请求超时 (sync): {type(e).__name__}: {e} (请求超过{self.timeout}秒未完成)\nprompt:{prompt}")
+            else:
+                self.logger.error(f"AI请求连接错误 (sync): {type(e).__name__}: {e}\nprompt:{prompt}")
             should_retry = True
             is_hard_error = True
         except (KeyError, IndexError, ValueError, json.JSONDecodeError) as e:
