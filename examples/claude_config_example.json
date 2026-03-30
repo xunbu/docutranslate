@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "docutranslate": {
-      "command": "python",
-      "args": ["-m", "docutranslate", "--mcp"]
-    }
-  }
-}

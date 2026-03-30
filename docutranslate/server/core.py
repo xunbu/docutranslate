@@ -32,6 +32,7 @@ from pydantic import TypeAdapter
 from docutranslate import __version__
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig
 from docutranslate.core.schemas import TranslatePayload
+from docutranslate.utils.utils import mask_secrets
 from docutranslate.exporter.md.types import ConvertEngineType
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
 from docutranslate.workflow.ass_workflow import AssWorkflow, AssWorkflowConfig
@@ -378,7 +379,7 @@ class TranslationService:
                 if hasattr(payload, "convert_engine"):
                     print(f"[{task_id}] After validation: convert_engine={payload.convert_engine}")
             except Exception as e:
-                raise HTTPException(status_code=400, detail=f"自动转换工作流参数失败: {e}")
+                raise HTTPException(status_code=400, detail=f"自动转换工作流参数失败: {mask_secrets(str(e))}")
 
         if task_id not in self.tasks_state:
             self.tasks_state[task_id] = _create_default_task_state()
@@ -452,7 +453,7 @@ class TranslationService:
                     "current_task_ref": None,
                 }
             )
-            raise HTTPException(status_code=500, detail=f"启动翻译任务时出错: {e}")
+            raise HTTPException(status_code=500, detail=f"启动翻译任务时出错: {mask_secrets(str(e))}")
 
     async def _perform_translation(
         self,
@@ -628,7 +629,7 @@ class TranslationService:
             task_logger.error(error_message, exc_info=True)
             task_state.update(
                 {
-                    "status_message": f"翻译过程中发生错误 (用时 {duration:.2f} 秒): {e}",
+                    "status_message": f"翻译过程中发生错误 (用时 {duration:.2f} 秒): {mask_secrets(str(e))}",
                     "error_flag": True,
                     "download_ready": False,
                     "progress_percent": 100,

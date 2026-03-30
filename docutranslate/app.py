@@ -59,6 +59,7 @@ from docutranslate.server import (
 )
 from docutranslate.translator import default_params
 from docutranslate.utils.resource_utils import resource_path
+from docutranslate.utils.utils import mask_secrets
 
 # MCP integration imports (optional)
 try:
@@ -318,7 +319,7 @@ async def service_translate(
     try:
         file_contents = base64.b64decode(request.file_content)
     except (binascii.Error, TypeError) as e:
-        raise HTTPException(status_code=400, detail=f"无效的Base64文件内容: {e}")
+        raise HTTPException(status_code=400, detail=f"无效的Base64文件内容: {mask_secrets(str(e))}")
 
     try:
         response_data = await translation_service.start_translation(
@@ -381,7 +382,7 @@ async def service_translate_file(
     try:
         file_contents = await file.read()
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"读取上传文件失败: {e}")
+        raise HTTPException(status_code=500, detail=f"读取上传文件失败: {mask_secrets(str(e))}")
 
     try:
         response_data = await translation_service.start_translation(
@@ -704,7 +705,7 @@ async def service_content(
             }
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"读取文件时发生内部错误: {e}")
+        raise HTTPException(status_code=500, detail=f"读取文件时发生内部错误: {mask_secrets(str(e))}")
 
 
 # ===================================================================
@@ -873,7 +874,7 @@ async def service_flat_translate(
         file_contents = await file.read()
         original_filename = file.filename or "uploaded_file"
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"文件读取失败: {e}")
+        raise HTTPException(status_code=500, detail=f"文件读取失败: {mask_secrets(str(e))}")
 
     parsed_glossary_dict = None
     if glossary_dict_json and glossary_dict_json.strip():
@@ -882,14 +883,14 @@ async def service_flat_translate(
             if not isinstance(parsed_glossary_dict, dict):
                 raise ValueError("必须是字典")
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"glossary_dict_json 解析失败: {e}")
+            raise HTTPException(status_code=400, detail=f"glossary_dict_json 解析失败: {mask_secrets(str(e))}")
 
     parsed_glossary_agent = None
     if glossary_agent_config_json and glossary_agent_config_json.strip():
         try:
             parsed_glossary_agent = json.loads(glossary_agent_config_json)
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"glossary_agent_config_json 解析失败: {e}")
+            raise HTTPException(status_code=400, detail=f"glossary_agent_config_json 解析失败: {mask_secrets(str(e))}")
 
     # Parse extra_body if provided - validate but keep as string
     if extra_body_json and extra_body_json.strip():
@@ -898,7 +899,7 @@ async def service_flat_translate(
             if not isinstance(parsed_extra, dict):
                 raise HTTPException(status_code=400, detail="extra_body_json 必须是 JSON 对象")
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"extra_body_json 解析失败: {e}")
+            raise HTTPException(status_code=400, detail=f"extra_body_json 解析失败: {mask_secrets(str(e))}")
 
     payload_dict = {
         "workflow_type": workflow_type,
@@ -960,7 +961,7 @@ async def service_flat_translate(
     try:
         payload_obj = TypeAdapter(TranslatePayload).validate_python(payload_dict)
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"参数配置校验失败: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"参数配置校验失败: {mask_secrets(str(e))}")
 
     try:
         await translation_service.start_translation(
@@ -970,7 +971,7 @@ async def service_flat_translate(
             original_filename=original_filename
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"内部翻译错误: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"内部翻译错误: {mask_secrets(str(e))}")
 
     task_state = translation_service.get_task_state(task_id)
 

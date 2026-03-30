@@ -13,6 +13,7 @@ htmlcov/
 .pytest_cache/
 *.pyc
 __pycache__/
+examples/
 check/
 docutranslate/output/
 # Virtual environments
