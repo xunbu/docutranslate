@@ -112,22 +112,18 @@ class TXTTranslator(AiTranslator):
         Returns:
             List[str]: 分段后的文本列表。
         """
+        # 使用 charset_normalizer 自动检测编码
+        result = charset_normalizer.from_bytes(document.content).best()
+        if result is None:
+            self.logger.error("无法检测TXT文件编码")
+            return []
+        detected_encoding = result.encoding
+        self.logger.info(f"检测到TXT文件编码: {detected_encoding}")
         try:
-            # 首先尝试 UTF-8-sig 解码以处理可能存在的BOM (Byte Order Mark)
-            txt_content = document.content.decode('utf-8-sig')
-        except (UnicodeDecodeError, AttributeError):
-            # UTF-8 失败，使用 charset_normalizer 自动检测编码
-            result = charset_normalizer.from_bytes(document.content).best()
-            if result is None:
-                self.logger.error("无法检测TXT文件编码")
-                return []
-            detected_encoding = result.encoding
-            self.logger.info(f"检测到TXT文件编码: {detected_encoding}")
-            try:
-                txt_content = document.content.decode(detected_encoding)
-            except (UnicodeDecodeError, AttributeError) as e:
-                self.logger.error(f"无法使用检测到的编码 {detected_encoding} 解码文件: {e}")
-                return []
+            txt_content = document.content.decode(detected_encoding)
+        except (UnicodeDecodeError, AttributeError) as e:
+            self.logger.error(f"无法使用检测到的编码 {detected_encoding} 解码文件: {e}")
+            return []
 
         if self.segment_mode == "line":
             return self._segment_by_line(txt_content)

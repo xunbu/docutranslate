@@ -73,11 +73,11 @@ class TXTWorkflow(Workflow[TXTWorkflowConfig, Document, Document], HTMLExportabl
     def export_to_html(self, config: TXT2HTMLExporterConfig = None) -> str:
         config = config or self.config.html_exporter_config
         docu = self._export(TXT2HTMLExporter(config))
-        return docu.content.decode()
+        return docu.content.decode('utf-8-sig')
 
     def export_to_txt(self, _: ExporterConfig | None = None) -> str:
         docu = self._export(TXT2TXTExporter())
-        return docu.content.decode()
+        return docu.content.decode('utf-8-sig')
 
     def save_as_html(self, name: str = None, output_dir: Path | str = "./output",
                      config: TXT2HTMLExporterConfig | None = None) -> Self:

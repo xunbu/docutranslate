@@ -76,11 +76,11 @@ class AssWorkflow(Workflow[AssWorkflowConfig, Document, Document], HTMLExportabl
     def export_to_html(self, config: Ass2HTMLExporterConfig = None) -> str:
         config = config or self.config.html_exporter_config
         docu = self._export(Ass2HTMLExporter(config))
-        return docu.content.decode()
+        return docu.content.decode('utf-8-sig')
 
     def export_to_ass(self, _: ExporterConfig | None = None) -> str:
         docu = self._export(Ass2AssExporter())
-        return docu.content.decode()
+        return docu.content.decode('utf-8-sig')
 
     def save_as_html(self, name: str = None, output_dir: Path | str = "./output",
                      config: Ass2HTMLExporterConfig | None = None) -> Self:

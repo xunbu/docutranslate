@@ -4,6 +4,8 @@ import asyncio
 from dataclasses import dataclass
 from typing import Self, List
 
+import charset_normalizer
+
 from docutranslate.agents import MDTranslateAgent
 from docutranslate.agents.markdown_agent import MDTranslateAgentConfig
 from docutranslate.context.md_mask_context import MDMaskUrisContext
@@ -63,11 +65,29 @@ class MDTranslator(AiTranslator):
                                                   )
             self.translate_agent = MDTranslateAgent(agent_config)
 
+    def _decode_content(self, document: MarkdownDocument) -> str:
+        """
+        使用 charset_normalizer 自动检测文档编码并解码内容。
+        """
+        result = charset_normalizer.from_bytes(document.content).best()
+        if result is None:
+            self.logger.error("无法检测Markdown文件编码")
+            return ""
+        detected_encoding = result.encoding
+        try:
+            return document.content.decode(detected_encoding)
+        except (UnicodeDecodeError, AttributeError) as e:
+            self.logger.error(f"无法使用检测到的编码 {detected_encoding} 解码文件: {e}")
+            return ""
+
     def translate(self, document: MarkdownDocument) -> Self:
         self.logger.info("正在翻译markdown")
         with MDMaskUrisContext(document):
             # 使用新接口，获取 chunks 和对应的 separators
-            chunks, separators = split_markdown_with_layout(document.content.decode(), self.chunk_size)
+            content_str = self._decode_content(document)
+            if not content_str:
+                return self
+            chunks, separators = split_markdown_with_layout(content_str, self.chunk_size)
 
             translate_indices: List[int] = []
             translate_chunks: List[str] = []
@@ -114,7 +134,10 @@ class MDTranslator(AiTranslator):
         self.logger.info("正在翻译markdown")
         with MDMaskUrisContext(document):
             # 异步方法同样更新
-            chunks, separators = split_markdown_with_layout(document.content.decode(), self.chunk_size)
+            content_str = await asyncio.to_thread(self._decode_content, document)
+            if not content_str:
+                return self
+            chunks, separators = split_markdown_with_layout(content_str, self.chunk_size)
 
             translate_indices: List[int] = []
             translate_chunks: List[str] = []

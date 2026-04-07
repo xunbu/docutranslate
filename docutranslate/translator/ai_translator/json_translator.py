@@ -1,10 +1,12 @@
 # SPDX-FileCopyrightText: 2025 QinHan
 # SPDX-License-Identifier: MPL-2.0
+import asyncio
 import json_repair
 import json
 from dataclasses import dataclass
 from typing import Self, Any, Tuple, List
 
+import charset_normalizer
 from jsonpath_ng.ext import parse
 
 from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, SegmentsTranslateAgent
@@ -130,6 +132,21 @@ class JsonTranslator(AiTranslator):
             if container is not None and key_or_index is not None:
                 container[key_or_index] = text
 
+    def _decode_content(self, document: Document) -> str:
+        """
+        使用 charset_normalizer 自动检测文档编码并解码内容。
+        """
+        result = charset_normalizer.from_bytes(document.content).best()
+        if result is None:
+            self.logger.error("无法检测JSON文件编码")
+            return ""
+        detected_encoding = result.encoding
+        try:
+            return document.content.decode(detected_encoding)
+        except (UnicodeDecodeError, AttributeError) as e:
+            self.logger.error(f"无法使用检测到的编码 {detected_encoding} 解码文件: {e}")
+            return ""
+
     def translate(self, document: Document) -> Self:
         """
         主方法：提取、翻译并更新JSON文档中的指定内容。
@@ -141,7 +158,10 @@ class JsonTranslator(AiTranslator):
         4. 将翻译回来的文本根据其原始位置，更新回JSON对象中。
         5. 将更新后的 content 写回 document。
         """
-        content = json_repair.loads(document.content.decode())
+        content_str = self._decode_content(document)
+        if not content_str:
+            return self
+        content = json_repair.loads(content_str)
 
         # 步骤 1: 提取所有需要翻译的字符串及其位置
         original_texts, update_targets = self._collect_strings_for_translation(content)
@@ -177,7 +197,10 @@ class JsonTranslator(AiTranslator):
         return self
 
     async def translate_async(self, document: Document) -> Self:
-        content = json_repair.loads(document.content.decode())
+        content_str = await asyncio.to_thread(self._decode_content, document)
+        if not content_str:
+            return self
+        content = json_repair.loads(content_str)
 
         # 步骤 1: 提取所有需要翻译的字符串及其位置
         original_texts, update_targets = self._collect_strings_for_translation(content)

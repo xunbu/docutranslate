@@ -5,6 +5,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Self, Literal, List, Optional
 
+import charset_normalizer
 import pysubs2
 
 from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, SegmentsTranslateAgent
@@ -71,10 +72,17 @@ class AssTranslator(AiTranslator):
         解析 ASS 文件，提取所有 Dialogue 行的文本。
         返回：subs 对象、待翻译条目列表、原文列表
         """
+        # 使用 charset_normalizer 自动检测编码
+        result = charset_normalizer.from_bytes(document.content).best()
+        if result is None:
+            self.logger.error("无法检测ASS文件编码")
+            return None, [], []
+        detected_encoding = result.encoding
         try:
-            content_str = document.content.decode('utf-8-sig')  # ASS 通常带 BOM
-        except UnicodeDecodeError:
-            content_str = document.content.decode('utf-8')
+            content_str = document.content.decode(detected_encoding)
+        except (UnicodeDecodeError, AttributeError) as e:
+            self.logger.error(f"无法使用检测到的编码 {detected_encoding} 解码文件: {e}")
+            return None, [], []
 
         subs = pysubs2.SSAFile.from_string(content_str)
         lines_to_translate = []
@@ -96,6 +104,9 @@ class AssTranslator(AiTranslator):
         """
         将翻译结果写回 ASS 对象，根据 insert_mode 处理。
         """
+        if subs is None:
+            return b""
+
         for i, item in enumerate(lines_to_translate):
             line = item["line"]
             translated_text = translated_texts[i]
@@ -117,7 +128,7 @@ class AssTranslator(AiTranslator):
     def translate(self, document: Document) -> Self:
         subs, lines_to_translate, original_texts = self._pre_translate(document)
 
-        if not lines_to_translate:
+        if subs is None or not lines_to_translate:
             print("\n未找到需要翻译的字幕行。")
             return self
 
@@ -144,7 +155,7 @@ class AssTranslator(AiTranslator):
     async def translate_async(self, document: Document) -> Self:
         subs, lines_to_translate, original_texts = await asyncio.to_thread(self._pre_translate, document)
 
-        if not lines_to_translate:
+        if subs is None or not lines_to_translate:
             print("\n未找到需要翻译的字幕行。")
             return self
 

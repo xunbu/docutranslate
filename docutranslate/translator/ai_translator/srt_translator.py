@@ -4,6 +4,7 @@ import asyncio
 from dataclasses import dataclass
 from typing import Self, Literal
 
+import charset_normalizer
 import srt  # 导入srt库来处理字幕文件
 
 from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, SegmentsTranslateAgent
@@ -74,11 +75,16 @@ class SrtTranslator(AiTranslator):
         Returns:
             tuple: (解析后的字幕对象列表, 待翻译的原文文本列表)
         """
+        # 使用 charset_normalizer 自动检测编码
+        result = charset_normalizer.from_bytes(document.content).best()
+        if result is None:
+            self.logger.error("无法检测SRT文件编码")
+            return [], []
+        detected_encoding = result.encoding
         try:
-            # 使用 utf-8-sig 解码以处理可能存在的BOM (Byte Order Mark)
-            srt_content = document.content.decode('utf-8-sig')
+            srt_content = document.content.decode(detected_encoding)
         except (UnicodeDecodeError, AttributeError) as e:
-            self.logger.error(f"无法解码SRT文件内容，请确保文件编码为UTF-8: {e}")
+            self.logger.error(f"无法使用检测到的编码 {detected_encoding} 解码文件: {e}")
             return [], []
 
         # 使用 srt 库解析内容
