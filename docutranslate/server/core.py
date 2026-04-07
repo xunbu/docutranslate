@@ -145,19 +145,21 @@ class QueueAndHistoryHandler(logging.Handler):
 
     def emit(self, record: logging.LogRecord):
         log_entry = self.format(record)
-        print(f"[{self.task_id}] {log_entry}")
-        self.history_list.append(log_entry)
+        # 过滤敏感信息后再存储和输出
+        masked_log_entry = mask_secrets(log_entry)
+        print(f"[{self.task_id}] {masked_log_entry}")
+        self.history_list.append(masked_log_entry)
         if len(self.history_list) > self.max_history:
             del self.history_list[: len(self.history_list) - self.max_history]
         if self.queue is not None:
             try:
                 # Try to get the main event loop - this will be set by the application
-                self.queue.put_nowait(log_entry)
+                self.queue.put_nowait(masked_log_entry)
             except asyncio.QueueFull:
-                print(f"[{self.task_id}] Log queue is full. Log dropped: {log_entry}")
+                print(f"[{self.task_id}] Log queue is full. Log dropped: {masked_log_entry}")
             except Exception as e:
                 print(
-                    f"[{self.task_id}] Error putting log to queue: {e}. Log: {log_entry}"
+                    f"[{self.task_id}] Error putting log to queue: {e}. Log: {masked_log_entry}"
                 )
 
 
