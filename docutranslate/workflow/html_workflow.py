@@ -71,7 +71,7 @@ class HtmlWorkflow(Workflow[HtmlWorkflowConfig, Document, Document], HTMLExporta
     def export_to_html(self, _: ExporterConfig = None) -> str:
 
         docu = self._export(Html2HtmlExporter())
-        return docu.content.decode()
+        return docu.content.decode('utf-8')
 
 
     def save_as_html(self, name: str = None, output_dir: Path | str = "./output",

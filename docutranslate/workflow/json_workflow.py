@@ -72,11 +72,11 @@ class JsonWorkflow(Workflow[JsonWorkflowConfig, Document, Document], HTMLExporta
     def export_to_html(self, config: Json2HTMLExporterConfig = None) -> str:
         config = config or self.config.html_exporter_config
         docu = self._export(Json2HTMLExporter(config))
-        return docu.content.decode()
+        return docu.content.decode('utf-8-sig')
 
     def export_to_json(self, _: ExporterConfig | None = None) -> str:
         docu = self._export(Json2JsonExporter())
-        return docu.content.decode()
+        return docu.content.decode('utf-8')
 
     def save_as_html(self, name: str = None, output_dir: Path | str = "./output",
                      config: Json2HTMLExporterConfig | None = None) -> Self:
