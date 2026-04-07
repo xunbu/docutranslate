@@ -71,7 +71,6 @@ class ConverterMineru(X2MarkdownConverter):
         }
 
     def _get_upload_data(self, document: Document):
-        print(self.config.language)
         return {
             "enable_formula": self.formula,
             "language": self.config.language,
