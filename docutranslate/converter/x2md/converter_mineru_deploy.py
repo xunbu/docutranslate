@@ -118,6 +118,11 @@ class ConverterMineruDeploy(X2MarkdownConverter):
         response.raise_for_status()  # 检查是否有错误
         # Mineru API 返回 zip 时包含图片和 md
         md = embed_inline_image_from_zip(response.content, None)
+        # 将原始 zip 存入附件
+        self.attachments.append(
+            AttachMent("mineru_deploy",
+                       Document.from_bytes(content=response.content, suffix=".zip", stem="mineru_deploy"))
+        )
         self.logger.info("已转化为markdown")
         return MarkdownDocument.from_bytes(md.encode(), suffix=".md", stem=d.stem)
 
@@ -133,6 +138,11 @@ class ConverterMineruDeploy(X2MarkdownConverter):
 
         response.raise_for_status()
         md = await asyncio.to_thread(embed_inline_image_from_zip, response.content, None)
+        # 将原始 zip 存入附件
+        self.attachments.append(
+            AttachMent("mineru_deploy",
+                       Document.from_bytes(content=response.content, suffix=".zip", stem="mineru_deploy"))
+        )
         self.logger.info("已转化为markdown")
         return MarkdownDocument.from_bytes(md.encode(), suffix=".md", stem=d.stem)
 

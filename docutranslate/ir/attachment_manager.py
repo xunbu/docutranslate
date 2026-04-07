@@ -4,7 +4,7 @@ from typing import Literal
 
 from docutranslate.ir.document import Document
 
-AttachMentIdentifier = Literal["glossary", "mineru", "docling", "md_cached"]
+AttachMentIdentifier = Literal["glossary", "mineru", "mineru_deploy", "docling", "md_cached"]
 
 
 class AttachMent:
