@@ -22,14 +22,14 @@ Một công cụ dịch thuật tệp tin cục bộ gọn nhẹ dựa trên cá
 
 * ✅ **Hỗ trợ Đa định dạng**: Dịch các file `pdf`, `docx`, `xlsx`, `md`, `txt`, `json`, `epub`, `srt`, `ass`, và nhiều hơn nữa.
 * ✅ **Tự động Tạo Thuật ngữ (Glossary)**: Hỗ trợ tự động tạo bảng thuật ngữ để đảm bảo sự đồng nhất về thuật ngữ.
-* ✅ **Nhận dạng Bảng, Công thức, Mã trong PDF**: Tận dụng các công cụ phân tích PDF như `docling` và `mineru` để nhận dạng và dịch các bảng, công thức và mã code thường thấy trong các bài báo học thuật.
+* ✅ **Nhận dạng Bảng, Công thức, Mã trong PDF**: Sử dụng `mineru` (online hoặc triển khai cục bộ) để phân tích PDF, hỗ trợ nhận dạng và dịch các bảng, công thức và mã code thường thấy trong các bài báo học thuật.
 * ✅ **Dịch thuật JSON**: Hỗ trợ chỉ định các giá trị cần dịch trong JSON bằng đường dẫn (sử dụng cú pháp `jsonpath-ng`).
 * ✅ **Bảo toàn Định dạng Word/Excel**: Hỗ trợ file `docx` và `xlsx` (hiện chưa hỗ trợ `doc` hoặc `xls`) trong khi vẫn giữ nguyên định dạng gốc.
 * ✅ **Hỗ trợ Đa Nền tảng AI**: Hỗ trợ hầu hết các nền tảng AI, cho phép dịch thuật AI đồng thời hiệu suất cao với các prompt tùy chỉnh.
 * ✅ **Hỗ trợ Bất đồng bộ (Async)**: Được thiết kế cho các kịch bản hiệu suất cao, cung cấp hỗ trợ bất đồng bộ đầy đủ và các giao diện cho đa nhiệm song song.
 * ✅ **Hỗ trợ Mạng LAN & Đa người dùng**: Hỗ trợ sử dụng đồng thời bởi nhiều người dùng trong cùng một mạng cục bộ (LAN).
 * ✅ **Giao diện Web Tương tác**: Cung cấp sẵn Giao diện Web (Web UI) và RESTful API để dễ dàng tích hợp và sử dụng.
-* ✅ **Các gói Portable Gọn nhẹ**: Các gói portable cho Windows và Mac dưới 40MB (các phiên bản không sử dụng `docling` để phân tích PDF cục bộ).
+* ✅ **Các gói Portable Gọn nhẹ**: Các gói portable cho Windows và Mac dưới 40MB.
 
 > Khi dịch `pdf`, tệp sẽ được chuyển đổi sang markdown trước. Điều này sẽ làm **mất** bố cục gốc. Người dùng có yêu cầu khắt khe về bố cục nên lưu ý điều này.
 
@@ -48,9 +48,6 @@ Một công cụ dịch thuật tệp tin cục bộ gọn nhẹ dựa trên cá
 
 Dành cho những người dùng muốn bắt đầu nhanh chóng, chúng tôi cung cấp các gói tích hợp trên [GitHub Releases](https://github.com/xunbu/docutranslate/releases). Chỉ cần tải xuống, giải nén và nhập API-Key nền tảng AI của bạn để bắt đầu sử dụng.
 
-* **DocuTranslate**: Phiên bản tiêu chuẩn. Sử dụng `minerU` (online hoặc triển khai cục bộ) để phân tích PDF. Hỗ trợ gọi API minerU cục bộ. (Được khuyến nghị)
-* **DocuTranslate_full**: Phiên bản đầy đủ. Bao gồm công cụ phân tích PDF cục bộ tích hợp sẵn là `docling`. Chọn phiên bản này nếu bạn cần phân tích PDF offline mà không cần minerU.
-
 ## Bắt đầu Nhanh chóng
 
 ### Sử dụng pip
@@ -61,9 +58,6 @@ pip install docutranslate
 
 # Cài đặt phần mở rộng mcp
 pip install docutranslate[mcp]
-
-# Cài đặt phần mở rộng docling
-pip install docutranslate[docling]
 
 docutranslate -i
 
@@ -82,9 +76,6 @@ uv add docutranslate
 # Cài đặt phần mở rộng mcp
 uv add docutranslate[mcp]
 
-# Cài đặt phần mở rộng docling
-uv add docutranslate[docling]
-
 uv run --no-dev docutranslate -i
 
 #uv run --no-dev docutranslate -i --with-mcp
@@ -100,7 +91,6 @@ cd docutranslate
 
 uv sync --no-dev
 # uv sync --no-dev --extra mcp
-# uv sync --no-dev --extra docling
 # uv sync --no-dev --all-extras
 
 ```
@@ -108,7 +98,7 @@ uv sync --no-dev
 ### Sử dụng docker
 
 ```bash
-docker run -d -p 8010:8010 xunbu/docutranslate:latest #không hỗ trợ docling
+docker run -d -p 8010:8010 xunbu/docutranslate:latest
 # docker run -it -p 8010:8010 xunbu/docutranslate:latest
 # docker run -it -p 8010:8010 xunbu/docutranslate:v1.5.4
 ```
@@ -256,7 +246,7 @@ print(f"Độ dài nội dung đã xuất: {len(base64_content)}")
 | **model_id** | `str` | - | ID Model sử dụng để dịch |
 | **to_lang** | `str` | - | Ngôn ngữ đích (ví dụ: `"Chinese"`, `"English"`, `"Japanese"`) |
 | **concurrent** | `int` | 10 | Số lượng yêu cầu LLM đồng thời |
-| **convert_engine** | `str` | `"mineru"` | Công cụ phân tích PDF: `"mineru"`, `"docling"`, `"mineru_deploy"` |
+| **convert_engine** | `str` | `"mineru"` | Công cụ phân tích PDF: `"mineru"`, `"mineru_deploy"` |
 | **md2docx_engine** | `str` | `"auto"` | Công cụ chuyển đổi Markdown sang Docx: `"python"` (Python thuần), `"pandoc"` (sử dụng Pandoc), `"auto"` (sử dụng Pandoc nếu đã cài đặt, nếu không thì dùng Python), `null` (không tạo docx) |
 | **mineru_deploy_base_url** | `str` | - | Địa chỉ API minerU cục bộ (khi dùng `convert_engine="mineru_deploy"`) |
 | **mineru_deploy_parse_method** | `str` | `"auto"` | Phương pháp phân tích minerU cục bộ: `"auto"`, `"txt"`, `"ocr"` |
@@ -380,7 +370,7 @@ asyncio.run(translate_multiple())
 | `insert_mode` | Docx, Xlsx, Html, Epub | `"replace"` (mặc định), `"append"`, `"prepend"` |
 | `json_paths` | Json | Biểu thức JSONPath (ví dụ: `["$.*", "$.name"]`) |
 | `separator` | Docx, Xlsx, Html, Epub | Dấu phân cách văn bản cho các chế độ `"append"` / `"prepend"` |
-| `convert_engine` | MarkdownBased | `"mineru"` (mặc định), `"docling"`, `"mineru_deploy"` |
+| `convert_engine` | MarkdownBased | `"mineru"` (mặc định), `"mineru_deploy"` |
 
 #### Ví dụ 1: Dịch một tệp PDF (Sử dụng `MarkdownBasedWorkflow`)
 
@@ -510,52 +500,9 @@ Nếu bạn chọn `mineru` làm engine phân tích tài liệu (`convert_engine
 
 > **Lưu ý**: Token minerU có giá trị trong 14 ngày. Vui lòng tạo lại sau khi hết hạn.
 
-### 2.2. Cấu hình Engine docling (Phân tích PDF Cục bộ)
+### 2.2. Dịch vụ MinerU Triển khai Cục bộ
 
-Nếu bạn chọn `docling` làm engine phân tích tài liệu (`convert_engine="docling"`), nó sẽ tải xuống các model cần thiết từ Hugging Face trong lần sử dụng đầu tiên.
-
-> Một lựa chọn tốt hơn là tải xuống `docling_artifact.zip` từ [GitHub Releases](https://github.com/xunbu/docutranslate/releases) và giải nén nó vào thư mục làm việc của bạn.
-
-**Giải pháp cho Vấn đề Mạng khi Tải Model `docling`:**
-
-1. **Thiết lập Hugging Face Mirror (Được khuyến nghị)**:
-
-* **Phương pháp A (Biến môi trường)**: Đặt biến môi trường hệ thống `HF_ENDPOINT` và khởi động lại IDE hoặc terminal của bạn.
-```
-HF_ENDPOINT=https://hf-mirror.com
-
-```
-
-
-* **Phương pháp B (Trong Code)**: Thêm đoạn mã sau vào đầu tập lệnh Python của bạn.
-
-```python
-import os
-
-os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
-
-```
-
-2. **Sử dụng Offline (Tải trước Gói Model)**:
-
-* Tải xuống `docling_artifact.zip` từ [GitHub Releases](https://github.com/xunbu/docutranslate/releases).
-* Giải nén nó vào thư mục dự án của bạn.
-* Chỉ định đường dẫn model trong cấu hình (nếu model không nằm trong cùng thư mục với tập lệnh):
-
-```python
-from docutranslate.converter.x2md.converter_docling import ConverterDoclingConfig
-
-converter_config = ConverterDoclingConfig(
-    artifact="./docling_artifact",  # Trỏ đến thư mục đã giải nén
-    code_ocr=True,
-    formula_ocr=True
-)
-
-```
-
-### 2.3. Dịch vụ MinerU Triển khai Cục bộ
-
-Đối với môi trường offline/mạng nội bộ, hãy triển khai `minerU` cục bộ với API được kích hoạt. Đặt `mineru_deploy_base_url` thành endpoint API minerU của bạn.
+Đối với môi trường offline/mạng nội bộ, bạn có thể sử dụng `minerU` được triển khai cục bộ. Đặt `mineru_deploy_base_url` thành endpoint API minerU của bạn.
 
 **Client SDK:**
 
@@ -585,11 +532,8 @@ result.save(fmt="markdown")
 **H: PDF scan có được hỗ trợ không?**
 Đ: Có, sử dụng engine `mineru` với khả năng OCR.
 
-**H: Dịch PDF lần đầu tiên rất chậm?**
-Đ: `docling` cần tải xuống các model trong lần chạy đầu tiên. Hãy sử dụng Hugging Face mirror hoặc tải trước gói artifact.
-
 **H: Sử dụng trong mạng nội bộ/offline được không?**
-Đ: Có. Sử dụng LLM cục bộ (Ollama/LM Studio) và minerU hoặc docling cục bộ.
+Đ: Có. Dịch thuật cục bộ có thể thực hiện bằng cách triển khai LLM cục bộ (Ollama/LM Studio/VLLM, v.v.). Nếu cần phân tích PDF cục bộ, bạn cũng cần triển khai MinerU cục bộ.
 
 **H: Cơ chế cache PDF?**
 Đ: `MarkdownBasedWorkflow` lưu trữ kết quả phân tích trong bộ nhớ (10 lần phân tích gần nhất). Cấu hình qua `DOCUTRANSLATE_CACHE_NUM`.

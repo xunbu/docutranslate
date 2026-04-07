@@ -22,14 +22,14 @@
 
 - ✅ **Support Multiple Formats**: Translates `pdf`, `docx`, `xlsx`, `md`, `txt`, `json`, `epub`, `srt`, `ass`, and more.
 - ✅ **Auto-Generate Glossary**: Supports automatic glossary generation to ensure term alignment.
-- ✅ **PDF Table, Formula, Code Recognition**: Leverages `docling` and `mineru` PDF parsing engines to recognize and translate tables, formulas, and code often found in academic papers.
+- ✅ **PDF Table, Formula, Code Recognition**: Uses `mineru` (online or locally deployed) for PDF parsing, supporting recognition and translation of tables, formulas, and code commonly found in academic papers.
 - ✅ **JSON Translation**: Supports specifying values to translate within JSON using paths (`jsonpath-ng` syntax).
 - ✅ **Word/Excel Format Preservation**: Supports `docx` and `xlsx` files (currently does not support `doc` or `xls`) while maintaining original formatting.
 - ✅ **Multi-AI Platform Support**: Supports most AI platforms, allowing for high-performance concurrent AI translation with custom prompts.
 - ✅ **Async Support**: Designed for high-performance scenarios, providing full asynchronous support and interfaces for parallel multi-tasking.
 - ✅ **LAN & Multi-user Support**: Supports simultaneous use by multiple users within a local area network (LAN).
 - ✅ **Interactive Web Interface**: Provides an out-of-the-box Web UI and RESTful API for easy integration and usage.
-- ✅ **Compact, Portable Packages**: Windows and Mac portable packages under 40MB (versions that do not use `docling` for local PDF parsing).
+- ✅ **Compact, Portable Packages**: Windows and Mac portable packages under 40MB.
 
 > When translating `pdf`, it is first converted to markdown. This will **lose** the original layout. Users with strict layout requirements should take note.
 
@@ -48,9 +48,6 @@
 
 For users who want to get started quickly, we provide integration packages on [GitHub Releases](https://github.com/xunbu/docutranslate/releases). Simply download, unzip, and enter your AI platform API-Key to start using it.
 
-- **DocuTranslate**: Standard version. Uses `minerU` (online or locally deployed) for PDF parsing. Supports local minerU API calls. (Recommended)
-- **DocuTranslate_full**: Full version. Includes the built-in `docling` local PDF parsing engine. Choose this version if you need offline PDF parsing without minerU.
-
 ## Quick Start
 
 ### Using pip
@@ -61,9 +58,6 @@ pip install docutranslate
 
 # Install mcp extension
 pip install docutranslate[mcp]
-
-# Install docling extension
-pip install docutranslate[docling]
 
 docutranslate -i
 
@@ -82,9 +76,6 @@ uv add docutranslate
 # Install mcp extension
 uv add docutranslate[mcp]
 
-# Install docling extension
-uv add docutranslate[docling]
-
 uv run --no-dev docutranslate -i
 
 #uv run --no-dev docutranslate -i --with-mcp
@@ -100,7 +91,6 @@ cd docutranslate
 
 uv sync --no-dev
 # uv sync --no-dev --extra mcp
-# uv sync --no-dev --extra docling
 # uv sync --no-dev --all-extras
 
 ```
@@ -108,7 +98,7 @@ uv sync --no-dev
 ### Using docker
 
 ```bash
-docker run -d -p 8010:8010 xunbu/docutranslate:latest #does not support docling
+docker run -d -p 8010:8010 xunbu/docutranslate:latest
 # docker run -it -p 8010:8010 xunbu/docutranslate:latest
 # docker run -it -p 8010:8010 xunbu/docutranslate:v1.5.4
 ```
@@ -255,7 +245,7 @@ print(f"Exported content length: {len(base64_content)}")
 | **model_id** | `str` | - | Model ID to use for translation |
 | **to_lang** | `str` | - | Target language (e.g., `"Chinese"`, `"English"`, `"Japanese"`) |
 | **concurrent** | `int` | 10 | Number of concurrent LLM requests |
-| **convert_engine** | `str` | `"mineru"` | PDF parsing engine: `"mineru"`, `"docling"`, `"mineru_deploy"` |
+| **convert_engine** | `str` | `"mineru"` | PDF parsing engine: `"mineru"`, `"mineru_deploy"` |
 | **md2docx_engine** | `str` | `"auto"` | Markdown to Docx engine: `"python"` (pure Python), `"pandoc"` (use Pandoc), `"auto"` (use Pandoc if installed, otherwise Python), `null` (do not generate docx) |
 | **mineru_deploy_base_url** | `str` | - | Local minerU API address (when `convert_engine="mineru_deploy"`) |
 | **mineru_deploy_parse_method** | `str` | `"auto"` | Local minerU parsing method: `"auto"`, `"txt"`, `"ocr"` |
@@ -376,7 +366,7 @@ For more control, use the Workflow API directly. Each workflow follows the same 
 | `insert_mode` | Docx, Xlsx, Html, Epub | `"replace"` (default), `"append"`, `"prepend"` |
 | `json_paths` | Json | JSONPath expressions (e.g., `["$.*", "$.name"]`) |
 | `separator` | Docx, Xlsx, Html, Epub | Text separator for append/prepend modes |
-| `convert_engine` | MarkdownBased | `"mineru"` (default), `"docling"`, `"mineru_deploy"` |
+| `convert_engine` | MarkdownBased | `"mineru"` (default), `"mineru_deploy"` |
 
 #### Example 1: Translate a PDF File (Using `MarkdownBasedWorkflow`)
 
@@ -503,47 +493,9 @@ If you choose `mineru` as the document parsing engine (`convert_engine="mineru"`
 
 > **Note**: The minerU Token is valid for 14 days. Please recreate it after expiration.
 
-### 2.2. docling Engine Configuration (Local PDF Parsing)
+### 2.2. Locally Deployed MinerU Service
 
-If you choose `docling` as the document parsing engine (`convert_engine="docling"`), it will download the required models from Hugging Face upon first use.
-
-> A better option is to download `docling_artifact.zip` from [GitHub Releases](https://github.com/xunbu/docutranslate/releases) and unzip it into your working directory.
-
-**Solutions for `docling` Model Download Network Issues:**
-
-1.  **Set Hugging Face Mirror (Recommended)**:
-
-*   **Method A (Environment Variable)**: Set the system environment variable `HF_ENDPOINT` and restart your IDE or terminal.
-    ```
-    HF_ENDPOINT=https://hf-mirror.com
-    ```
-*   **Method B (In Code)**: Add the following code at the beginning of your Python script.
-
-```python
-import os
-
-os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
-```
-
-2.  **Offline Use (Pre-download Model Package)**:
-
-*   Download `docling_artifact.zip` from [GitHub Releases](https://github.com/xunbu/docutranslate/releases).
-*   Unzip it into your project directory.
-*   Specify the model path in the configuration (if the model is not in the same directory as the script):
-
-```python
-from docutranslate.converter.x2md.converter_docling import ConverterDoclingConfig
-
-converter_config = ConverterDoclingConfig(
-    artifact="./docling_artifact",  # Point to the unzipped folder
-    code_ocr=True,
-    formula_ocr=True
-)
-```
-
-### 2.3. Locally Deployed MinerU Service
-
-For offline/intranet environments, deploy `minerU` locally with API enabled. Set `mineru_deploy_base_url` to your minerU API endpoint.
+For offline/intranet environments, you can use locally deployed `minerU`. Set `mineru_deploy_base_url` to your minerU API endpoint.
 
 **Client SDK:**
 ```python
@@ -571,11 +523,8 @@ A: Use `docutranslate -i -p 8011` or set `DOCUTRANSLATE_PORT=8011`.
 **Q: Scanned PDFs supported?**
 A: Yes, use `mineru` engine with OCR capabilities.
 
-**Q: First PDF translation slow?**
-A: `docling` needs to download models on first run. Use Hugging Face mirror or pre-download artifact.
-
 **Q: Use in intranet/offline?**
-A: Yes. Use local LLM (Ollama/LM Studio) and local minerU or docling.
+A: Yes. Local translation can be achieved by deploying a local LLM (Ollama/LM Studio/VLLM, etc.). If you need to parse PDFs locally, you also need to deploy MinerU locally.
 
 **Q: PDF cache mechanism?**
 A: `MarkdownBasedWorkflow` caches parsing results in memory (last 10 parses). Configure via `DOCUTRANSLATE_CACHE_NUM`.

@@ -22,14 +22,14 @@
 
 - ✅ **多形式対応**：`pdf`、`docx`、`xlsx`、`md`、`txt`、`json`、`epub`、`srt`、`ass`など、多様なファイルの翻訳に対応。
 - ✅ **用語集自動生成**：用語のアライメント（統一）を実現するための用語集自動生成をサポート。
-- ✅ **PDFの表・数式・コード認識**：`docling`、`mineru`といったPDF解析エンジンにより、学術論文によくある表、数式、コードの認識と翻訳を実現。
+- ✅ **PDFの表・数式・コード認識**：`mineru`（オンラインまたはローカルデプロイ）を使用してPDFを解析し、学術論文によくある表、数式、コードの認識と翻訳を実現。
 - ✅ **JSON翻訳**：JSONパス（`jsonpath-ng`構文）による翻訳対象値の指定をサポート。
 - ✅ **Word/Excelの書式保持翻訳**：`docx`、`xlsx`ファイル（`doc`、`xls`は未対応）の書式を保持したまま翻訳可能。
 - ✅ **マルチAIプラットフォーム対応**：ほぼ全てのAIプラットフォームに対応し、カスタムプロンプトによる高性能な並行AI翻訳を実現。
 - ✅ **非同期サポート**：高性能なシナリオ向けに設計され、完全な非同期サポートを提供し、マルチタスク並列処理可能なサービスインターフェースを実装。
 - ✅ **LAN・複数人利用対応**：LAN内での複数人同時利用をサポート。
 - ✅ **インタラクティブなWeb画面**：すぐに使えるWeb UIとRESTful APIを提供し、統合と使用が容易。
-- ✅ **軽量・マルチプラットフォーム対応のポータブルパッケージ**：40MB未満のWindows/Mac用ポータブルパッケージ（`docling`ローカル解析を含まないバージョン）を提供。
+- ✅ **軽量・マルチプラットフォーム対応のポータブルパッケージ**：40MB未満のWindows/Mac用ポータブルパッケージを提供。
 
 > `pdf`を翻訳する際、まずMarkdownに変換されるため、元のレイアウトが**失われます**。レイアウトを重視するユーザーはご注意ください。
 
@@ -48,9 +48,6 @@
 
 すぐに使い始めたいユーザー向けに、[GitHub Releases](https://github.com/xunbu/docutranslate/releases) で統合パッケージを提供しています。ダウンロードして解凍し、AIプラットフォームのAPIキーを入力するだけで使用を開始できます。
 
-- **DocuTranslate**: 標準版。`minerU`（オンラインまたはローカルデプロイ）を使用してPDFを解析します。ローカルの minerU API 呼び出しをサポートしています。（推奨）
-- **DocuTranslate_full**: 完全版。`docling` ローカルPDF解析エンジンを内蔵しています。minerU なしでオフラインPDF解析が必要な場合はこちらを選択してください。
-
 ## クイックスタート
 
 ### pipを使用する場合
@@ -61,9 +58,6 @@ pip install docutranslate
 
 # mcp拡張をインストール
 pip install docutranslate[mcp]
-
-# docling拡張をインストール
-pip install docutranslate[docling]
 
 docutranslate -i
 
@@ -82,9 +76,6 @@ uv add docutranslate
 # mcp拡張をインストール
 uv add docutranslate[mcp]
 
-# docling拡張をインストール
-uv add docutranslate[docling]
-
 uv run --no-dev docutranslate -i
 
 #uv run --no-dev docutranslate -i --with-mcp
@@ -100,7 +91,6 @@ cd docutranslate
 
 uv sync --no-dev
 # uv sync --no-dev --extra mcp
-# uv sync --no-dev --extra docling
 # uv sync --no-dev --all-extras
 
 ```
@@ -108,7 +98,7 @@ uv sync --no-dev
 ### docker を使用する場合
 
 ```bash
-docker run -d -p 8010:8010 xunbu/docutranslate:latest #doclingをサポートしていません
+docker run -d -p 8010:8010 xunbu/docutranslate:latest
 # docker run -it -p 8010:8010 xunbu/docutranslate:latest
 # docker run -it -p 8010:8010 xunbu/docutranslate:v1.5.4
 ```
@@ -255,7 +245,7 @@ print(f"エクスポートコンテンツ長さ: {len(base64_content)}")
 | **model_id** | `str` | - | 翻訳に使用するモデル ID |
 | **to_lang** | `str` | - | ターゲット言語（例: `"中文"`、`"English"`、`"日本語"`） |
 | **concurrent** | `int` | 10 | 同時 LLM リクエスト数 |
-| **convert_engine** | `str` | `"mineru"` | PDF 解析エンジン: `"mineru"`、`"docling"`、`"mineru_deploy"` |
+| **convert_engine** | `str` | `"mineru"` | PDF 解析エンジン: `"mineru"`、`"mineru_deploy"` |
 | **md2docx_engine** | `str` | `"auto"` | Markdown から Docx への変換エンジン: `"python"`（純Python）、`"pandoc"`（Pandoc を使用）、`"auto"`（インストールされていればPandocを使用，否则はPython）、`null`（docxを生成しない） |
 | **mineru_deploy_base_url** | `str` | - | ローカル minerU API アドレス（`convert_engine="mineru_deploy"` の場合） |
 | **mineru_deploy_parse_method** | `str` | `"auto"` | ローカル minerU 解析方法: `"auto"`, `"txt"`, `"ocr"` |
@@ -376,7 +366,7 @@ asyncio.run(translate_multiple())
 | `insert_mode` | Docx, Xlsx, Html, Epub | `"replace"`（デフォルト）, `"append"`, `"prepend"` |
 | `json_paths` | Json | JSONPath 式（例: `["$.*", "$.name"]`） |
 | `separator` | Docx, Xlsx, Html, Epub | append/prepend モードのテキスト区切り文字 |
-| `convert_engine` | MarkdownBased | `"mineru"`（デフォルト）, `"docling"`, `"mineru_deploy"` |
+| `convert_engine` | MarkdownBased | `"mineru"`（デフォルト）, `"mineru_deploy"` |
 
 #### 例 1: PDFファイルの翻訳 (`MarkdownBasedWorkflow` を使用)
 
@@ -503,47 +493,9 @@ if __name__ == "__main__":
 
 > **注意**: minerU Token の有効期限は14日間です。期限切れ後は再作成してください。
 
-### 2.2. docling エンジン設定 (ローカルPDF解析)
+### 2.2. ローカルデプロイ MinerU サービス
 
-ドキュメント解析エンジンとして `docling` を選択する場合（`convert_engine="docling"`）、初回使用時に Hugging Face から必要なモデルをダウンロードします。
-
-> [Github Releases](https://github.com/xunbu/docutranslate/releases) から `docling_artifact.zip` をダウンロードし、作業ディレクトリに解凍することをお勧めします。
-
-**`docling` モデルダウンロード時のネットワーク問題解決策:**
-
-1. **Hugging Face ミラーの設定 (推奨)**:
-
-* **方法 A (環境変数)**: システム環境変数 `HF_ENDPOINT` を設定し、IDEまたはターミナルを再起動します。
-   ```
-   HF_ENDPOINT=https://hf-mirror.com
-   ```
-* **方法 B (コード内で設定)**: Pythonスクリプトの冒頭に以下のコードを追加します。
-
-```python
-import os
-
-os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
-```
-
-2. **オフライン使用 (事前にモデルパッケージをダウンロード)**:
-
-* [GitHub Releases](https://github.com/xunbu/docutranslate/releases) から `docling_artifact.zip` をダウンロードします。
-* プロジェクトディレクトリに解凍します。
-* 設定でモデルパスを指定します（モデルがスクリプトと同階層にない場合）：
-
-```python
-from docutranslate.converter.x2md.converter_docling import ConverterDoclingConfig
-
-converter_config = ConverterDoclingConfig(
-    artifact="./docling_artifact",  # 解凍後のフォルダを指定
-    code_ocr=True,
-    formula_ocr=True
-)
-```
-
-### 2.3. ローカルデプロイ MinerU サービス
-
-オフライン/イントラネット環境では、ローカルデプロイの `minerU` を推奨します。パフォーマンス向上、API制限なし。`mineru_deploy_base_url` に minerU API アドレスを設定してください。
+オフラインまたはイントラネット環境では、ローカルデプロイの `minerU` を使用できます。`mineru_deploy_base_url` に minerU API アドレスを設定してください。
 
 **Client SDK:**
 ```python
@@ -571,11 +523,8 @@ A: `docutranslate -i -p 8011` または `DOCUTRANSLATE_PORT=8011`。
 **Q: スキャンPDF対応？**
 A: はい。`mineru` エンジンのOCR機能を使用。
 
-**Q: 最初のPDF翻訳が遅い？**
-A: `docling` は初回モデルダウンロードが必要。Hugging Face mirror または artifact 事前ダウンロードで解決。
-
 **Q: イントラネット/オフライン使用？**
-A: 可能。ローカルLLM（Ollama/LM Studio）とローカル minerU または docling を使用。
+A: 可能 ローカル翻訳はローカルLLM（Ollama/LM Studio/VLLMなど）をデプロイすることで実現できます。ローカルでPDFを解析する必要がある場合は、ローカルデプロイMinerUも必要です。
 
 **Q: PDFキャッシュ機構？**
 A: `MarkdownBasedWorkflow` がメモリ内に解析結果をキャッシュ（最近10件）。`DOCUTRANSLATE_CACHE_NUM` で変更可。
