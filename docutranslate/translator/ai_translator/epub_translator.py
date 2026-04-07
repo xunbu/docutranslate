@@ -119,6 +119,82 @@ class EpubTranslator(AiTranslator):
 
                 soup = soups[file_path]
 
+                # 预处理：检测并处理 body 下的直接文本内容（用 <br/> 换行的情况）
+                # 将直接在 body 下的文本按 <br/> 切分并用 <p> 包裹
+                body = soup.body
+                if body:
+                    # 检查 body 的直接子节点中是否有 NavigableString 或 <br/>
+                    has_direct_text = False
+                    has_br = False
+                    for child in body.contents:
+                        if isinstance(child, NavigableString) and child.strip():
+                            has_direct_text = True
+                            break
+                        if isinstance(child, Tag) and child.name == 'br':
+                            has_br = True
+                            break
+
+                    if has_direct_text or has_br:
+                        # 需要重构 body 内容
+                        new_body_contents = []
+                        current_paragraph = []
+                        leading_elements = []  # 用于存放开头的结构标记（如 span#pagestart）
+
+                        # 首先收集开头的非文本标记（直到遇到第一个有意义的文本或 br）
+                        found_first_content = False
+
+                        for child in list(body.contents):
+                            # 提取节点需要复制，避免修改原列表时的问题
+                            if isinstance(child, NavigableString):
+                                if child.strip():
+                                    found_first_content = True
+                                    current_paragraph.append(child)
+                                else:
+                                    # 空白文本，根据是否已找到内容决定放哪里
+                                    if found_first_content:
+                                        current_paragraph.append(child)
+                                    else:
+                                        leading_elements.append(child)
+                            elif isinstance(child, Tag):
+                                if child.name == 'br':
+                                    found_first_content = True
+                                    # 遇到 <br/>，结束当前段落
+                                    if current_paragraph:
+                                        p_tag = soup.new_tag('p')
+                                        for node in current_paragraph:
+                                            p_tag.append(node)
+                                        new_body_contents.append(p_tag)
+                                        current_paragraph = []
+                                else:
+                                    # 其他标签
+                                    if not found_first_content:
+                                        # 检查是否是结构标记（如 span#pagestart）
+                                        if (child.name == 'span' and child.get('id')) or child.name in ['a', 'link']:
+                                            leading_elements.append(child)
+                                        else:
+                                            found_first_content = True
+                                            current_paragraph.append(child)
+                                    else:
+                                        current_paragraph.append(child)
+
+                        # 处理最后一个段落
+                        if current_paragraph:
+                            p_tag = soup.new_tag('p')
+                            for node in current_paragraph:
+                                p_tag.append(node)
+                            new_body_contents.append(p_tag)
+
+                        # 只有当确实生成了段落时才替换 body 内容
+                        if new_body_contents:
+                            # 清空 body 并重新填充
+                            body.clear()
+                            # 先添加开头的结构标记
+                            for elem in leading_elements:
+                                body.append(elem)
+                            # 再添加新的段落
+                            for p in new_body_contents:
+                                body.append(p)
+
                 all_potential_tags = soup.find_all(TAGS_TO_TRANSLATE)
                 all_potential_tags_set = set(all_potential_tags)
 
