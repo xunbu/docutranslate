@@ -50,7 +50,8 @@ class ConverterMineruDeployConfig(X2MarkdownConverterConfig):
 
     def gethash(self) -> Hashable:
         return (self.backend, self.formula_enable, self.table_enable,
-                self.parse_method, self.start_page_id, self.end_page_id)
+                self.parse_method, self.start_page_id, self.end_page_id,
+                tuple(self.lang_list) if self.lang_list else None)
 
 
 # 配置HTTP客户端
