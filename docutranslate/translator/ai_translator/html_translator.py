@@ -54,8 +54,20 @@ class HtmlTranslator(AiTranslator):
         super().__init__(config=config)
         self.chunk_size = config.chunk_size
         self.translate_agent = None
+        self.total_chunks = 0
         glossary_dict = self.glossary.glossary_dict if self.glossary else None
         if not self.skip_translate:
+            # 创建进度回调函数
+            def progress_callback(current: int, total: int):
+                self.total_chunks = total
+                if self.progress_tracker:
+                    # 计算进度百分比 (30% - 90% 区间)
+                    percent = 30 + int((current / total) * 60)
+                    self.progress_tracker.update(
+                        percent=percent,
+                        message=f"正在翻译 ({current}/{total})"
+                    )
+
             agent_config = SegmentsTranslateAgentConfig(
                 custom_prompt=config.custom_prompt,
                 to_lang=config.to_lang,
@@ -76,6 +88,7 @@ class HtmlTranslator(AiTranslator):
                 tpm=config.tpm,
                 provider=config.provider,
                 extra_body=config.extra_body,
+                progress_callback=progress_callback,
             )
             self.translate_agent = SegmentsTranslateAgent(agent_config)
         self.insert_mode = config.insert_mode

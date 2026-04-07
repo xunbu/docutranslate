@@ -57,7 +57,19 @@ class AiTranslator(Translator[T]):
             raise ValueError("skip_translate不为false时，base_url、api_key、model_id为必填项")
 
         if config.glossary_generate_enable:
+            # 创建术语表进度回调 (20% - 30%)
+            def glossary_progress_callback(current: int, total: int):
+                if self.progress_tracker:
+                    # 映射到 20% - 30% 区间
+                    percent = 20 + int((current / total) * 10)
+                    self.progress_tracker.update(
+                        percent=percent,
+                        message=f"正在提取术语表 ({current}/{total})"
+                    )
+
             if config.glossary_agent_config:
+                # 如果有预配置，确保传入 progress_callback
+                config.glossary_agent_config.progress_callback = glossary_progress_callback
                 self.glossary_agent = GlossaryAgent(config.glossary_agent_config)
             else:
                 glossary_agent_config = GlossaryAgentConfig(
@@ -78,6 +90,7 @@ class AiTranslator(Translator[T]):
                     tpm=config.tpm,
                     provider=config.provider,
                     extra_body=config.extra_body,
+                    progress_callback=glossary_progress_callback,
                 )
                 self.glossary_agent = GlossaryAgent(glossary_agent_config)
 

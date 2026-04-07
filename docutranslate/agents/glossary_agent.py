@@ -7,6 +7,7 @@ import re
 from dataclasses import dataclass
 from json import JSONDecodeError
 from logging import Logger
+from typing import Callable
 
 import json_repair
 
@@ -68,6 +69,7 @@ class GlossaryAgentConfig(AgentConfig):
     to_lang: str
     custom_prompt: str = None
     force_json: bool = False
+    progress_callback: Callable[[int, int], None] | None = None
 
 
 class GlossaryAgent(Agent):

@@ -83,7 +83,7 @@ class AgentConfig:
     rpm: int | None = None  # 每分钟请求数限制
     tpm: int | None = None  # 每分钟Token数限制
     provider: ProviderType | None = None
-    progress_callback: callable = None  # 进度回调 (current: int, total: int) -> None
+    progress_callback: Callable[[int,int],None]|None = None  # 进度回调 (current: int, total: int) -> None
     extra_body: str | None = None  # JSON字符串格式的额外请求体参数
 
 

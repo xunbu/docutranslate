@@ -66,8 +66,8 @@ class TXTTranslator(AiTranslator):
             def progress_callback(current: int, total: int):
                 self.total_chunks = total
                 if self.progress_tracker:
-                    # 计算进度百分比 (50% - 90% 区间)
-                    percent = 50 + int((current / total) * 40)
+                    # 计算进度百分比 (30% - 90% 区间)
+                    percent = 30 + int((current / total) * 60)
                     self.progress_tracker.update(
                         percent=percent,
                         message=f"正在翻译 ({current}/{total})"
