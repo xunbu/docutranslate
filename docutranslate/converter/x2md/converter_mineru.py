@@ -32,9 +32,14 @@ class ConverterMineruConfig(X2MarkdownConverterConfig):
     mineru_token: str
     formula_ocr: bool = True
     model_version: Literal["pipeline", "vlm"] = "vlm"
+    language: Literal[
+        "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
+        "ta", "te", "ka", "el", "th", "latin", "arabic", "cyrillic",
+        "east_slavic", "devanagari"
+    ] = "ch"
 
     def gethash(self) -> Hashable:
-        return self.formula_ocr, self.model_version
+        return self.formula_ocr, self.model_version, self.language
 
 
 timeout = httpx.Timeout(
@@ -52,6 +57,7 @@ client_async = httpx.AsyncClient(limits=limits, trust_env=False, timeout=timeout
 class ConverterMineru(X2MarkdownConverter):
     def __init__(self, config: ConverterMineruConfig):
         super().__init__(config=config)
+        self.config = config
         self.mineru_token = config.mineru_token.strip()
         self.formula = config.formula_ocr
         self.model_version = config.model_version
@@ -65,9 +71,10 @@ class ConverterMineru(X2MarkdownConverter):
         }
 
     def _get_upload_data(self, document: Document):
+        print(self.config.language)
         return {
             "enable_formula": self.formula,
-            "language": "auto",
+            "language": self.config.language,
             "enable_table": True,
             "model_version": self.model_version,
             "files": [

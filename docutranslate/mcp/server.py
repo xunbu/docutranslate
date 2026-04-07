@@ -288,6 +288,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 model_version: Optional[str] = None,
                 formula_ocr: Optional[bool] = None,
                 code_ocr: Optional[bool] = None,
+                mineru_language: Optional[str] = None,
                 mineru_deploy_base_url: Optional[str] = None,
                 mineru_deploy_backend: Optional[str] = None,
                 mineru_deploy_parse_method: Optional[str] = None,
@@ -339,6 +340,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 model_version: MinerU Cloud model version (pipeline, vlm)
                 formula_ocr: Enable formula OCR
                 code_ocr: Enable code block OCR
+                mineru_language: MinerU Cloud language option (ch, ch_server, en, japan, korean, chinese_cht, ta, te, ka, el, th, latin, arabic, cyrillic, east_slavic, devanagari)
                 mineru_deploy_base_url: MinerU local deployment base URL
                 mineru_deploy_backend: MinerU local backend type
                 mineru_deploy_parse_method: MinerU parse method (auto, txt, ocr)
@@ -496,6 +498,8 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 payload_dict["formula_ocr"] = formula_ocr
             if code_ocr is not None:
                 payload_dict["code_ocr"] = code_ocr
+            if mineru_language:
+                payload_dict["mineru_language"] = mineru_language
             if mineru_deploy_base_url:
                 payload_dict["mineru_deploy_base_url"] = mineru_deploy_base_url
             if mineru_deploy_backend:

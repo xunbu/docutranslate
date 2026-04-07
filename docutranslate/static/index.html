@@ -403,6 +403,15 @@
                                                 </select>
                                                 <div class="form-text">{{ t('modelVersionHelp') }}</div>
                                             </div>
+                                            <div class="mb-3">
+                                                <label class="form-label">{{ t('mineruLanguageLabel') }}</label>
+                                                <select class="form-select" v-model="form.mineru_language"
+                                                        @change="saveSetting('translator_mineru_language', form.mineru_language)">
+                                                    <option v-for="lang in mineruLangOptions" :key="lang.val" :value="lang.val">
+                                                        {{ lang.label }}
+                                                    </option>
+                                                </select>
+                                            </div>
                                         </div>
 
                                         <!-- Mineru Local Deploy Config -->
@@ -1426,23 +1435,22 @@
     };
 
     const mineruLangOptions = [
-        {val: "ch", label: "ch"},
-        {val: "ch_server", label: "ch_server"},
-        {val: "ch_lite", label: "ch_lite"},
-        {val: "en", label: "en"},
-        {val: "korean", label: "korean"},
-        {val: "japan", label: "japan"},
-        {val: "chinese_cht", label: "chinese_cht"},
-        {val: "ta", label: "ta"},
-        {val: "te", label: "te"},
-        {val: "ka", label: "ka"},
-        {val: "th", label: "th"},
-        {val: "el", label: "el"},
-        {val: "latin", label: "latin"},
-        {val: "arabic", label: "arabic"},
-        {val: "east_slavic", label: "east_slavic"},
-        {val: "cyrillic", label: "cyrillic"},
-        {val: "devanagari", label: "devanagari"}
+        {val: "ch", label: "ch (中英文)"},
+        {val: "ch_server", label: "ch_server (繁体、手写体)"},
+        {val: "en", label: "en (纯英文)"},
+        {val: "japan", label: "japan (日文为主)"},
+        {val: "korean", label: "korean (韩文)"},
+        {val: "chinese_cht", label: "chinese_cht (繁体中文为主)"},
+        {val: "ta", label: "ta (泰米尔文)"},
+        {val: "te", label: "te (泰卢固文)"},
+        {val: "ka", label: "ka (卡纳达文)"},
+        {val: "el", label: "el (希腊文)"},
+        {val: "th", label: "th (泰文)"},
+        {val: "latin", label: "latin (拉丁语系)"},
+        {val: "arabic", label: "arabic (阿拉伯语系)"},
+        {val: "cyrillic", label: "cyrillic (西里尔语系)"},
+        {val: "east_slavic", label: "east_slavic (东斯拉夫语系)"},
+        {val: "devanagari", label: "devanagari (天城文语系)"}
     ];
 
     createApp({
@@ -1490,6 +1498,7 @@
                 md2docx_engine: 'auto',
                 mineru_token: '',
                 model_version: 'vlm',
+                mineru_language: 'ch',
                 mineru_deploy_base_url: 'http://127.0.0.1:8000',
                 mineru_deploy_backend: 'hybrid-auto-engine', // Updated default
                 mineru_deploy_parse_method: 'auto', // Added
@@ -1581,6 +1590,7 @@
                 form.md2docx_engine = md2docxVal === 'null' ? null : md2docxVal;
                 form.mineru_token = get('translator_mineru_token', '');
                 form.model_version = get('translator_model_version', 'vlm');
+                form.mineru_language = get('translator_mineru_language', 'ch');
                 form.mineru_deploy_base_url = get('mineru_deploy_base_url', 'http://127.0.0.1:8000');
                 form.mineru_deploy_backend = get('mineru_deploy_backend', 'hybrid-auto-engine');
                 form.mineru_deploy_parse_method = get('mineru_deploy_parse_method', 'auto');
@@ -1672,6 +1682,7 @@
                 s('translator_md2docx_engine', f.md2docx_engine);
                 s('translator_mineru_token', f.mineru_token);
                 s('translator_model_version', f.model_version);
+                s('translator_mineru_language', f.mineru_language);
 
                 // Mineru Deploy 相关
                 s('mineru_deploy_base_url', f.mineru_deploy_base_url);
@@ -2029,6 +2040,7 @@
                         basePayload.mineru_token = emptyToNull(form.mineru_token);
                         basePayload.model_version = form.model_version;
                         basePayload.formula_ocr = form.formula_ocr;
+                        basePayload.mineru_language = form.mineru_language;
                     } else if (form.convert_engine === 'mineru_deploy') {
                         basePayload.mineru_deploy_base_url = emptyToNull(form.mineru_deploy_base_url);
                         basePayload.mineru_deploy_backend = form.mineru_deploy_backend;

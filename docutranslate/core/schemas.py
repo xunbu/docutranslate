@@ -229,6 +229,11 @@ class UniversalParamsMixin(BaseModel):
     model_version: Optional[Literal["pipeline", "vlm"]] = None
     formula_ocr: Optional[bool] = None
     code_ocr: Optional[bool] = None
+    mineru_language: Optional[Literal[
+        "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
+        "ta", "te", "ka", "el", "th", "latin", "arabic", "cyrillic",
+        "east_slavic", "devanagari"
+    ]] = None
 
     # MinerU Deploy 相关 - 设置默认值避免 None 导致的验证错误
     mineru_deploy_base_url: Optional[str] = None
@@ -290,6 +295,14 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
     formula_ocr: bool = Field(
         True,
         description="[仅当 convert_engine='mineru' 或 'docling'] 是否对公式进行OCR识别。",
+    )
+    mineru_language: Literal[
+        "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
+        "ta", "te", "ka", "el", "th", "latin", "arabic", "cyrillic",
+        "east_slavic", "devanagari"
+    ] = Field(
+        "ch",
+        description="[仅当 convert_engine='mineru'] 识别语言选项，默认 'ch'（中英文）。",
     )
 
     # -- For "docling" --

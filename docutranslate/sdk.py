@@ -221,6 +221,11 @@ class Client:
             model_version: Literal["pipeline", "vlm"] = "vlm",
             formula_ocr: bool = True,
             code_ocr: bool = True,
+            mineru_language: Literal[
+                "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
+                "ta", "te", "ka", "el", "th", "latin", "arabic", "cyrillic",
+                "east_slavic", "devanagari"
+            ] = "ch",
             mineru_deploy_base_url: str = "http://127.0.0.1:8000",
             mineru_deploy_backend: Literal["pipeline", "vlm-auto-engine", "vlm-http-client", "hybrid-auto-engine", "hybrid-http-client"] = "hybrid-auto-engine",
             mineru_deploy_parse_method: Literal["auto", "txt", "ocr"] = "auto",
@@ -294,6 +299,11 @@ class Client:
             model_version: Literal["pipeline", "vlm"] = "vlm",
             formula_ocr: bool = True,
             code_ocr: bool = True,
+            mineru_language: Literal[
+                "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
+                "ta", "te", "ka", "el", "th", "latin", "arabic", "cyrillic",
+                "east_slavic", "devanagari"
+            ] = "ch",
 
             # --- Mineru 本地部署参数 ---
             mineru_deploy_base_url: str = "http://127.0.0.1:8000",

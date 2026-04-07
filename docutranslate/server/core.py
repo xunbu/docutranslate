@@ -335,6 +335,7 @@ class TranslationService:
             # 从 UniversalParamsMixin 复制所有字段（关键！）
             universal_fields = [
                 "convert_engine", "mineru_token", "model_version", "formula_ocr", "code_ocr",
+                "mineru_language",
                 "mineru_deploy_base_url", "mineru_deploy_backend", "mineru_deploy_parse_method",
                 "mineru_deploy_table_enable", "mineru_deploy_formula_enable",
                 "mineru_deploy_start_page_id", "mineru_deploy_end_page_id",
@@ -716,6 +717,7 @@ class TranslationService:
                     mineru_token=token,
                     formula_ocr=payload.formula_ocr,
                     model_version=payload.model_version,
+                    language=payload.mineru_language,
                 )
             elif payload.convert_engine == "mineru_deploy":
                 converter_config = ConverterMineruDeployConfig(

@@ -73,7 +73,8 @@ def create_workflow_from_payload(payload: TranslatePayload, logger: logging.Logg
         if payload.convert_engine == "mineru":
             converter_config = ConverterMineruConfig(logger=logger, mineru_token=payload.mineru_token,
                                                      formula_ocr=payload.formula_ocr,
-                                                     model_version=payload.model_version)
+                                                     model_version=payload.model_version,
+                                                     language=payload.mineru_language)
         elif payload.convert_engine == "mineru_deploy":
             converter_config = ConverterMineruDeployConfig(base_url=payload.mineru_deploy_base_url,
                                                            backend=payload.mineru_deploy_backend,
