@@ -16,7 +16,7 @@ from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTr
 @dataclass
 class AssTranslatorConfig(AiTranslatorConfig):
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
-    separator: str = "\\N"  # ASS 中换行符是 \N
+    separator: str = "\n"  # 统一使用 \n 作为分隔符，实际使用时会转换为 ASS 格式的 \N
     # 未来可扩展：指定样式名或时间范围，当前暂不实现，翻译所有 Dialogue
     translate_regions: Optional[List[str]] = None  # 暂保留接口，但当前忽略
 
@@ -107,6 +107,9 @@ class AssTranslator(AiTranslator):
         if subs is None:
             return b""
 
+        # 将分隔符中的 \n 转换为 ASS 格式的 \N
+        ass_separator = self.separator.replace("\n", "\\N")
+
         for i, item in enumerate(lines_to_translate):
             line = item["line"]
             translated_text = translated_texts[i]
@@ -115,9 +118,9 @@ class AssTranslator(AiTranslator):
             if self.insert_mode == "replace":
                 line.text = translated_text
             elif self.insert_mode == "append":
-                line.text = original_text + self.separator + translated_text
+                line.text = original_text + ass_separator + translated_text
             elif self.insert_mode == "prepend":
-                line.text = translated_text + self.separator + original_text
+                line.text = translated_text + ass_separator + original_text
             else:
                 self.logger.error(f"不支持的插入模式: {self.insert_mode}")
 

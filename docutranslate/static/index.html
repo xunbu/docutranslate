@@ -1561,7 +1561,7 @@
                 srt: {insert_mode: 'replace', separator: '\\n'},
                 epub: {insert_mode: 'replace', separator: ''},
                 html: {insert_mode: 'replace', separator: ''},
-                ass: {insert_mode: 'replace', separator: '\\N'},
+                ass: {insert_mode: 'replace', separator: '\\n'},
                 json: {json_paths: ''},
                 pptx: {insert_mode: 'replace', separator: '\\n'}
             });
@@ -2066,8 +2066,7 @@
                 } else {
                     const params = {...workflowParams[form.workflow_type]};
                     if (params.separator) {
-                        if (form.workflow_type === 'ass') params.separator = params.separator;
-                        else params.separator = params.separator.replace(/\\n/g, '\n');
+                        params.separator = params.separator.replace(/\\n/g, '\n');
                     }
                     if (form.workflow_type === 'json') {
                         params.json_paths = params.json_paths.split('\n').map(p => p.trim()).filter(p => p);
