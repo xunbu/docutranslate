@@ -241,72 +241,44 @@
                     <form id="translateForm" @submit.prevent>
                         <div class="accordion" id="settingsAccordion">
 
-                            <!-- 1. Set Default Workflow -->
+                            <!-- 1. Workflow Configuration (Merged) -->
                             <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                                            data-bs-target="#collapseDefaultWorkflow">
-                                        <strong><span class="step-number">1</span><i
-                                                class="bi bi-gear-fill me-2"></i><span>{{ t('setDefaultWorkflowTitle')
-                                            }}</span></strong>
-                                    </button>
-                                </h2>
-                                <div id="collapseDefaultWorkflow" class="accordion-collapse collapse show">
-                                    <div class="accordion-body">
-                                        <p class="text-muted small">{{ t('setDefaultWorkflowDesc') }}</p>
-                                        <button type="button" class="btn btn-outline-primary" @click="openDefaultWorkflowModal">
-                                            <i class="bi bi-gear-fill me-2"></i>{{ t('openDefaultWorkflowBtn') }}
-                                        </button>
-                                        <div class="mt-3">
-                                            <small class="text-muted" v-for="(wf, ext) in default_workflows" :key="ext">
-                                                <span class="badge bg-light text-dark me-1 mb-1">.{{ ext }} → {{ getWorkflowLabel(wf) }}</span>
-                                            </small>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 2. Workflow Preferences -->
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
-                                            data-bs-target="#collapseZero">
-                                        <strong><span class="step-number">2</span><i
-                                                class="bi bi-diagram-3 me-2"></i><span>{{ t('workflowPreferencesTitle')
-                                            }}</span></strong>
-                                    </button>
-                                </h2>
-                                <div id="collapseZero" class="accordion-collapse collapse show">
-                                    <div class="accordion-body">
-                                        <select class="form-select" v-model="form.workflow_type"
-                                                @change="saveSetting('translator_last_workflow', form.workflow_type)">
-                                            <option value="markdown_based">{{ t('workflowOptionMarkdown') }}</option>
-                                            <option value="docx">{{ t('workflowOptionDocx') }}</option>
-                                            <option value="xlsx">{{ t('workflowOptionXlsx') }}</option>
-                                            <option value="epub">{{ t('workflowOptionEpub') }}</option>
-                                            <option value="txt">{{ t('workflowOptionTxt') }}</option>
-                                            <option value="pptx">{{ t('workflowOptionPptx') }}</option>
-                                            <option value="srt">{{ t('workflowOptionSrt') }}</option>
-                                            <option value="ass">{{ t('workflowOptionAss') }}</option>
-                                            <option value="json">{{ t('workflowOptionJson') }}</option>
-                                            <option value="html">{{ t('workflowOptionHtml') }}</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 2. Specific Workflow Settings (Conditional) -->
-                            <div class="accordion-item" v-if="currentWorkflowConfig" v-show="true">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                            data-bs-target="#collapseWorkflow">
-                                        <strong><span class="step-number">{{ stepMap.specific }} </span><i
-                                                :class="currentWorkflowConfig.icon + ' me-2'"></i><span>{{ t(currentWorkflowConfig.titleKey)
+                                            data-bs-target="#collapseWorkflowConfig">
+                                        <strong><span class="step-number">1</span><i
+                                                class="bi bi-diagram-3 me-2"></i><span>{{ t('workflowConfigTitle')
                                             }}</span></strong>
                                     </button>
                                 </h2>
-                                <div id="collapseWorkflow" class="accordion-collapse collapse">
+                                <div id="collapseWorkflowConfig" class="accordion-collapse collapse">
                                     <div class="accordion-body">
+                                        <!-- Top: Configure default workflow button -->
+                                        <div class="mb-3">
+                                            <button type="button" class="btn btn-outline-primary" @click="openDefaultWorkflowModal">
+                                                <i class="bi bi-gear-fill me-2"></i>{{ t('openExtWorkflowBtn') }}
+                                            </button>
+                                        </div>
+                                        <!-- Workflow type selection -->
+                                        <div class="mb-3">
+                                            <label class="form-label">工作流配置</label>
+                                            <select class="form-select" v-model="form.workflow_type"
+                                                    @change="saveSetting('translator_last_workflow', form.workflow_type)">
+                                                <option value="markdown_based">{{ t('workflowOptionMarkdown') }}</option>
+                                                <option value="docx">{{ t('workflowOptionDocx') }}</option>
+                                                <option value="xlsx">{{ t('workflowOptionXlsx') }}</option>
+                                                <option value="epub">{{ t('workflowOptionEpub') }}</option>
+                                                <option value="txt">{{ t('workflowOptionTxt') }}</option>
+                                                <option value="pptx">{{ t('workflowOptionPptx') }}</option>
+                                                <option value="srt">{{ t('workflowOptionSrt') }}</option>
+                                                <option value="ass">{{ t('workflowOptionAss') }}</option>
+                                                <option value="json">{{ t('workflowOptionJson') }}</option>
+                                                <option value="html">{{ t('workflowOptionHtml') }}</option>
+                                            </select>
+                                        </div>
+                                        <hr>
+                                        <!-- Workflow-specific options -->
+                                        <template v-if="currentWorkflowConfig">
                                         <!-- Common Insert Mode -->
                                         <div class="mb-3" v-if="currentWorkflowConfig.hasInsertMode">
                                             <label class="form-label">{{ t('insertModeLabel') }}</label>
@@ -362,212 +334,200 @@
                                                       :placeholder="t('jsonPathPlaceholder')"></textarea>
                                             <div class="form-text" v-html="t('jsonPathHelp')"></div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 3. Parsing Settings (Markdown Based Only) -->
-                            <div class="accordion-item" v-if="form.workflow_type === 'markdown_based'">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
-                                            data-bs-target="#collapseOne">
-                                        <strong><span class="step-number">{{ stepMap.parsing }} </span><i
-                                                class="bi bi-file-earmark-binary me-2"></i><span>{{ t('parsingSettingsTitleText')
-                                            }}</span></strong>
-                                    </button>
-                                </h2>
-                                <div id="collapseOne" class="accordion-collapse collapse">
-                                    <div class="accordion-body">
-                                        <div class="mb-3">
-                                            <label class="form-label">{{ t('parsingEngineLabel') }}</label>
-                                            <select class="form-select" v-model="form.convert_engine"
-                                                    @change="saveSetting('translator_convert_engin', form.convert_engine)">
-                                                <option value="identity" v-if="showIdentityOption">
-                                                    {{ t('engineOptionIdentity') || '已经是markdown' }}
-                                                </option>
-                                                <option v-for="eng in enginList" :key="eng" :value="eng">
-                                                    {{ t('engineOption' + capitalize(eng)) || eng }}
-                                                </option>
-                                            </select>
-                                            <div class="form-text">{{ t('parsingEngineHelp') }}</div>
-                                        </div>
-
-                                        <!-- Mineru Cloud Config -->
-                                        <div v-if="form.convert_engine === 'mineru'">
+                                        </template>
+                                        <!-- Markdown Parsing Settings (only shown for markdown_based workflow) -->
+                                        <div v-if="form.workflow_type === 'markdown_based'" class="border-top pt-3 mt-3">
                                             <div class="mb-3">
-                                                <label class="form-label">Mineru Token <a
-                                                        href="https://mineru.net/apiManage/token" target="_blank"
-                                                        class="ms-1"><i
-                                                        class="bi bi-box-arrow-up-right"></i></a></label>
-                                                <div class="input-group">
-                                                    <input :type="showMineruToken ? 'text' : 'password'"
-                                                           autocomplete="new-password" class="form-control"
-                                                           :class="{'is-invalid': errors.mineru_token}"
-                                                           v-model="form.mineru_token"
-                                                           @change="saveSetting('translator_mineru_token', form.mineru_token); clearError('mineru_token')"
-                                                           :placeholder="t('mineruTokenPlaceholder')">
-                                                    <button class="btn btn-outline-secondary" type="button"
-                                                            @click="showMineruToken = !showMineruToken"><i class="bi"
-                                                                                                           :class="showMineruToken ? 'bi-eye' : 'bi-eye-slash'"></i>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">{{ t('modelVersionLabel') }}</label>
-                                                <select class="form-select" v-model="form.model_version"
-                                                        @change="saveSetting('translator_model_version', form.model_version)">
-                                                    <option value="vlm">{{ t('modelVersionVlm') }}</option>
-                                                    <option value="pipeline">{{ t('modelVersionPipline') }}</option>
-                                                </select>
-                                                <div class="form-text">{{ t('modelVersionHelp') }}</div>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">{{ t('mineruLanguageLabel') }}</label>
-                                                <select class="form-select" v-model="form.mineru_language"
-                                                        @change="saveSetting('translator_mineru_language', form.mineru_language)">
-                                                    <option v-for="lang in mineruLangOptions" :key="lang.val" :value="lang.val">
-                                                        {{ lang.label }}
+                                                <label class="form-label">{{ t('parsingEngineLabel') }}</label>
+                                                <select class="form-select" v-model="form.convert_engine"
+                                                        @change="saveSetting('translator_convert_engin', form.convert_engine)">
+                                                    <option value="identity" v-if="showIdentityOption">
+                                                        {{ t('engineOptionIdentity') || '已经是markdown' }}
+                                                    </option>
+                                                    <option v-for="eng in enginList" :key="eng" :value="eng">
+                                                        {{ t('engineOption' + capitalize(eng)) || eng }}
                                                     </option>
                                                 </select>
-                                            </div>
-                                        </div>
-
-                                        <!-- Mineru Local Deploy Config -->
-                                        <div v-if="form.convert_engine === 'mineru_deploy'"
-                                             class="border p-3 rounded mb-3">
-                                            <div class="mb-3">
-                                                <label class="form-label">{{ t('mineruDeployBaseUrlLabel') }}</label>
-                                                <input type="url" class="form-control"
-                                                       :class="{'is-invalid': errors.mineru_deploy_base_url}"
-                                                       v-model="form.mineru_deploy_base_url"
-                                                       @change="saveSetting('mineru_deploy_base_url', form.mineru_deploy_base_url); clearError('mineru_deploy_base_url')"
-                                                       required :placeholder="t('mineruDeployBaseUrlPlaceholder')">
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label">{{ t('mineruDeployBackendLabel') }}</label>
-                                                <select class="form-select" v-model="form.mineru_deploy_backend"
-                                                        @change="saveSetting('mineru_deploy_backend', form.mineru_deploy_backend)">
-                                                    <option value="pipeline">pipeline</option>
-                                                    <option value="vlm-auto-engine">vlm-auto-engine</option>
-                                                    <option value="vlm-http-client">vlm-http-client</option>
-                                                    <option value="hybrid-auto-engine">hybrid-auto-engine</option>
-                                                    <option value="hybrid-http-client">hybrid-http-client</option>
-                                                </select>
+                                                <div class="form-text">{{ t('parsingEngineHelp') }}</div>
                                             </div>
 
-                                            <div class="mb-3">
-                                                <label class="form-label">{{ t('mineruDeployParseMethodLabel')
-                                                    }}</label>
-                                                <select class="form-select" v-model="form.mineru_deploy_parse_method"
-                                                        @change="saveSetting('mineru_deploy_parse_method', form.mineru_deploy_parse_method)">
-                                                    <option value="auto">auto</option>
-                                                    <option value="txt">txt</option>
-                                                    <option value="ocr">ocr</option>
-                                                </select>
-                                            </div>
-
-                                            <!-- Condition: If Backend is Pipeline or Hybrid, show Lang List -->
-                                            <div class="mb-3"
-                                                 v-if="['pipeline', 'hybrid-auto-engine', 'hybrid-http-client'].includes(form.mineru_deploy_backend)">
-                                                <label class="form-label">{{ t('mineruDeployLangListLabel') }}</label>
-                                                <div class="lang-list-container">
-                                                    <div class="form-check" v-for="lang in mineruLangOptions"
-                                                         :key="lang.val">
-                                                        <input class="form-check-input" type="checkbox"
-                                                               :value="lang.val"
-                                                               :id="'langCheck-'+lang.val"
-                                                               v-model="form.mineru_deploy_lang_list"
-                                                               @change="saveSettingArray('mineru_deploy_lang_list', form.mineru_deploy_lang_list)">
-                                                        <label class="form-check-label" :for="'langCheck-'+lang.val">
-                                                            {{ lang.label }}
-                                                        </label>
+                                            <!-- Mineru Cloud Config -->
+                                            <div v-if="form.convert_engine === 'mineru'">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Mineru Token <a
+                                                            href="https://mineru.net/apiManage/token" target="_blank"
+                                                            class="ms-1"><i
+                                                            class="bi bi-box-arrow-up-right"></i></a></label>
+                                                    <div class="input-group">
+                                                        <input :type="showMineruToken ? 'text' : 'password'"
+                                                               autocomplete="new-password" class="form-control"
+                                                               :class="{'is-invalid': errors.mineru_token}"
+                                                               v-model="form.mineru_token"
+                                                               @change="saveSetting('translator_mineru_token', form.mineru_token); clearError('mineru_token')"
+                                                               :placeholder="t('mineruTokenPlaceholder')">
+                                                        <button class="btn btn-outline-secondary" type="button"
+                                                                @click="showMineruToken = !showMineruToken"><i class="bi"
+                                                                                                               :class="showMineruToken ? 'bi-eye' : 'bi-eye-slash'"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
-                                            </div>
-
-                                            <!-- Condition: If Backend is vlm-http-client or hybrid-http-client, show Server URL -->
-                                            <div class="mb-3"
-                                                 v-if="['vlm-http-client', 'hybrid-http-client'].includes(form.mineru_deploy_backend)">
-                                                <label class="form-label">{{ t('mineruDeployServerUrlLabel') }}</label>
-                                                <input type="url" class="form-control"
-                                                       v-model="form.mineru_deploy_server_url"
-                                                       @change="saveSetting('mineru_deploy_server_url', form.mineru_deploy_server_url)"
-                                                       :placeholder="t('mineruDeployServerUrlPlaceholder')">
-                                            </div>
-
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">{{ t('mineruDeployStartPageLabel')
-                                                        }}</label>
-                                                    <input type="number" class="form-control"
-                                                           v-model="form.mineru_deploy_start_page"
-                                                           @change="saveSetting('mineru_deploy_start_page', form.mineru_deploy_start_page)"
-                                                           min="0">
+                                                <div class="mb-3">
+                                                    <label class="form-label">{{ t('modelVersionLabel') }}</label>
+                                                    <select class="form-select" v-model="form.model_version"
+                                                            @change="saveSetting('translator_model_version', form.model_version)">
+                                                        <option value="vlm">{{ t('modelVersionVlm') }}</option>
+                                                        <option value="pipeline">{{ t('modelVersionPipline') }}</option>
+                                                    </select>
+                                                    <div class="form-text">{{ t('modelVersionHelp') }}</div>
                                                 </div>
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label">{{ t('mineruDeployEndPageLabel')
-                                                        }}</label>
-                                                    <input type="number" class="form-control"
-                                                           v-model="form.mineru_deploy_end_page"
-                                                           @change="saveSetting('mineru_deploy_end_page', form.mineru_deploy_end_page)"
-                                                           min="0">
+                                                <div class="mb-3">
+                                                    <label class="form-label">{{ t('mineruLanguageLabel') }}</label>
+                                                    <select class="form-select" v-model="form.mineru_language"
+                                                            @change="saveSetting('translator_mineru_language', form.mineru_language)">
+                                                        <option v-for="lang in mineruLangOptions" :key="lang.val" :value="lang.val">
+                                                            {{ lang.label }}
+                                                        </option>
+                                                    </select>
                                                 </div>
                                             </div>
-                                            <div class="form-check form-switch mb-2">
-                                                <input class="form-check-input" type="checkbox" role="switch"
-                                                       v-model="form.mineru_deploy_formula_enable"
-                                                       @change="saveSetting('mineru_deploy_formula_enable', form.mineru_deploy_formula_enable)">
-                                                <label class="form-check-label">{{ t('mineruDeployFormulaEnableLabel')
+
+                                            <!-- Mineru Local Deploy Config -->
+                                            <div v-if="form.convert_engine === 'mineru_deploy'"
+                                                 class="border p-3 rounded mb-3">
+                                                <div class="mb-3">
+                                                    <label class="form-label">{{ t('mineruDeployBaseUrlLabel') }}</label>
+                                                    <input type="url" class="form-control"
+                                                           :class="{'is-invalid': errors.mineru_deploy_base_url}"
+                                                           v-model="form.mineru_deploy_base_url"
+                                                           @change="saveSetting('mineru_deploy_base_url', form.mineru_deploy_base_url); clearError('mineru_deploy_base_url')"
+                                                           required :placeholder="t('mineruDeployBaseUrlPlaceholder')">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">{{ t('mineruDeployBackendLabel') }}</label>
+                                                    <select class="form-select" v-model="form.mineru_deploy_backend"
+                                                            @change="saveSetting('mineru_deploy_backend', form.mineru_deploy_backend)">
+                                                        <option value="pipeline">pipeline</option>
+                                                        <option value="vlm-auto-engine">vlm-auto-engine</option>
+                                                        <option value="vlm-http-client">vlm-http-client</option>
+                                                        <option value="hybrid-auto-engine">hybrid-auto-engine</option>
+                                                        <option value="hybrid-http-client">hybrid-http-client</option>
+                                                    </select>
+                                                </div>
+
+                                                <div class="mb-3">
+                                                    <label class="form-label">{{ t('mineruDeployParseMethodLabel')
+                                                        }}</label>
+                                                    <select class="form-select" v-model="form.mineru_deploy_parse_method"
+                                                            @change="saveSetting('mineru_deploy_parse_method', form.mineru_deploy_parse_method)">
+                                                        <option value="auto">auto</option>
+                                                        <option value="txt">txt</option>
+                                                        <option value="ocr">ocr</option>
+                                                    </select>
+                                                </div>
+
+                                                <!-- Condition: If Backend is Pipeline or Hybrid, show Lang List -->
+                                                <div class="mb-3"
+                                                     v-if="['pipeline', 'hybrid-auto-engine', 'hybrid-http-client'].includes(form.mineru_deploy_backend)">
+                                                    <label class="form-label">{{ t('mineruDeployLangListLabel') }}</label>
+                                                    <div class="lang-list-container">
+                                                        <div class="form-check" v-for="lang in mineruLangOptions"
+                                                             :key="lang.val">
+                                                            <input class="form-check-input" type="checkbox"
+                                                                   :value="lang.val"
+                                                                   :id="'langCheck-'+lang.val"
+                                                                   v-model="form.mineru_deploy_lang_list"
+                                                                   @change="saveSettingArray('mineru_deploy_lang_list', form.mineru_deploy_lang_list)">
+                                                            <label class="form-check-label" :for="'langCheck-'+lang.val">
+                                                                {{ lang.label }}
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Condition: If Backend is vlm-http-client or hybrid-http-client, show Server URL -->
+                                                <div class="mb-3"
+                                                     v-if="['vlm-http-client', 'hybrid-http-client'].includes(form.mineru_deploy_backend)">
+                                                    <label class="form-label">{{ t('mineruDeployServerUrlLabel') }}</label>
+                                                    <input type="url" class="form-control"
+                                                           v-model="form.mineru_deploy_server_url"
+                                                           @change="saveSetting('mineru_deploy_server_url', form.mineru_deploy_server_url)"
+                                                           :placeholder="t('mineruDeployServerUrlPlaceholder')">
+                                                </div>
+
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">{{ t('mineruDeployStartPageLabel')
+                                                            }}</label>
+                                                        <input type="number" class="form-control"
+                                                               v-model="form.mineru_deploy_start_page"
+                                                               @change="saveSetting('mineru_deploy_start_page', form.mineru_deploy_start_page)"
+                                                               min="0">
+                                                    </div>
+                                                    <div class="col-md-6 mb-3">
+                                                        <label class="form-label">{{ t('mineruDeployEndPageLabel')
+                                                            }}</label>
+                                                        <input type="number" class="form-control"
+                                                               v-model="form.mineru_deploy_end_page"
+                                                               @change="saveSetting('mineru_deploy_end_page', form.mineru_deploy_end_page)"
+                                                               min="0">
+                                                    </div>
+                                                </div>
+                                                <div class="form-check form-switch mb-2">
+                                                    <input class="form-check-input" type="checkbox" role="switch"
+                                                           v-model="form.mineru_deploy_formula_enable"
+                                                           @change="saveSetting('mineru_deploy_formula_enable', form.mineru_deploy_formula_enable)">
+                                                    <label class="form-check-label">{{ t('mineruDeployFormulaEnableLabel')
+                                                        }}</label>
+                                                </div>
+                                                <div class="form-check form-switch mb-2">
+                                                    <input class="form-check-input" type="checkbox" role="switch"
+                                                           v-model="form.mineru_deploy_table_enable"
+                                                           @change="saveSetting('mineru_deploy_table_enable', form.mineru_deploy_table_enable)">
+                                                    <label class="form-check-label">{{ t('mineruDeployTableEnableLabel')
+                                                        }}</label>
+                                                </div>
+                                            </div>
+
+
+                                            <div class="mt-3">
+                                                <div class="form-check form-switch mb-2" v-if="ocrOptions.showFormula">
+                                                    <input class="form-check-input" type="checkbox" role="switch"
+                                                           v-model="form.formula_ocr"
+                                                           @change="saveSetting('translator_formula_ocr', form.formula_ocr)">
+                                                    <label class="form-check-label">{{ t('formulaOcrLabel') }}</label>
+                                                </div>
+                                                <div class="form-check form-switch mb-2" v-if="ocrOptions.showCode">
+                                                    <input class="form-check-input" type="checkbox" role="switch"
+                                                           v-model="form.code_ocr"
+                                                           @change="saveSetting('translator_code_ocr', form.code_ocr)">
+                                                    <label class="form-check-label">{{ t('codeOcrLabel') }}</label>
+                                                </div>
+                                            </div>
+
+                                            <!-- Markdown to Docx Engine Selector -->
+                                            <div class="border-top mt-3  pt-3">
+                                                <label class="form-label">{{ t('md2docxEngineLabel') || 'Markdown转Docx引擎'
                                                     }}</label>
-                                            </div>
-                                            <div class="form-check form-switch mb-2">
-                                                <input class="form-check-input" type="checkbox" role="switch"
-                                                       v-model="form.mineru_deploy_table_enable"
-                                                       @change="saveSetting('mineru_deploy_table_enable', form.mineru_deploy_table_enable)">
-                                                <label class="form-check-label">{{ t('mineruDeployTableEnableLabel')
-                                                    }}</label>
-                                            </div>
-                                        </div>
-
-
-                                        <div class="mt-3">
-                                            <div class="form-check form-switch mb-2" v-if="ocrOptions.showFormula">
-                                                <input class="form-check-input" type="checkbox" role="switch"
-                                                       v-model="form.formula_ocr"
-                                                       @change="saveSetting('translator_formula_ocr', form.formula_ocr)">
-                                                <label class="form-check-label">{{ t('formulaOcrLabel') }}</label>
-                                            </div>
-                                            <div class="form-check form-switch mb-2" v-if="ocrOptions.showCode">
-                                                <input class="form-check-input" type="checkbox" role="switch"
-                                                       v-model="form.code_ocr"
-                                                       @change="saveSetting('translator_code_ocr', form.code_ocr)">
-                                                <label class="form-check-label">{{ t('codeOcrLabel') }}</label>
-                                            </div>
-                                        </div>
-
-                                        <!-- Markdown to Docx Engine Selector -->
-                                        <div class="border-top mt-3  pt-3">
-                                            <label class="form-label">{{ t('md2docxEngineLabel') || 'Markdown转Docx引擎'
-                                                }}</label>
-                                            <select class="form-select" v-model="form.md2docx_engine"
-                                                    @change="saveSetting('translator_md2docx_engine', form.md2docx_engine)">
-                                                <option :value="null">{{ t('engineOptionNone') || '不生成docx' }}
-                                                </option>
-                                                <option value="auto">{{ t('engineOptionAuto') || '自动选择' }}</option>
-                                                <option value="python">{{ t('engineOptionPython') || '纯Python' }}
-                                                </option>
-                                                <option value="pandoc">{{ t('engineOptionPandoc') || 'Pandoc' }}
-                                                </option>
-                                            </select>
-                                            <div class="form-text">{{ t('md2docxEngineHelp') || '选择将Markdown导出为Docx的方式'
-                                                }}
+                                                <select class="form-select" v-model="form.md2docx_engine"
+                                                        @change="saveSetting('translator_md2docx_engine', form.md2docx_engine)">
+                                                    <option :value="null">{{ t('engineOptionNone') || '不生成docx' }}
+                                                    </option>
+                                                    <option value="auto">{{ t('engineOptionAuto') || '自动选择' }}</option>
+                                                    <option value="python">{{ t('engineOptionPython') || '纯Python' }}
+                                                    </option>
+                                                    <option value="pandoc">{{ t('engineOptionPandoc') || 'Pandoc' }}
+                                                    </option>
+                                                </select>
+                                                <div class="form-text">{{ t('md2docxEngineHelp') || '选择将Markdown导出为Docx的方式'
+                                                    }}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- 4. AI Settings -->
+                            <!-- 2. AI Settings -->
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
@@ -619,7 +579,7 @@
                                 </div>
                             </div>
 
-                            <!-- 5. Translation Settings -->
+                            <!-- 3. Translation Settings -->
                             <div class="accordion-item" v-show="!form.skip_translate">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
@@ -732,7 +692,7 @@
                                 </div>
                             </div>
 
-                            <!-- 6. Glossary Settings -->
+                            <!-- 4. Glossary Settings -->
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
@@ -1141,37 +1101,91 @@
 
     <!-- Default Workflow Settings Modal -->
     <div class="modal fade" id="defaultWorkflowModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">{{ t('defaultWorkflowModalTitle') }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <p class="text-muted small mb-3">{{ t('defaultWorkflowModalHelp') }}</p>
-                    <div class="mb-3" v-for="(wf, ext) in default_workflows" :key="ext">
-                        <label class="form-label text-capitalize">{{ ext }}</label>
-                        <select class="form-select form-select-sm" v-model="default_workflows[ext]">
-                            <option value="markdown_based">{{ t('workflowOptionMarkdown') }}</option>
-                            <option value="txt">{{ t('workflowOptionTxt') }}</option>
-                            <option value="docx">{{ t('workflowOptionDocx') }}</option>
-                            <option value="xlsx">{{ t('workflowOptionXlsx') }}</option>
-                            <option value="epub">{{ t('workflowOptionEpub') }}</option>
-                            <option value="pptx">{{ t('workflowOptionPptx') }}</option>
-                            <option value="srt">{{ t('workflowOptionSrt') }}</option>
-                            <option value="ass">{{ t('workflowOptionAss') }}</option>
-                            <option value="json">{{ t('workflowOptionJson') }}</option>
-                            <option value="html">{{ t('workflowOptionHtml') }}</option>
-                        </select>
+                    <div v-if="addExtensionError" class="alert alert-danger py-2 mb-3 small">
+                        {{ addExtensionError }}
+                    </div>
+                    <!-- Workflow Cards - 2 Column Layout -->
+                    <div class="row g-2">
+                        <div class="col-md-6" v-for="wf in workflowOptions" :key="wf.value">
+                            <div class="card h-100 workflow-card"
+                                 :class="{'drag-over': workflowDragOver === wf.value}"
+                                 @dragover.prevent="workflowDragOver = wf.value"
+                                 @dragleave.prevent="workflowDragOver = null"
+                                 @drop.prevent="onDropWorkflow($event, wf.value); workflowDragOver = null">
+                                <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                                    <span class="fw-medium">{{ getSimpleWorkflowLabel(wf.value) }}</span>
+                                    <span class="badge bg-secondary">{{ getWorkflowExtensions(wf.value).length }}</span>
+                                </div>
+                                <div class="card-body p-2 min-h-8">
+                                    <div class="d-flex flex-wrap gap-1 mb-2">
+                                        <span v-for="ext in getWorkflowExtensions(wf.value)" :key="ext"
+                                              class="badge bg-light text-dark border d-flex align-items-center gap-1 pe-1 ext-badge"
+                                              draggable="true"
+                                              @dragstart="onDragStart($event, ext)"
+                                              @dragend="onDragEnd($event)">
+                                            <span>.{{ ext }}</span>
+                                            <button type="button" class="btn-close btn-close-xs ms-1"
+                                                    @click.stop="deleteExtension(ext)"
+                                                    :title="t('deleteExtTooltip')"></button>
+                                        </span>
+                                    </div>
+                                    <!-- Inline add extension -->
+                                    <div class="input-group input-group-sm" style="max-width: 140px;">
+                                        <span class="input-group-text">.</span>
+                                        <input type="text" class="form-control"
+                                               @keyup.enter="addExtToWorkflow(wf.value, $event)"
+                                               maxlength="10">
+                                        <button class="btn btn-outline-primary" type="button"
+                                                @click="addExtToWorkflow(wf.value, $event)">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancelBtn') }}</button>
-                    <button type="button" class="btn btn-primary" @click="saveDefaultWorkflows" data-bs-dismiss="modal">{{ t('saveBtn') }}</button>
+                    <button type="button" class="btn btn-outline-secondary" @click="resetDefaultWorkflows" data-bs-toggle="tooltip" :title="t('resetBtn')">
+                        <i class="bi bi-arrow-counterclockwise"></i>
+                    </button>
                 </div>
             </div>
         </div>
     </div>
+
+    <style>
+        .btn-close-xs {
+            transform: scale(0.6);
+            opacity: 0.6;
+        }
+        .btn-close-xs:hover {
+            opacity: 1;
+        }
+        .min-h-8 {
+            min-height: 80px;
+        }
+        .ext-badge {
+            cursor: grab;
+        }
+        .ext-badge:active {
+            cursor: grabbing;
+        }
+        .ext-badge.dragging {
+            opacity: 0.5;
+        }
+        .workflow-card.drag-over {
+            border-color: var(--bs-primary);
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+    </style>
 
     <div class="modal fade" id="tutorialModal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
@@ -1765,6 +1779,21 @@
                         Object.assign(default_workflows, parsed);
                     } catch(e) {}
                 }
+                // Load custom extensions
+                const savedCustomExts = localStorage.getItem('custom_extensions');
+                if (savedCustomExts) {
+                    try {
+                        const parsed = JSON.parse(savedCustomExts);
+                        if (Array.isArray(parsed)) {
+                            parsed.forEach(ext => {
+                                if (!ALL_EXTENSIONS.value.includes(ext)) {
+                                    ALL_EXTENSIONS.value.push(ext);
+                                    if (!default_workflows[ext]) default_workflows[ext] = 'markdown_based';
+                                }
+                            });
+                        }
+                    } catch(e) {}
+                }
 
                 // Load queue concurrent
                 const savedQueueConcurrent = localStorage.getItem('queue_concurrent');
@@ -1970,10 +1999,8 @@
 
             // Dynamic Step Numbering
             const stepMap = computed(() => {
-                let step = 3; // 1=Set Default Workflow, 2=Workflow Preferences, from 3 onwards are dynamic
-                const map = {specific: 0, parsing: 0, ai: 0, trans: 0, glossary: 0};
-                if (currentWorkflowConfig.value) map.specific = step++;
-                if (form.workflow_type === 'markdown_based') map.parsing = step++;
+                let step = 2; // 1=Workflow Configuration (merged, includes parsing), from 2 onwards are dynamic
+                const map = {ai: 0, trans: 0, glossary: 0};
                 map.ai = step++;
                 if (!form.skip_translate) map.trans = step++;
                 map.glossary = step++;
@@ -2563,11 +2590,150 @@
                 else document.documentElement.setAttribute('data-bs-theme', t);
             };
 
-            // Default workflow settings modal
+            // ===== Default workflow drag & drop =====
+            const DEFAULT_EXTENSIONS = ['pdf','png','jpg','jpeg','gif','bmp','webp','txt','md','docx','doc','xlsx','csv','xls','epub','pptx','ppt','srt','ass','json','html','htm'];
+            const DEFAULT_WORKFLOW_MAPPING = {
+                pdf: 'markdown_based', png: 'markdown_based', jpg: 'markdown_based', jpeg: 'markdown_based',
+                gif: 'markdown_based', bmp: 'markdown_based', webp: 'markdown_based',
+                txt: 'txt', md: 'markdown_based',
+                docx: 'docx', doc: 'docx',
+                xlsx: 'xlsx', csv: 'xlsx', xls: 'xlsx',
+                epub: 'epub',
+                pptx: 'pptx', ppt: 'pptx',
+                srt: 'srt', ass: 'ass',
+                json: 'json', html: 'html', htm: 'html'
+            };
+            const ALL_EXTENSIONS = ref([...DEFAULT_EXTENSIONS]);
+
+            const customExtensions = computed(() => {
+                return ALL_EXTENSIONS.value.filter(ext => !DEFAULT_EXTENSIONS.includes(ext));
+            });
+
+            const workflowOptions = [
+                { value: 'markdown_based', label: 'Markdown' },
+                { value: 'txt', label: 'TXT' },
+                { value: 'docx', label: 'DOCX' },
+                { value: 'xlsx', label: 'XLSX' },
+                { value: 'epub', label: 'EPUB' },
+                { value: 'pptx', label: 'PPTX' },
+                { value: 'srt', label: 'SRT' },
+                { value: 'ass', label: 'ASS' },
+                { value: 'json', label: 'JSON' },
+                { value: 'html', label: 'HTML' },
+            ];
+
+            // Map workflow value to i18n key for full label
+            const workflowFullLabelKeys = {
+                markdown_based: 'workflowOptionMarkdown',
+                txt: 'workflowOptionTxt',
+                docx: 'workflowOptionDocx',
+                xlsx: 'workflowOptionXlsx',
+                epub: 'workflowOptionEpub',
+                pptx: 'workflowOptionPptx',
+                srt: 'workflowOptionSrt',
+                ass: 'workflowOptionAss',
+                json: 'workflowOptionJson',
+                html: 'workflowOptionHtml',
+            };
+
+            const getWorkflowFullLabel = (wf) => {
+                const key = workflowFullLabelKeys[wf];
+                return key ? t(key) : wf;
+            };
+
+            // Get simplified workflow label without parentheses
+            const getSimpleWorkflowLabel = (wf) => {
+                const fullLabel = getWorkflowFullLabel(wf);
+                // Remove everything from first parenthesis
+                return fullLabel.replace(/\s*\(.*$/, '');
+            };
+
+            const getWorkflowExtensions = (workflow) => {
+                return ALL_EXTENSIONS.value.filter(ext => default_workflows[ext] === workflow);
+            };
+
+            // Drag handlers
+            const workflowDragOver = ref(null);
+
+            const onDragStart = (e, ext) => {
+                e.dataTransfer.setData('text/plain', ext);
+                e.target.classList.add('dragging');
+            };
+
+            const onDragEnd = (e) => {
+                e.target.classList.remove('dragging');
+            };
+
+            const onDropWorkflow = (e, workflow) => {
+                const ext = e.dataTransfer.getData('text/plain');
+                if (ext && ALL_EXTENSIONS.value.includes(ext)) {
+                    default_workflows[ext] = workflow;
+                }
+            };
+
+            // Delete an extension entirely
+            const deleteExtension = (ext) => {
+                delete default_workflows[ext];
+                const idx = ALL_EXTENSIONS.value.indexOf(ext);
+                if (idx !== -1) {
+                    ALL_EXTENSIONS.value.splice(idx, 1);
+                }
+            };
+
+            // Remove a single extension's custom mapping (falls back to default) - kept for backward compatibility
+            const removeExtensionMapping = (ext) => {
+                deleteExtension(ext);
+            };
+
+            // Add extension directly to a specific workflow
+            const addExtToWorkflow = (workflow, event) => {
+                const input = event.target.closest('.input-group').querySelector('input');
+                const raw = (input.value || '').trim().toLowerCase().replace(/^\.+/, '');
+
+                if (!raw) return;
+                if (!/^[a-z0-9]+$/.test(raw)) {
+                    addExtensionError.value = t('addExtensionPlaceholder');
+                    return;
+                }
+                if (ALL_EXTENSIONS.value.includes(raw)) {
+                    addExtensionError.value = t('extensionExistsError');
+                    return;
+                }
+
+                addExtensionError.value = '';
+                ALL_EXTENSIONS.value.push(raw);
+                default_workflows[raw] = workflow;
+                input.value = '';
+            };
+
+            const resetDefaultWorkflows = () => {
+                // Remove custom extensions
+                ALL_EXTENSIONS.value.forEach(ext => {
+                    if (!DEFAULT_WORKFLOW_MAPPING.hasOwnProperty(ext)) {
+                        delete default_workflows[ext];
+                    }
+                });
+                // Restore to default extensions only
+                ALL_EXTENSIONS.value = [...DEFAULT_EXTENSIONS];
+                // Restore default mappings
+                DEFAULT_EXTENSIONS.forEach(ext => {
+                    default_workflows[ext] = DEFAULT_WORKFLOW_MAPPING[ext];
+                });
+                localStorage.setItem('default_workflows', JSON.stringify(default_workflows));
+            };
+
             const openDefaultWorkflowModal = () => new bootstrap.Modal(document.getElementById('defaultWorkflowModal')).show();
             const saveDefaultWorkflows = () => {
                 localStorage.setItem('default_workflows', JSON.stringify(default_workflows));
+                const custom = ALL_EXTENSIONS.value.filter(ext => !DEFAULT_EXTENSIONS.includes(ext));
+                localStorage.setItem('custom_extensions', JSON.stringify(custom));
             };
+
+            const addExtensionError = ref('');
+
+            // Keep for backward compatibility
+            const newExtInput = ref(null);
+            const addExtension = () => {};
 
             // Folder upload
             const handleFolderSelect = (e) => {
@@ -2696,7 +2862,14 @@
                 glossaryInput, configFile, triggerFileInput,
                 mineruLangOptions, // Export new constant
                 default_workflows, queue_concurrent, hasPendingTasks,
-                openDefaultWorkflowModal, saveDefaultWorkflows, handleFolderSelect, runAllPendingTasks,
+                openDefaultWorkflowModal, saveDefaultWorkflows, resetDefaultWorkflows,
+                workflowOptions, getWorkflowExtensions, getWorkflowFullLabel, getSimpleWorkflowLabel,
+                removeExtensionMapping, deleteExtension,
+                onDragStart, onDragEnd, onDropWorkflow,
+                workflowDragOver,
+                addExtToWorkflow,
+                newExtInput, addExtension, addExtensionError,
+                handleFolderSelect, runAllPendingTasks,
                 getWorkflowLabel, selectTaskWorkflow
             };
         }
