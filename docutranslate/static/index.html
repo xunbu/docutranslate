@@ -1769,11 +1769,14 @@
                 }
             };
 
+            let _importingConfig = false;
             watch(() => form.platform, (n) => {
+                if (_importingConfig) return;
                 updatePlatformParams(n, 'translator_platform', form);
             });
 
             watch(() => form.glossary_agent_platform, (n) => {
+                if (_importingConfig) return;
                 updatePlatformParams(n, 'glossary_agent_platform', form, true);
             });
 
@@ -2425,11 +2428,14 @@
                     r.onload = (ev) => {
                         try {
                             const data = JSON.parse(ev.target.result);
+                            _importingConfig = true;
                             if (data.form) Object.assign(form, data.form);
                             if (data.workflowParams) Object.assign(workflowParams, data.workflowParams);
+                            _importingConfig = false;
                             saveAllSettings();
                             alert(t('configImportSuccess'));
                         } catch (err) {
+                            _importingConfig = false;
                             alert(t('configImportError'));
                         }
                     };
