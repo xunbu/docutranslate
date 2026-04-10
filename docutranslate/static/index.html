@@ -241,13 +241,38 @@
                     <form id="translateForm" @submit.prevent>
                         <div class="accordion" id="settingsAccordion">
 
-                            <!-- 1. Workflow Selection -->
+                            <!-- 1. Set Default Workflow -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                            data-bs-target="#collapseDefaultWorkflow">
+                                        <strong><span class="step-number">1</span><i
+                                                class="bi bi-gear-fill me-2"></i><span>{{ t('setDefaultWorkflowTitle')
+                                            }}</span></strong>
+                                    </button>
+                                </h2>
+                                <div id="collapseDefaultWorkflow" class="accordion-collapse collapse show">
+                                    <div class="accordion-body">
+                                        <p class="text-muted small">{{ t('setDefaultWorkflowDesc') }}</p>
+                                        <button type="button" class="btn btn-outline-primary" @click="openDefaultWorkflowModal">
+                                            <i class="bi bi-gear-fill me-2"></i>{{ t('openDefaultWorkflowBtn') }}
+                                        </button>
+                                        <div class="mt-3">
+                                            <small class="text-muted" v-for="(wf, ext) in default_workflows" :key="ext">
+                                                <span class="badge bg-light text-dark me-1 mb-1">.{{ ext }} → {{ getWorkflowLabel(wf) }}</span>
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 2. Workflow Preferences -->
                             <div class="accordion-item">
                                 <h2 class="accordion-header">
                                     <button class="accordion-button" type="button" data-bs-toggle="collapse"
                                             data-bs-target="#collapseZero">
-                                        <strong><span class="step-number">1</span><i
-                                                class="bi bi-diagram-3 me-2"></i><span>{{ t('workflowTitle')
+                                        <strong><span class="step-number">2</span><i
+                                                class="bi bi-diagram-3 me-2"></i><span>{{ t('workflowPreferencesTitle')
                                             }}</span></strong>
                                     </button>
                                 </h2>
@@ -266,13 +291,6 @@
                                             <option value="json">{{ t('workflowOptionJson') }}</option>
                                             <option value="html">{{ t('workflowOptionHtml') }}</option>
                                         </select>
-                                        <div class="form-check form-switch mt-2">
-                                            <input class="form-check-input" type="checkbox" role="switch"
-                                                   id="autoWorkflowSwitch" v-model="form.auto_workflow_enabled"
-                                                   @change="saveSetting('translator_auto_workflow_enabled', form.auto_workflow_enabled)">
-                                            <label class="form-check-label"
-                                                   for="autoWorkflowSwitch">{{ t('autoWorkflowLabel') }}</label>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -940,6 +958,20 @@
                         <div class="d-flex gap-2">
                             <button class="btn btn-outline-danger" @click="clearAllTasks()" v-if="tasks.length > 0"><i
                                     class="bi bi-trash me-2"></i><span>{{ t('clearAllTasksBtn') }}</span></button>
+                            <input type="file" id="folderInput" ref="folderInput" class="d-none" webkitdirectory directory multiple
+                                   @change="handleFolderSelect($event)">
+                            <button class="btn btn-outline-primary" @click="$refs.folderInput.click()">
+                                <i class="bi bi-folder-fill me-2"></i><span>{{ t('uploadFolderBtn') }}</span>
+                            </button>
+                            <button class="btn btn-success" @click="runAllPendingTasks()" v-if="hasPendingTasks">
+                                <i class="bi bi-play-fill me-2"></i><span>{{ t('runAllBtn') }}</span>
+                            </button>
+                            <div class="input-group input-group-sm" style="width: auto;">
+                                <span class="input-group-text">{{ t('queueConcurrentLabel') }}</span>
+                                <input type="number" class="form-control" style="width: 60px;"
+                                       v-model.number="queue_concurrent" min="1" max="10"
+                                       @change="saveSetting('queue_concurrent', queue_concurrent)">
+                            </div>
                             <button class="btn btn-primary" @click="createNewTask()"><i
                                     class="bi bi-plus-circle-fill me-2"></i><span>{{ t('newTaskBtn') }}</span></button>
                         </div>
@@ -949,11 +981,11 @@
                             <img src="/static/favicon.ico" alt="LOGO" style="width:10%;min-width: 55px; height: auto;">
                             <p class="mt-3">{{ t('noTaskPlaceholder') }}</p>
                         </div>
-                        <div v-for="task in tasks" :key="task.uiId" class="card mb-3 task-card">
+                        <div v-for="task in tasks" :key="task.uiId" class="card mb-3 task-card" @click="selectTaskWorkflow(task)">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <span class="fw-bold"><span>{{ t('taskCardIdLabel')
                                     }}</span>: <code>{{ task.backendId || t('taskCardIdPlaceholder') }}</code></span>
-                                <button type="button" class="btn-close" @click="removeTask(task)"></button>
+                                <button type="button" class="btn-close" @click.stop="removeTask(task)"></button>
                             </div>
                             <div class="card-body">
                                 <div class="row">
@@ -962,7 +994,7 @@
                                                @change="handleTaskFileSelect($event, task)">
                                         <div class="file-drop-area"
                                              :class="{'drag-over': task.isDragOver, 'file-selected': !!task.file, 'input-error': task.validationError}"
-                                             @click="triggerFileInput(task.uiId)"
+                                             @click.stop="triggerFileInput(task.uiId)"
                                              @dragenter.prevent="task.isDragOver = true"
                                              @dragover.prevent="task.isDragOver = true"
                                              @dragleave.prevent="task.isDragOver = false"
@@ -988,15 +1020,21 @@
                                         <div class="log-area-wrapper">
                                             <div class="log-area" v-html="task.logs" :id="'log-' + task.uiId"></div>
                                             <button type="button" class="btn btn-sm btn-outline-secondary copy-log-btn"
-                                                    @click="copyLog($event, task.logs)" data-bs-toggle="tooltip"
+                                                    @click.stop="copyLog($event, task.logs)" data-bs-toggle="tooltip"
                                                     :data-bs-title="t('copyLogsTooltip')">
                                                 <i class="bi bi-clipboard"></i>
                                             </button>
                                         </div>
                                         <div class="mt-2 d-flex align-items-center">
                                             <span class="small"
-                                                  :class="task.statusClass">{{ task.statusMessage || t('taskCardStatusWaiting')
-                                                }}</span>
+                                                  :class="task.statusClass">
+                                                <template v-if="task.queuePosition && !task.isTranslating && !task.isFinished">
+                                                    {{ t('taskCardQueuePosition', { n: task.queuePosition, total: task.queueTotal }) }}
+                                                </template>
+                                                <template v-else>
+                                                    {{ task.statusMessage || t('taskCardStatusWaiting') }}
+                                                </template>
+                                            </span>
                                             <div v-if="task.isProcessing" class="spinner-border spinner-border-sm ms-2"
                                                  role="status"></div>
                                             <span v-if="task.isProcessing"
@@ -1015,7 +1053,7 @@
                             <div class="card-footer d-flex justify-content-between align-items-center">
                                 <div class="download-buttons" v-if="task.downloads">
                                     <button class="btn btn-sm btn-success me-1" v-if="task.downloads.html"
-                                            @click="openPreview(task)"><i
+                                            @click.stop="openPreview(task)"><i
                                             class="bi bi-eye-fill me-1"></i><span>{{ t('taskCardPreviewBtn') }}</span>
                                     </button>
                                     <div class="btn-group me-1">
@@ -1031,7 +1069,7 @@
                                             </li>
                                             <li v-if="task.downloads.html">
                                                 <a class="dropdown-item" href="#"
-                                                   @click.prevent="printPdf(task.downloads.html)"><i
+                                                   @click.stop.prevent="printPdf(task.downloads.html)"><i
                                                         class="bi bi-file-earmark-pdf me-2"></i>PDF</a>
                                             </li>
                                         </ul>
@@ -1050,7 +1088,7 @@
                                     </div>
                                 </div>
                                 <button class="btn ms-auto" :class="task.isTranslating ? 'btn-danger' : 'btn-primary'"
-                                        @click="toggleTaskState(task)" :disabled="task.initializing">
+                                        @click.stop="toggleTaskState(task)" :disabled="task.initializing">
                                     <span v-if="task.initializing"><span
                                             class="spinner-border spinner-border-sm"></span> {{ t('btn_initializing') }}</span>
                                     <span v-else-if="task.isTranslating"><i
@@ -1096,6 +1134,40 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('closeBtn') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Default Workflow Settings Modal -->
+    <div class="modal fade" id="defaultWorkflowModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">{{ t('defaultWorkflowModalTitle') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small mb-3">{{ t('defaultWorkflowModalHelp') }}</p>
+                    <div class="mb-3" v-for="(wf, ext) in default_workflows" :key="ext">
+                        <label class="form-label text-capitalize">{{ ext }}</label>
+                        <select class="form-select form-select-sm" v-model="default_workflows[ext]">
+                            <option value="markdown_based">{{ t('workflowOptionMarkdown') }}</option>
+                            <option value="txt">{{ t('workflowOptionTxt') }}</option>
+                            <option value="docx">{{ t('workflowOptionDocx') }}</option>
+                            <option value="xlsx">{{ t('workflowOptionXlsx') }}</option>
+                            <option value="epub">{{ t('workflowOptionEpub') }}</option>
+                            <option value="pptx">{{ t('workflowOptionPptx') }}</option>
+                            <option value="srt">{{ t('workflowOptionSrt') }}</option>
+                            <option value="ass">{{ t('workflowOptionAss') }}</option>
+                            <option value="json">{{ t('workflowOptionJson') }}</option>
+                            <option value="html">{{ t('workflowOptionHtml') }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('cancelBtn') }}</button>
+                    <button type="button" class="btn btn-primary" @click="saveDefaultWorkflows" data-bs-dismiss="modal">{{ t('saveBtn') }}</button>
                 </div>
             </div>
         </div>
@@ -1493,7 +1565,6 @@
             // Form Data
             const form = reactive({
                 workflow_type: 'markdown_based',
-                auto_workflow_enabled: true,
                 convert_engine: 'mineru',
                 md2docx_engine: 'auto',
                 mineru_token: '',
@@ -1553,6 +1624,28 @@
                 glossary_agent_extra_body: ''  // New Glossary Agent extra_body
             });
 
+            // Default workflows per file extension
+            const default_workflows = reactive({
+                pdf: 'markdown_based', png: 'markdown_based', jpg: 'markdown_based', jpeg: 'markdown_based',
+                gif: 'markdown_based', bmp: 'markdown_based', webp: 'markdown_based',
+                txt: 'txt', md: 'markdown_based',
+                docx: 'docx', doc: 'docx',
+                xlsx: 'xlsx', csv: 'xlsx', xls: 'xlsx',
+                epub: 'epub',
+                pptx: 'pptx', ppt: 'pptx',
+                srt: 'srt', ass: 'ass',
+                json: 'json', html: 'html', htm: 'html'
+            });
+
+            const workflowLabels = {
+                markdown_based: 'Markdown', txt: 'TXT', docx: 'DOCX', xlsx: 'XLSX',
+                epub: 'EPUB', pptx: 'PPTX', srt: 'SRT', ass: 'ASS', json: 'JSON', html: 'HTML'
+            };
+            const getWorkflowLabel = (wf) => workflowLabels[wf] || wf;
+
+            const queue_concurrent = ref(3);
+            const runningCount = ref(0);
+
             // Nested Params for specific workflows
             const workflowParams = reactive({
                 txt: {insert_mode: 'replace', separator: '\\n', segment_mode: 'line'},
@@ -1583,7 +1676,6 @@
                 };
 
                 form.workflow_type = get('translator_last_workflow', 'markdown_based');
-                form.auto_workflow_enabled = getBool('translator_auto_workflow_enabled', true);
                 form.convert_engine = get('translator_convert_engin', 'mineru');
                 // 将字符串 "null" 转换回真正的 null
                 const md2docxVal = get('translator_md2docx_engine', 'auto');
@@ -1665,6 +1757,19 @@
                 workflowParams.xlsx.translate_regions = get('translator_xlsx_translate_regions', '');
                 workflowParams.json.json_paths = get('translator_json_paths', '');
 
+                // Load default workflows
+                const savedDefaultWorkflows = localStorage.getItem('default_workflows');
+                if (savedDefaultWorkflows) {
+                    try {
+                        const parsed = JSON.parse(savedDefaultWorkflows);
+                        Object.assign(default_workflows, parsed);
+                    } catch(e) {}
+                }
+
+                // Load queue concurrent
+                const savedQueueConcurrent = localStorage.getItem('queue_concurrent');
+                if (savedQueueConcurrent) queue_concurrent.value = Number(savedQueueConcurrent) || 3;
+
                 // Trigger platform updates to load API keys/models
                 updatePlatformParams(form.platform, 'translator_platform', form);
                 updatePlatformParams(form.glossary_agent_platform, 'glossary_agent_platform', form, true);
@@ -1677,7 +1782,6 @@
 
                 // 1. 基础配置映射 (手动映射那些名字不一样的)
                 s('translator_last_workflow', f.workflow_type);
-                s('translator_auto_workflow_enabled', f.auto_workflow_enabled);
                 s('translator_convert_engin', f.convert_engine);
                 s('translator_md2docx_engine', f.md2docx_engine);
                 s('translator_mineru_token', f.mineru_token);
@@ -1789,8 +1893,14 @@
                 }
             });
 
-            const t = (k) => {
-                return i18nData.value[k] || k;
+            const t = (k, params) => {
+                let str = i18nData.value[k] || k;
+                if (params) {
+                    Object.keys(params).forEach(key => {
+                        str = str.replace(`{${key}}`, params[key]);
+                    });
+                }
+                return str;
             };
             const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
             const saveSetting = (k, v) => localStorage.setItem(k, v);
@@ -1860,7 +1970,7 @@
 
             // Dynamic Step Numbering
             const stepMap = computed(() => {
-                let step = 2;
+                let step = 3; // 1=Set Default Workflow, 2=Workflow Preferences, from 3 onwards are dynamic
                 const map = {specific: 0, parsing: 0, ai: 0, trans: 0, glossary: 0};
                 if (currentWorkflowConfig.value) map.specific = step++;
                 if (form.workflow_type === 'markdown_based') map.parsing = step++;
@@ -1907,7 +2017,7 @@
                     uiId, backendId, file: null, fileName: '', logs: '', statusMessage: '',
                     statusClass: 'text-muted', isTranslating: false, isFinished: false, isProcessing: false,
                     validationError: false, downloads: null, attachment: null, initializing: false, isDragOver: false,
-                    progressPercent: 0
+                    progressPercent: 0, detectedWorkflow: null
                 });
                 tasks.value.unshift(task);
                 if (backendId) {
@@ -1947,31 +2057,14 @@
                 const f = e.target.files ? e.target.files[0] : e.dataTransfer.files[0];
                 if (f) {
                     task.file = f;
-                    task.fileName = f.name; // Save filename explicitly
+                    task.fileName = f.name;
                     task.validationError = false;
                     task.isDragOver = false;
-                    if (form.auto_workflow_enabled) {
-                        const ext = f.name.split('.').pop().toLowerCase();
-                        const map = {
-                            txt: 'txt',
-                            xlsx: 'xlsx',
-                            csv: 'xlsx',
-                            xls: 'xlsx',
-                            docx: 'docx',
-                            doc: 'docx',
-                            json: 'json',
-                            srt: 'srt',
-                            epub: 'epub',
-                            html: 'html',
-                            htm: 'html',
-                            ass: 'ass',
-                            pptx: 'pptx',
-                            ppt: 'pptx'
-                        };
-                        const newWorkflow = map[ext] || 'markdown_based';
-                        form.workflow_type = newWorkflow;
-                        saveSetting('translator_last_workflow', newWorkflow);
-                    }
+                    const ext = f.name.split('.').pop().toLowerCase();
+                    const newWorkflow = default_workflows[ext] || 'markdown_based';
+                    form.workflow_type = newWorkflow;
+                    task.detectedWorkflow = newWorkflow;
+                    saveSetting('translator_last_workflow', newWorkflow);
                 }
             };
             const handleTaskFileDrop = (e, task) => handleTaskFileSelect(e, task);
@@ -1979,6 +2072,12 @@
             const triggerFileInput = (uiId) => {
                 const el = document.getElementById('fileInput-' + uiId);
                 if (el) el.click();
+            };
+
+            const selectTaskWorkflow = (task) => {
+                if (task.file && task.detectedWorkflow) {
+                    form.workflow_type = task.detectedWorkflow;
+                }
             };
 
             const buildPayload = () => {
@@ -2138,6 +2237,7 @@
                 if (task.isTranslating) {
                     task.statusMessage = t('status_cancelling');
                     if (task.backendId) await fetch(`/service/cancel/${task.backendId}`, {method: 'POST'});
+                    runningCount.value = Math.max(0, runningCount.value - 1);
                 } else if (task.isFinished) {
                     task.isFinished = false;
                     task.logs = '';
@@ -2157,9 +2257,14 @@
 
                     task.initializing = true;
                     try {
+                        const savedWorkflow = form.workflow_type;
+                        if (task.detectedWorkflow) {
+                            form.workflow_type = task.detectedWorkflow;
+                        }
                         const formData = new FormData();
                         formData.append('file', task.file);
                         formData.append('payload', JSON.stringify(buildPayload()));
+                        form.workflow_type = savedWorkflow;
                         const res = await fetch('/service/translate/file', {
                             method: 'POST',
                             body: formData
@@ -2178,6 +2283,7 @@
                         task.statusMessage = e.message;
                         task.statusClass = 'text-danger';
                         task.isTranslating = false;
+                        runningCount.value = Math.max(0, runningCount.value - 1);
                     } finally {
                         task.initializing = false;
                     }
@@ -2234,6 +2340,8 @@
                             clearInterval(interval);
                             task.isTranslating = false;
                             task.isFinished = true;
+                            runningCount.value = Math.max(0, runningCount.value - 1);
+                            startNextPendingTask();
                             if (statData.download_ready && !statData.error_flag) {
                                 task.downloads = statData.downloads;
                                 task.attachment = statData.attachment;
@@ -2455,6 +2563,60 @@
                 else document.documentElement.setAttribute('data-bs-theme', t);
             };
 
+            // Default workflow settings modal
+            const openDefaultWorkflowModal = () => new bootstrap.Modal(document.getElementById('defaultWorkflowModal')).show();
+            const saveDefaultWorkflows = () => {
+                localStorage.setItem('default_workflows', JSON.stringify(default_workflows));
+            };
+
+            // Folder upload
+            const handleFolderSelect = (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+                files.forEach(f => {
+                    const task = reactive({
+                        uiId: 'card_' + Math.random().toString(36).substring(2, 9),
+                        backendId: null, file: f, fileName: f.name, logs: '', statusMessage: '',
+                        statusClass: 'text-muted', isTranslating: false, isFinished: false, isProcessing: false,
+                        validationError: false, downloads: null, attachment: null, initializing: false, isDragOver: false,
+                        progressPercent: 0, detectedWorkflow: null
+                    });
+                    tasks.value.unshift(task);
+                    const ext = f.name.split('.').pop().toLowerCase();
+                    const newWorkflow = default_workflows[ext] || 'markdown_based';
+                    form.workflow_type = newWorkflow;
+                    task.detectedWorkflow = newWorkflow;
+                    saveSetting('translator_last_workflow', newWorkflow);
+                });
+                e.target.value = '';
+            };
+
+            // Batch run pending tasks - queue management
+            const pendingQueue = [];
+            const hasPendingTasks = computed(() => tasks.value.some(t => t.file && !t.isTranslating && !t.isFinished));
+
+            const startNextPendingTask = () => {
+                const maxConcurrent = Math.max(1, queue_concurrent.value);
+                while (pendingQueue.length > 0 && runningCount.value < maxConcurrent) {
+                    const task = pendingQueue.shift();
+                    if (task.file && !task.isTranslating && !task.isFinished) {
+                        runningCount.value++;
+                        toggleTaskState(task).finally(() => { startNextPendingTask(); });
+                    }
+                }
+            };
+
+            const runAllPendingTasks = () => {
+                const pending = tasks.value.filter(t => t.file && !t.isTranslating && !t.isFinished);
+                pendingQueue.length = 0;
+                pending.forEach((task, i) => {
+                    task.queuePosition = i + 1;
+                    task.queueTotal = pending.length;
+                    pendingQueue.push(task);
+                });
+                startNextPendingTask();
+            };
+
             onMounted(async () => {
                 // I18n
                 try {
@@ -2532,7 +2694,10 @@
                 originalPane, translatedFrame, splitInstance, splitContainer, previewTask,
                 saveSetting, saveWorkflowParam, saveSettingArray,
                 glossaryInput, configFile, triggerFileInput,
-                mineruLangOptions // Export new constant
+                mineruLangOptions, // Export new constant
+                default_workflows, queue_concurrent, hasPendingTasks,
+                openDefaultWorkflowModal, saveDefaultWorkflows, handleFolderSelect, runAllPendingTasks,
+                getWorkflowLabel, selectTaskWorkflow
             };
         }
     }).mount('#app');

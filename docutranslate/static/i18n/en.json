@@ -3,6 +3,7 @@
   "tutorialBtn": "Tutorial",
   "projectContributeBtn": "Project Collaboration",
   "workflowTitle": "Select Workflow",
+  "workflowPreferencesTitle": "Workflow Preferences",
   "workflowOptionMarkdown": "Convert to Markdown then Translate (.pdf/.md/.png, etc.)",
   "workflowOptionTxt": "Plain Text Translation (.txt)",
   "workflowOptionEpub": "EPUB Translation (.epub)",
@@ -131,6 +132,7 @@
   "taskCardLogLabel": "Logs",
   "copyLogsTooltip": "Copy logs",
   "taskCardStatusWaiting": "Waiting for file upload...",
+  "taskCardQueuePosition": "Queuing ({n}/{total})",
   "taskCardPreviewBtn": "Preview",
   "taskCardDownloadBtn": "Download",
   "taskCardAttachmentBtn": "Attachments",
@@ -185,5 +187,16 @@
   "extraBodyLabel": "Extra Body",
   "extraBodyPlaceholder": "e.g., {\"enable_thinking\": true}",
   "extraBodyHelp": "Additional API request parameters in JSON format, will be merged into the request body. Example for Alibaba Cloud: {\"enable_thinking\": false}",
-  "extraBodyTooltip": "Additional API request parameters in JSON format, will be merged into the request body. Example for Alibaba Cloud: {\"enable_thinking\": false}"
+  "extraBodyTooltip": "Additional API request parameters in JSON format, will be merged into the request body. Example for Alibaba Cloud: {\"enable_thinking\": false}",
+  "defaultWorkflowSettingsBtn": "Configure Default Workflows",
+  "setDefaultWorkflowTitle": "Set Default Workflows",
+  "setDefaultWorkflowDesc": "Configure the default workflow for each file extension. The matching workflow will be automatically selected when you upload a file.",
+  "openDefaultWorkflowBtn": "Configure Default Workflows",
+  "defaultWorkflowModalTitle": "Default Workflow Settings",
+  "defaultWorkflowModalHelp": "Set the default workflow for each file extension. These mappings will be used to auto-select the workflow when uploading files.",
+  "uploadFolderBtn": "Upload Folder",
+  "runAllBtn": "Run All",
+  "queueConcurrentLabel": "Concurrency",
+  "saveBtn": "Save",
+  "cancelBtn": "Cancel"
 }

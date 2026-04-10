@@ -3,6 +3,7 @@
   "tutorialBtn": "教程",
   "projectContributeBtn": "项目协作",
   "workflowTitle": "选择工作流",
+  "workflowPreferencesTitle": "工作流首选项",
   "workflowOptionMarkdown": "转Markdown再翻译 (.pdf/.md/.png等)",
   "workflowOptionTxt": "纯文本翻译 (.txt)",
   "workflowOptionEpub": "EPUB翻译 (.epub)",
@@ -131,6 +132,7 @@
   "taskCardLogLabel": "日志",
   "copyLogsTooltip": "复制日志",
   "taskCardStatusWaiting": "等待上传文件...",
+  "taskCardQueuePosition": "排队中 (第 {n}/{total} 个)",
   "taskCardPreviewBtn": "预览",
   "taskCardDownloadBtn": "下载",
   "taskCardAttachmentBtn": "附件",
@@ -185,5 +187,16 @@
   "extraBodyLabel": "Extra Body",
   "extraBodyPlaceholder": "例如: {\"enable_thinking\": true}",
   "extraBodyHelp": "额外的 API 请求参数，JSON 格式，会合并到请求体中。例如阿里云：{\"enable_thinking\": false}",
-  "extraBodyTooltip": "额外的 API 请求参数，JSON 格式，会合并到请求体中。例如阿里云：{\"enable_thinking\": false}"
+  "extraBodyTooltip": "额外的 API 请求参数，JSON 格式，会合并到请求体中。例如阿里云：{\"enable_thinking\": false}",
+  "defaultWorkflowSettingsBtn": "设置默认工作流",
+  "setDefaultWorkflowTitle": "设置默认工作流",
+  "setDefaultWorkflowDesc": "配置每种文件扩展名默认使用的工作流。上传文件时将自动匹配对应的工作流。",
+  "openDefaultWorkflowBtn": "配置默认工作流",
+  "defaultWorkflowModalTitle": "默认工作流设置",
+  "defaultWorkflowModalHelp": "为每种文件扩展名设置自动匹配的工作流。上传文件时将使用此处配置的映射。",
+  "uploadFolderBtn": "上传文件夹",
+  "runAllBtn": "批量运行",
+  "queueConcurrentLabel": "并发数",
+  "saveBtn": "保存",
+  "cancelBtn": "取消"
 }

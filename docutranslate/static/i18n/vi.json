@@ -3,6 +3,7 @@
   "tutorialBtn": "Hướng dẫn",
   "projectContributeBtn": "Hợp tác dự án",
   "workflowTitle": "Chọn quy trình làm việc",
+  "workflowPreferencesTitle": "Tùy chọn quy trình",
   "workflowOptionMarkdown": "Chuyển sang Markdown rồi dịch (.pdf/.md/.png, v.v.)",
   "workflowOptionTxt": "Dịch văn bản thuần (.txt)",
   "workflowOptionEpub": "Dịch EPUB (.epub)",
@@ -131,6 +132,7 @@
   "taskCardLogLabel": "Nhật ký (Logs)",
   "copyLogsTooltip": "Sao chép nhật ký",
   "taskCardStatusWaiting": "Đang chờ tải tệp lên...",
+  "taskCardQueuePosition": "Đang xếp hàng ({n}/{total})",
   "taskCardPreviewBtn": "Xem trước",
   "taskCardDownloadBtn": "Tải xuống",
   "taskCardAttachmentBtn": "Tệp đính kèm",
@@ -185,5 +187,16 @@
   "extraBodyLabel": "Extra Body",
   "extraBodyPlaceholder": "Ví dụ: {\"enable_thinking\": true}",
   "extraBodyHelp": "Tham số yêu cầu API bổ sung ở định dạng JSON, sẽ được hợp nhất vào nội dung yêu cầu. Ví dụ cho Alibaba Cloud: {\"enable_thinking\": false}",
-  "extraBodyTooltip": "Tham số yêu cầu API bổ sung ở định dạng JSON, sẽ được hợp nhất vào nội dung yêu cầu. Ví dụ cho Alibaba Cloud: {\"enable_thinking\": false}"
+  "extraBodyTooltip": "Tham số yêu cầu API bổ sung ở định dạng JSON, sẽ được hợp nhất vào nội dung yêu cầu. Ví dụ cho Alibaba Cloud: {\"enable_thinking\": false}",
+  "defaultWorkflowSettingsBtn": "Cấu hình quy trình mặc định",
+  "setDefaultWorkflowTitle": "Đặt quy trình mặc định",
+  "setDefaultWorkflowDesc": "Cấu hình quy trình mặc định cho từng phần mở rộng tệp. Quy trình phù hợp sẽ tự động được chọn khi bạn tải tệp lên.",
+  "openDefaultWorkflowBtn": "Cấu hình quy trình mặc định",
+  "defaultWorkflowModalTitle": "Cài đặt quy trình mặc định",
+  "defaultWorkflowModalHelp": "Đặt quy trình mặc định cho từng phần mở rộng tệp. Các ánh xạ này sẽ được sử dụng để tự động chọn quy trình khi tải tệp lên.",
+  "uploadFolderBtn": "Tải lên thư mục",
+  "runAllBtn": "Chạy tất cả",
+  "queueConcurrentLabel": "Số lượng đồng thời",
+  "saveBtn": "Lưu",
+  "cancelBtn": "Hủy"
 }
