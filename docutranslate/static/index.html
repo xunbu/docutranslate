@@ -11,6 +11,10 @@
     <link rel="stylesheet" href="/static/bootstrap-icons.css">
 
     <style>
+        :root {
+            --bs-primary: #0066cc;
+        }
+
         body {
             background-color: var(--bs-body-bg);
         }
@@ -39,71 +43,71 @@
             overflow-y: auto;
         }
 
-        /* ===== 任务卡片美化 ===== */
+        /* ===== 任务卡片 - 扁平化 ===== */
         .task-card {
-            border: none;
-            border-radius: 0.75rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.25rem;
+            box-shadow: none;
+            transition: border-color 0.2s ease;
         }
         .task-card:hover {
-            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            border-color: var(--bs-primary);
+            box-shadow: none;
         }
         .task-card .card-header {
-            border-radius: 0.75rem 0.75rem 0 0 !important;
+            border-radius: 0.25rem 0.25rem 0 0 !important;
             font-weight: 500;
-            border-bottom: 2px solid transparent;
+            border-bottom: 1px solid var(--bs-border-color);
+            background: transparent;
         }
         .task-card:hover .card-header {
             border-bottom-color: var(--bs-primary);
         }
 
-        /* ===== 文件拖放区美化 ===== */
+        /* ===== 文件拖放区 - 扁平化 ===== */
         .file-drop-area {
-            border: 2px dashed var(--bs-secondary-bg);
-            border-radius: 0.75rem;
+            border: 2px dashed var(--bs-border-color);
+            border-radius: 0.25rem;
             padding: 2rem;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            background: linear-gradient(135deg, rgba(13,110,253,0.03), rgba(13,110,253,0.01));
-            background-color: var(--bs-body-bg);
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+            background: transparent;
         }
 
         .file-drop-area.drag-over {
             border-color: var(--bs-primary);
-            background: linear-gradient(135deg, rgba(13,110,253,0.12), rgba(13,110,253,0.04));
-            transform: scale(1.01);
+            background: rgba(13,110,253,0.04);
         }
 
         .file-drop-area.file-selected {
             border-style: solid;
             border-color: var(--bs-success);
-            background: linear-gradient(135deg, rgba(25,135,84,0.08), rgba(25,135,84,0.02));
+            background: rgba(25,135,84,0.04);
         }
 
         .file-drop-area.input-error {
             border-color: var(--bs-danger);
         }
 
-        /* ===== 日志区域 - 终端风格 ===== */
+        /* ===== 日志区域 - 极简风格 ===== */
         .log-area {
             height: 150px;
-            background-color: #1e1e1e;
-            color: #d4d4d4;
+            background-color: #f5f5f5;
+            color: #333;
             font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
-            border-radius: 0.5rem;
-            border: 1px solid #333;
+            border-radius: 0.25rem;
+            border: 1px solid var(--bs-border-color);
             font-size: 0.8rem;
             padding: 10px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-all;
         }
-        [data-bs-theme="light"] .log-area {
-            background-color: #f6f8fa;
-            color: #24292f;
-            border-color: var(--bs-border-color);
+        [data-bs-theme="dark"] .log-area {
+            background-color: #1a1a1a;
+            color: #ccc;
+            border-color: #333;
         }
 
         .log-area-wrapper {
@@ -116,7 +120,7 @@
             right: 5px;
             z-index: 10;
             opacity: 0.5;
-            transition: all 0.2s ease-in-out;
+            transition: opacity 0.15s ease;
             padding: 0.1rem 0.4rem;
             line-height: 1;
         }
@@ -147,7 +151,7 @@
         .preview-pane-wrapper .preview-pane {
             flex-grow: 1;
             border: 1px solid var(--bs-border-color);
-            border-radius: .375rem;
+            border-radius: 0.25rem;
             overflow: auto;
             position: relative;
         }
@@ -210,19 +214,36 @@
             max-height: 200px;
             overflow-y: auto;
             border: 1px solid var(--bs-border-color);
-            border-radius: 0.375rem;
+            border-radius: 0.25rem;
             padding: 0.5rem;
             background-color: var(--bs-body-bg);
         }
 
-        /* ===== 进度条渐变 ===== */
+        /* ===== 进度条 - 纯色 ===== */
         .progress-bar.bg-primary {
-            background: linear-gradient(90deg, #0d6efd, #0dcaf0) !important;
+            background: var(--bs-primary) !important;
         }
 
-        /* ===== 折叠面板动画 ===== */
+        /* ===== 折叠面板 - 快速干脆 ===== */
         .accordion-collapse {
-            transition: height 0.35s ease;
+            transition: none;
+        }
+
+        /* ===== 手风琴 - 细边框分隔 ===== */
+        .accordion-item {
+            border: none;
+            border-bottom: 1px solid var(--bs-border-color);
+        }
+        .accordion-item:last-child {
+            border-bottom: none;
+        }
+        .accordion-button {
+            border-radius: 0 !important;
+            border: none !important;
+        }
+        .accordion-button:not(.collapsed) {
+            background-color: rgba(13,110,253,0.04);
+            box-shadow: none;
         }
 
         /* ===== 滑块控件自定义 ===== */
@@ -241,74 +262,66 @@
             }
         }
 
-        /* ===== 顶部按钮组间距 ===== */
-        .header-btn-group {
-            display: flex;
-            gap: 0.25rem;
-        }
-        .header-btn-group .icon-btn {
-            width: 32px;
-            height: 32px;
-            padding: 0;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* ===== 设置面板标题下划线 ===== */
+        /* ===== 设置面板标题 - 极简分隔 ===== */
         .settings-panel .d-flex.justify-content-between.align-items-center {
             padding-bottom: 0.75rem;
             border-bottom: 1px solid var(--bs-border-color);
+            margin-bottom: 1rem;
         }
 
-        /* ===== 按钮渐变 ===== */
+        /* ===== 按钮 - 纯色扁平 ===== */
         .btn-primary {
-            background: linear-gradient(135deg, #0d6efd, #0a58ca);
+            background: var(--bs-primary);
             border: none;
         }
         .btn-primary:hover {
-            background: linear-gradient(135deg, #0b5ed7, #0a58ca);
-            transform: translateY(-1px);
+            background: var(--bs-primary);
+            opacity: 0.85;
         }
 
-        /* ===== 手风琴标题悬停效果 ===== */
-        .accordion-button:not(.collapsed) {
-            background-color: rgba(13,110,253,0.08);
-        }
-        .accordion-button:hover:not(.collapsed) {
-            background-color: rgba(13,110,253,0.12);
-        }
-
-        /* ===== 卡片头部状态色 ===== */
-        .task-card .card-header {
-            border-radius: 0.75rem 0.75rem 0 0 !important;
-            font-weight: 500;
-        }
-        .task-card .text-success ~ .card-footer .btn-danger {
-            background: linear-gradient(135deg, #dc3545, #b02a37);
+        /* ===== 统一小圆角 ===== */
+        .task-card,
+        .form-control,
+        .form-select,
+        .btn,
+        .modal-content,
+        .offcanvas {
+            border-radius: 0.25rem !important;
         }
 
-        /* ===== 项目信息美化 ===== */
-        .project-info {
-            border-radius: 0.5rem;
-            padding: 1rem;
-            margin-top: 1rem !important;
+        /* ===== 完全去除部分元素的圆角 ===== */
+        .input-group-text,
+        .badge,
+        .progress {
+            border-radius: 0 !important;
         }
 
-        /* ===== 队列并发控制美化 ===== */
+        /* ===== 按钮组间距 ===== */
+        .d-flex.gap-2 {
+            gap: 0.5rem;
+        }
+
+        /* ===== 队列并发控制 ===== */
         .input-group-sm .input-group-text {
             background: rgba(13,110,253,0.05);
         }
 
-        /* ===== 工作流卡片美化 ===== */
+        /* ===== 工作流卡片 - 扁平化 ===== */
         .workflow-card {
             border: 1px solid var(--bs-border-color);
-            border-radius: 0.5rem;
-            transition: all 0.2s ease;
+            border-radius: 0.25rem;
+            transition: border-color 0.2s ease;
         }
         .workflow-card:hover {
             border-color: var(--bs-primary);
-            box-shadow: 0 2px 8px rgba(13,110,253,0.15);
+            box-shadow: none;
+        }
+
+        /* ===== 项目信息 ===== */
+        .project-info {
+            border-radius: 0.25rem;
+            padding: 1rem;
+            margin-top: 1rem !important;
         }
 
         @media (max-width: 991.98px) {
@@ -345,16 +358,14 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div class="d-flex align-items-center">
                             <h4 class="mb-0 me-3 fw-bold" :title="t('pageTitle')">DocuTranslate</h4>
-                            <div class="header-btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-secondary icon-btn"
-                                        :title="t('tutorialBtn')"
-                                        data-bs-toggle="modal" data-bs-target="#tutorialModal">
-                                    <i class="bi bi-question-circle-fill"></i>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
+                                        data-bs-target="#tutorialModal">
+                                    <i class="bi bi-question-circle-fill me-1"></i><span>{{ t('tutorialBtn') }}</span>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary icon-btn"
-                                        :title="t('projectContributeBtn')"
-                                        data-bs-toggle="modal" data-bs-target="#contributorsModal">
-                                    <i class="bi bi-heart-fill"></i>
+                                <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal"
+                                        data-bs-target="#contributorsModal">
+                                    <i class="bi bi-people-fill me-1"></i><span>{{ t('projectContributeBtn') }}</span>
                                 </button>
                             </div>
                         </div>
@@ -383,7 +394,6 @@
                                         </div>
                                         <!-- Workflow type selection -->
                                         <div class="mb-3">
-                                            <label class="form-label">工作流配置</label>
                                             <select class="form-select" v-model="form.workflow_type"
                                                     @change="saveSetting('translator_last_workflow', form.workflow_type)">
                                                 <option value="markdown_based">{{ t('workflowOptionMarkdown') }}</option>
@@ -458,7 +468,7 @@
                                         </div>
                                         </template>
                                         <!-- Markdown Parsing Settings (only shown for markdown_based workflow) -->
-                                        <div v-if="form.workflow_type === 'markdown_based'" class="border-top pt-3 mt-3">
+                                        <div v-if="form.workflow_type === 'markdown_based'">
                                             <div class="mb-3">
                                                 <label class="form-label">{{ t('parsingEngineLabel') }}</label>
                                                 <select class="form-select" v-model="form.convert_engine"
