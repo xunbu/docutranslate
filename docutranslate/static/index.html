@@ -11,7 +11,6 @@
     <link rel="stylesheet" href="/static/bootstrap-icons.css">
 
     <style>
-        /* 复用原版 CSS */
         body {
             background-color: var(--bs-body-bg);
         }
@@ -40,21 +39,71 @@
             overflow-y: auto;
         }
 
+        /* ===== 任务卡片美化 ===== */
         .task-card {
-            transition: all 0.3s ease-in-out;
+            border: none;
+            border-radius: 0.75rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .task-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        .task-card .card-header {
+            border-radius: 0.75rem 0.75rem 0 0 !important;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+        }
+        .task-card:hover .card-header {
+            border-bottom-color: var(--bs-primary);
         }
 
+        /* ===== 文件拖放区美化 ===== */
+        .file-drop-area {
+            border: 2px dashed var(--bs-secondary-bg);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, rgba(13,110,253,0.03), rgba(13,110,253,0.01));
+            background-color: var(--bs-body-bg);
+        }
+
+        .file-drop-area.drag-over {
+            border-color: var(--bs-primary);
+            background: linear-gradient(135deg, rgba(13,110,253,0.12), rgba(13,110,253,0.04));
+            transform: scale(1.01);
+        }
+
+        .file-drop-area.file-selected {
+            border-style: solid;
+            border-color: var(--bs-success);
+            background: linear-gradient(135deg, rgba(25,135,84,0.08), rgba(25,135,84,0.02));
+        }
+
+        .file-drop-area.input-error {
+            border-color: var(--bs-danger);
+        }
+
+        /* ===== 日志区域 - 终端风格 ===== */
         .log-area {
             height: 150px;
-            background-color: var(--bs-tertiary-bg);
-            border: 1px solid var(--bs-border-color);
-            border-radius: .375rem;
-            font-family: monospace;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+            border-radius: 0.5rem;
+            border: 1px solid #333;
             font-size: 0.8rem;
             padding: 10px;
             overflow-y: auto;
             white-space: pre-wrap;
             word-break: break-all;
+        }
+        [data-bs-theme="light"] .log-area {
+            background-color: #f6f8fa;
+            color: #24292f;
+            border-color: var(--bs-border-color);
         }
 
         .log-area-wrapper {
@@ -74,31 +123,6 @@
 
         .copy-log-btn:hover {
             opacity: 1;
-        }
-
-        .file-drop-area {
-            border: 2px dashed var(--bs-secondary-bg);
-            border-radius: .375rem;
-            padding: 2rem;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-            background-color: var(--bs-body-bg);
-        }
-
-        .file-drop-area.drag-over {
-            border-color: var(--bs-primary);
-            background-color: var(--bs-secondary-bg);
-        }
-
-        .file-drop-area.file-selected {
-            border-style: solid;
-            border-color: var(--bs-success);
-            background-color: var(--bs-success-bg-subtle);
-        }
-
-        .file-drop-area.input-error {
-            border-color: var(--bs-danger);
         }
 
         #previewOffcanvas {
@@ -191,6 +215,102 @@
             background-color: var(--bs-body-bg);
         }
 
+        /* ===== 进度条渐变 ===== */
+        .progress-bar.bg-primary {
+            background: linear-gradient(90deg, #0d6efd, #0dcaf0) !important;
+        }
+
+        /* ===== 折叠面板动画 ===== */
+        .accordion-collapse {
+            transition: height 0.35s ease;
+        }
+
+        /* ===== 滑块控件自定义 ===== */
+        .form-range::-webkit-slider-thumb {
+            background: var(--bs-primary);
+        }
+        .form-range::-webkit-slider-runnable-track {
+            background: rgba(13,110,253,0.2);
+        }
+
+        /* ===== 设置面板粘性头部 ===== */
+        @media (min-width: 992px) {
+            .settings-panel {
+                position: sticky;
+                top: 1rem;
+            }
+        }
+
+        /* ===== 顶部按钮组间距 ===== */
+        .header-btn-group {
+            display: flex;
+            gap: 0.25rem;
+        }
+        .header-btn-group .icon-btn {
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ===== 设置面板标题下划线 ===== */
+        .settings-panel .d-flex.justify-content-between.align-items-center {
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--bs-border-color);
+        }
+
+        /* ===== 按钮渐变 ===== */
+        .btn-primary {
+            background: linear-gradient(135deg, #0d6efd, #0a58ca);
+            border: none;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #0b5ed7, #0a58ca);
+            transform: translateY(-1px);
+        }
+
+        /* ===== 手风琴标题悬停效果 ===== */
+        .accordion-button:not(.collapsed) {
+            background-color: rgba(13,110,253,0.08);
+        }
+        .accordion-button:hover:not(.collapsed) {
+            background-color: rgba(13,110,253,0.12);
+        }
+
+        /* ===== 卡片头部状态色 ===== */
+        .task-card .card-header {
+            border-radius: 0.75rem 0.75rem 0 0 !important;
+            font-weight: 500;
+        }
+        .task-card .text-success ~ .card-footer .btn-danger {
+            background: linear-gradient(135deg, #dc3545, #b02a37);
+        }
+
+        /* ===== 项目信息美化 ===== */
+        .project-info {
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-top: 1rem !important;
+        }
+
+        /* ===== 队列并发控制美化 ===== */
+        .input-group-sm .input-group-text {
+            background: rgba(13,110,253,0.05);
+        }
+
+        /* ===== 工作流卡片美化 ===== */
+        .workflow-card {
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+        }
+        .workflow-card:hover {
+            border-color: var(--bs-primary);
+            box-shadow: 0 2px 8px rgba(13,110,253,0.15);
+        }
+
         @media (max-width: 991.98px) {
             .main-container {
                 height: auto;
@@ -225,14 +345,16 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <div class="d-flex align-items-center">
                             <h4 class="mb-0 me-3 fw-bold" :title="t('pageTitle')">DocuTranslate</h4>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal"
-                                        data-bs-target="#tutorialModal">
-                                    <i class="bi bi-question-circle-fill me-1"></i><span>{{ t('tutorialBtn') }}</span>
+                            <div class="header-btn-group">
+                                <button type="button" class="btn btn-sm btn-outline-secondary icon-btn"
+                                        :title="t('tutorialBtn')"
+                                        data-bs-toggle="modal" data-bs-target="#tutorialModal">
+                                    <i class="bi bi-question-circle-fill"></i>
                                 </button>
-                                <button type="button" class="btn btn-sm btn-outline-warning" data-bs-toggle="modal"
-                                        data-bs-target="#contributorsModal">
-                                    <i class="bi bi-people-fill me-1"></i><span>{{ t('projectContributeBtn') }}</span>
+                                <button type="button" class="btn btn-sm btn-outline-secondary icon-btn"
+                                        :title="t('projectContributeBtn')"
+                                        data-bs-toggle="modal" data-bs-target="#contributorsModal">
+                                    <i class="bi bi-heart-fill"></i>
                                 </button>
                             </div>
                         </div>
@@ -926,14 +1048,13 @@
                             <button class="btn btn-success" @click="runAllPendingTasks()" v-if="hasPendingTasks">
                                 <i class="bi bi-play-fill me-2"></i><span>{{ t('runAllBtn') }}</span>
                             </button>
-                            <div class="input-group input-group-sm" style="width: auto;">
-                                <span class="input-group-text">{{ t('queueConcurrentLabel') }}</span>
-                                <input type="number" class="form-control" style="width: 60px;"
-                                       v-model.number="queue_concurrent" min="1" max="10"
-                                       @change="saveSetting('queue_concurrent', queue_concurrent)">
-                            </div>
                             <button class="btn btn-primary" @click="createNewTask()"><i
                                     class="bi bi-plus-circle-fill me-2"></i><span>{{ t('newTaskBtn') }}</span></button>
+                            <button type="button" class="btn btn-outline-primary icon-btn"
+                                    :title="t('queueConcurrentLabel')"
+                                    data-bs-toggle="modal" data-bs-target="#queueSettingsModal">
+                                <i class="bi bi-gear-fill"></i>
+                            </button>
                         </div>
                     </div>
                     <div id="task-container">
@@ -1239,6 +1360,34 @@
         </div>
     </div>
 
+    <!-- Queue Settings Modal -->
+    <div class="modal fade" id="queueSettingsModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-gear-fill me-2"></i>{{ t('queueConcurrentLabel') }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">{{ t('queueConcurrentLabel') }}</label>
+                        <input type="number" class="form-control"
+                               v-model.number="queue_concurrent" min="1" max="10"
+                               @change="saveSetting('queue_concurrent', queue_concurrent)">
+                        <div class="form-text">{{ t('queueConcurrentHelp') || '设置批量运行时同时翻译的任务数量（1-10）' }}</div>
+                    </div>
+                    <div class="alert alert-info py-2 small mb-0">
+                        <i class="bi bi-info-circle me-1"></i>
+                        {{ t('queueConcurrentNote') || '手动逐个点击开始翻译不受此限制影响' }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ t('closeBtn') }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Preview Offcanvas -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="previewOffcanvas" ref="previewOffcanvas">
         <div class="offcanvas-header border-bottom">
@@ -1342,6 +1491,45 @@
 
 <script>
     const {createApp, ref, reactive, computed, watch, onMounted, nextTick} = Vue;
+
+    // ===== 存储键名常量 =====
+    const STORAGE = {
+        keys: {
+            WORKFLOW: 'translator_last_workflow',
+            ENGINE: 'translator_convert_engin',
+            MD2DOCX: 'translator_md2docx_engine',
+            PLATFORM: 'translator_platform_last_platform',
+            CHUNK_SIZE: 'chunk_size',
+            CONCURRENT: 'concurrent',
+            TEMPERATURE: 'temperature',
+            TOP_P: 'top_p',
+            RETRY: 'retry',
+            RPM: 'rpm',
+            TPM: 'tpm',
+            EXTRA_BODY: 'extra_body',
+            CUSTOM_PROMPT: 'custom_prompt',
+            QUEUE_CONCURRENT: 'queue_concurrent',
+            ACTIVE_TASK_IDS: 'active_task_ids',
+            UI_LANGUAGE: 'ui_language',
+            UI_SYNC_SCROLL: 'ui_sync_scroll_enabled',
+            THEME: 'theme',
+            DEFAULT_WORKFLOWS: 'default_workflows',
+            CUSTOM_EXTENSIONS: 'custom_extensions',
+        },
+        prefix: (name, platform, suffix) => `${name}_${platform}_${suffix}`,
+    };
+
+    // ===== 存储工具 =====
+    const storage = {
+        get: (k, def) => { const v = localStorage.getItem(k); return v === null ? def : v; },
+        set: (k, v) => { localStorage.setItem(k, v); },
+        getBool: (k, def) => { const v = localStorage.getItem(k); return v === null ? def : v === 'true'; },
+        getNum: (k, def) => { const v = localStorage.getItem(k); return v ? Number(v) : def; },
+        getNumOrNull: (k) => { const v = localStorage.getItem(k); return (v === null || v === '' || v === 'null') ? null : Number(v); },
+    };
+
+    // ===== 空值转换 =====
+    const emptyToNull = (val) => (!val && val !== 0 && val !== false) ? null : val;
 
     const SliderControl = {
         props: ['label', 'modelValue', 'min', 'max', 'step', 'defaultVal', 't', 'saveKey'],
@@ -1673,117 +1861,101 @@
                 pptx: {insert_mode: 'replace', separator: '\\n'}
             });
 
-            // Load config from localStorage
-            const loadConfig = (defaults = {}) => {
-                const get = (k, def) => localStorage.getItem(k) || def;
-                const getBool = (k, def) => {
-                    const v = localStorage.getItem(k);
-                    return v === null ? def : v === 'true';
-                };
-                const getNum = (k, def) => {
-                    const v = localStorage.getItem(k);
-                    return v ? Number(v) : def;
-                };
-                const getNumOrNull = (k) => {
-                    const v = localStorage.getItem(k);
-                    return (v === null || v === '' || v === 'null') ? null : Number(v);
-                };
-
-                form.workflow_type = get('translator_last_workflow', 'markdown_based');
-                form.convert_engine = get('translator_convert_engin', 'mineru');
-                // 将字符串 "null" 转换回真正的 null
-                const md2docxVal = get('translator_md2docx_engine', 'auto');
+            // ===== 加载配置 - 拆分为子函数 =====
+            const loadMainConfig = (defaults) => {
+                form.workflow_type = storage.get(STORAGE.keys.WORKFLOW, 'markdown_based');
+                form.convert_engine = storage.get(STORAGE.keys.ENGINE, 'mineru');
+                const md2docxVal = storage.get(STORAGE.keys.MD2DOCX, 'auto');
                 form.md2docx_engine = md2docxVal === 'null' ? null : md2docxVal;
-                form.mineru_token = get('translator_mineru_token', '');
-                form.model_version = get('translator_model_version', 'vlm');
-                form.mineru_language = get('translator_mineru_language', 'ch');
-                form.mineru_deploy_base_url = get('mineru_deploy_base_url', 'http://127.0.0.1:8000');
-                form.mineru_deploy_backend = get('mineru_deploy_backend', 'hybrid-auto-engine');
-                form.mineru_deploy_parse_method = get('mineru_deploy_parse_method', 'auto');
-                form.mineru_deploy_start_page = getNum('mineru_deploy_start_page', 0);
-                form.mineru_deploy_end_page = getNum('mineru_deploy_end_page', 99999);
-                form.mineru_deploy_formula_enable = getBool('mineru_deploy_formula_enable', true);
-                form.mineru_deploy_table_enable = getBool('mineru_deploy_table_enable', true);
-                form.mineru_deploy_server_url = get('mineru_deploy_server_url', '');
+                form.mineru_token = storage.get('translator_mineru_token', '');
+                form.model_version = storage.get('translator_model_version', 'vlm');
+                form.mineru_language = storage.get('translator_mineru_language', 'ch');
+                form.mineru_deploy_base_url = storage.get('mineru_deploy_base_url', 'http://127.0.0.1:8000');
+                form.mineru_deploy_backend = storage.get('mineru_deploy_backend', 'hybrid-auto-engine');
+                form.mineru_deploy_parse_method = storage.get('mineru_deploy_parse_method', 'auto');
+                form.mineru_deploy_start_page = storage.getNum('mineru_deploy_start_page', 0);
+                form.mineru_deploy_end_page = storage.getNum('mineru_deploy_end_page', 99999);
+                form.mineru_deploy_formula_enable = storage.getBool('mineru_deploy_formula_enable', true);
+                form.mineru_deploy_table_enable = storage.getBool('mineru_deploy_table_enable', true);
+                form.mineru_deploy_server_url = storage.get('mineru_deploy_server_url', '');
                 const savedLangList = localStorage.getItem('mineru_deploy_lang_list');
                 form.mineru_deploy_lang_list = savedLangList ? JSON.parse(savedLangList) : [];
+                form.formula_ocr = storage.getBool('translator_formula_ocr', true);
+                form.code_ocr = storage.getBool('translator_code_ocr', true);
+                form.skip_translate = storage.getBool('translator_skip_translate', false);
+                form.platform = storage.get(STORAGE.keys.PLATFORM, 'https://api.302.ai/v1');
+                form.system_proxy_enable = storage.getBool('translator_system_proxy_enable', defaults.system_proxy_enable ?? false);
+                form.force_json = storage.getBool('translator_force_json', false);
+                form.to_lang = storage.get('translator_to_lang', 'Simplified Chinese');
+                form.custom_to_lang = storage.get('translator_custom_to_lang', '');
+                form.thinking = storage.get('translator_thinking_mode', defaults.thinking ?? 'disable');
+                form.custom_prompt = storage.get(STORAGE.keys.CUSTOM_PROMPT, '');
+                form.chunk_size = storage.getNum(STORAGE.keys.CHUNK_SIZE, defaults.chunk_size ?? 4000);
+                form.concurrent = storage.getNum(STORAGE.keys.CONCURRENT, defaults.concurrent ?? 30);
+                form.temperature = storage.getNum(STORAGE.keys.TEMPERATURE, defaults.temperature ?? 0.7);
+                form.top_p = storage.getNum(STORAGE.keys.TOP_P, defaults.top_p ?? 0.9);
+                form.retry = storage.getNum(STORAGE.keys.RETRY, defaults.retry ?? 2);
+                form.rpm = storage.getNumOrNull(STORAGE.keys.RPM);
+                form.tpm = storage.getNumOrNull(STORAGE.keys.TPM);
+                form.extra_body = storage.get(STORAGE.keys.EXTRA_BODY, defaults.extra_body ?? '');
+            };
 
-                form.formula_ocr = getBool('translator_formula_ocr', true);
-                form.code_ocr = getBool('translator_code_ocr', true);
-                form.skip_translate = getBool('translator_skip_translate', false);
-                form.platform = get('translator_platform_last_platform', 'https://api.302.ai/v1');
-                form.system_proxy_enable = getBool('translator_system_proxy_enable', defaults.system_proxy_enable ?? false);
-                form.force_json = getBool('translator_force_json', false);
-                form.to_lang = get('translator_to_lang', 'Simplified Chinese');
-                form.custom_to_lang = get('translator_custom_to_lang', '');
-                form.thinking = get('translator_thinking_mode', defaults.thinking ?? 'disable');
-                form.custom_prompt = get('custom_prompt', '');
-                form.chunk_size = getNum('chunk_size', defaults.chunk_size ?? 4000);
-                form.concurrent = getNum('concurrent', defaults.concurrent ?? 30);
-                form.temperature = getNum('temperature', defaults.temperature ?? 0.7);
-                form.top_p = getNum('top_p', defaults.top_p ?? 0.9);
-                form.retry = getNum('retry', defaults.retry ?? 2);
-                form.rpm = getNumOrNull('rpm'); // Load RPM
-                form.tpm = getNumOrNull('tpm'); // Load TPM
-                form.extra_body = get('extra_body', defaults.extra_body ?? ''); // Load extra_body
-
-                // Determine Provider
+            const loadPlatformConfig = () => {
                 const platObj = KNOWN_PLATFORMS.find(p => p.val === form.platform);
                 if (form.platform === 'custom') {
-                    // 修正：读取组件实际保存的 Key (translator_platform_custom_provider)
-                    form.provider = get('translator_platform_custom_provider', 'default');
+                    form.provider = storage.get('translator_platform_custom_provider', 'default');
                 } else {
                     form.provider = platObj ? platObj.provider : '';
                 }
+            };
 
-                form.glossary_generate_enable = getBool('glossary_generate_enable', false);
-                form.glossary_agent_custom_prompt = get('glossary_agent_custom_prompt', '');
-                form.glossary_agent_config_choice = get('glossary_agent_config_choice', 'same');
-                form.glossary_agent_platform = get('glossary_agent_platform_last_platform', 'https://api.302.ai/v1');
-                form.glossary_agent_to_lang = get('glossary_agent_to_lang', 'Simplified Chinese');
-                form.glossary_agent_custom_to_lang = get('glossary_agent_custom_to_lang', '');
-                form.glossary_agent_chunk_size = getNum('glossary_agent_chunk_size', defaults.chunk_size ?? 1000);
-                form.glossary_agent_concurrent = getNum('glossary_agent_concurrent', defaults.concurrent ?? 5);
-                form.glossary_agent_temperature = getNum('glossary_agent_temperature', defaults.temperature ?? 0.7);
-                form.glossary_agent_top_p = getNum('glossary_agent_top_p', 0.9);
-                form.glossary_agent_retry = getNum('glossary_agent_retry', defaults.retry ?? 3);
-                form.glossary_agent_thinking = get('glossary_agent_thinking_mode', defaults.thinking ?? 'default');
-                form.glossary_agent_system_proxy_enable = getBool('glossary_agent_system_proxy_enable', defaults.system_proxy_enable ?? false);
-                form.glossary_agent_force_json = getBool('glossary_agent_force_json', false);
-                form.glossary_agent_rpm = getNumOrNull('glossary_agent_rpm'); // Load Glossary RPM
-                form.glossary_agent_tpm = getNumOrNull('glossary_agent_tpm'); // Load Glossary TPM
-                form.glossary_agent_extra_body = get('glossary_agent_extra_body', defaults.extra_body ?? ''); // Load Glossary extra_body
+            const loadGlossaryConfig = (defaults) => {
+                form.glossary_generate_enable = storage.getBool('glossary_generate_enable', false);
+                form.glossary_agent_custom_prompt = storage.get('glossary_agent_custom_prompt', '');
+                form.glossary_agent_config_choice = storage.get('glossary_agent_config_choice', 'same');
+                form.glossary_agent_platform = storage.get('glossary_agent_platform_last_platform', 'https://api.302.ai/v1');
+                form.glossary_agent_to_lang = storage.get('glossary_agent_to_lang', 'Simplified Chinese');
+                form.glossary_agent_custom_to_lang = storage.get('glossary_agent_custom_to_lang', '');
+                form.glossary_agent_chunk_size = storage.getNum('glossary_agent_chunk_size', defaults.chunk_size ?? 1000);
+                form.glossary_agent_concurrent = storage.getNum('glossary_agent_concurrent', defaults.concurrent ?? 5);
+                form.glossary_agent_temperature = storage.getNum('glossary_agent_temperature', defaults.temperature ?? 0.7);
+                form.glossary_agent_top_p = storage.getNum('glossary_agent_top_p', 0.9);
+                form.glossary_agent_retry = storage.getNum('glossary_agent_retry', defaults.retry ?? 3);
+                form.glossary_agent_thinking = storage.get('glossary_agent_thinking_mode', defaults.thinking ?? 'default');
+                form.glossary_agent_system_proxy_enable = storage.getBool('glossary_agent_system_proxy_enable', defaults.system_proxy_enable ?? false);
+                form.glossary_agent_force_json = storage.getBool('glossary_agent_force_json', false);
+                form.glossary_agent_rpm = storage.getNumOrNull('glossary_agent_rpm');
+                form.glossary_agent_tpm = storage.getNumOrNull('glossary_agent_tpm');
+                form.glossary_agent_extra_body = storage.get('glossary_agent_extra_body', defaults.extra_body ?? '');
 
-                // Determine Glossary Provider
                 const gPlatObj = KNOWN_PLATFORMS.find(p => p.val === form.glossary_agent_platform);
                 if (form.glossary_agent_platform === 'custom') {
-                    form.glossary_agent_provider = get('glossary_agent_platform_custom_provider', 'default');
+                    form.glossary_agent_provider = storage.get('glossary_agent_platform_custom_provider', 'default');
                 } else {
                     form.glossary_agent_provider = gPlatObj ? gPlatObj.provider : '';
                 }
+            };
 
-                // Restore workflow specific params
+            const loadWorkflowParams = () => {
                 ['txt', 'xlsx', 'docx', 'srt', 'epub', 'html', 'ass', 'pptx'].forEach(t => {
-                    workflowParams[t].insert_mode = get(`translator_${t}_insert_mode`, 'replace');
-                    if (workflowParams[t].separator !== undefined) workflowParams[t].separator = get(`translator_${t}_separator`, workflowParams[t].separator);
+                    workflowParams[t].insert_mode = storage.get(`translator_${t}_insert_mode`, 'replace');
+                    if (workflowParams[t].separator !== undefined)
+                        workflowParams[t].separator = storage.get(`translator_${t}_separator`, workflowParams[t].separator);
                 });
-                workflowParams.txt.segment_mode = get('translator_txt_segment_mode', 'line');
-                workflowParams.xlsx.translate_regions = get('translator_xlsx_translate_regions', '');
-                workflowParams.json.json_paths = get('translator_json_paths', '');
+                workflowParams.txt.segment_mode = storage.get('translator_txt_segment_mode', 'line');
+                workflowParams.xlsx.translate_regions = storage.get('translator_xlsx_translate_regions', '');
+                workflowParams.json.json_paths = storage.get('translator_json_paths', '');
+            };
 
-                // Load default workflows
-                const savedDefaultWorkflows = localStorage.getItem('default_workflows');
-                if (savedDefaultWorkflows) {
-                    try {
-                        const parsed = JSON.parse(savedDefaultWorkflows);
-                        Object.assign(default_workflows, parsed);
-                    } catch(e) {}
+            const loadDefaultWorkflows = () => {
+                const saved = localStorage.getItem(STORAGE.keys.DEFAULT_WORKFLOWS);
+                if (saved) {
+                    try { Object.assign(default_workflows, JSON.parse(saved)); } catch(e) {}
                 }
-                // Load custom extensions
-                const savedCustomExts = localStorage.getItem('custom_extensions');
-                if (savedCustomExts) {
+                const savedCustom = localStorage.getItem(STORAGE.keys.CUSTOM_EXTENSIONS);
+                if (savedCustom) {
                     try {
-                        const parsed = JSON.parse(savedCustomExts);
+                        const parsed = JSON.parse(savedCustom);
                         if (Array.isArray(parsed)) {
                             parsed.forEach(ext => {
                                 if (!ALL_EXTENSIONS.value.includes(ext)) {
@@ -1794,9 +1966,17 @@
                         }
                     } catch(e) {}
                 }
+            };
+
+            const loadConfig = (defaults = {}) => {
+                loadMainConfig(defaults);
+                loadPlatformConfig();
+                loadGlossaryConfig(defaults);
+                loadWorkflowParams();
+                loadDefaultWorkflows();
 
                 // Load queue concurrent
-                const savedQueueConcurrent = localStorage.getItem('queue_concurrent');
+                const savedQueueConcurrent = localStorage.getItem(STORAGE.keys.QUEUE_CONCURRENT);
                 if (savedQueueConcurrent) queue_concurrent.value = Number(savedQueueConcurrent) || 3;
 
                 // Trigger platform updates to load API keys/models
@@ -1804,89 +1984,87 @@
                 updatePlatformParams(form.glossary_agent_platform, 'glossary_agent_platform', form, true);
             };
 
-            // --- 新增：专门用于将当前 form 数据全部写入 localStorage 的函数 ---
-            const saveAllSettings = () => {
-                const s = (k, v) => localStorage.setItem(k, v); // 简写保存函数
+            // ===== 保存配置 - 拆分为子函数 =====
+            const saveMainConfig = () => {
                 const f = form;
+                storage.set(STORAGE.keys.WORKFLOW, f.workflow_type);
+                storage.set(STORAGE.keys.ENGINE, f.convert_engine);
+                storage.set(STORAGE.keys.MD2DOCX, f.md2docx_engine);
+                storage.set('translator_mineru_token', f.mineru_token);
+                storage.set('translator_model_version', f.model_version);
+                storage.set('translator_mineru_language', f.mineru_language);
+                storage.set('mineru_deploy_base_url', f.mineru_deploy_base_url);
+                storage.set('mineru_deploy_backend', f.mineru_deploy_backend);
+                storage.set('mineru_deploy_parse_method', f.mineru_deploy_parse_method);
+                storage.set('mineru_deploy_start_page', f.mineru_deploy_start_page);
+                storage.set('mineru_deploy_end_page', f.mineru_deploy_end_page);
+                storage.set('mineru_deploy_formula_enable', f.mineru_deploy_formula_enable);
+                storage.set('mineru_deploy_table_enable', f.mineru_deploy_table_enable);
+                storage.set('mineru_deploy_server_url', f.mineru_deploy_server_url);
+                storage.set('mineru_deploy_lang_list', JSON.stringify(f.mineru_deploy_lang_list));
+                storage.set('translator_formula_ocr', f.formula_ocr);
+                storage.set('translator_code_ocr', f.code_ocr);
+                storage.set('translator_skip_translate', f.skip_translate);
+                storage.set(STORAGE.keys.PLATFORM, f.platform);
+                storage.set('translator_system_proxy_enable', f.system_proxy_enable);
+                storage.set('translator_force_json', f.force_json);
+                storage.set('translator_to_lang', f.to_lang);
+                storage.set('translator_custom_to_lang', f.custom_to_lang);
+                storage.set('translator_thinking_mode', f.thinking);
+                storage.set(STORAGE.keys.CUSTOM_PROMPT, f.custom_prompt);
+                storage.set(STORAGE.keys.CHUNK_SIZE, f.chunk_size);
+                storage.set(STORAGE.keys.CONCURRENT, f.concurrent);
+                storage.set(STORAGE.keys.TEMPERATURE, f.temperature);
+                storage.set(STORAGE.keys.TOP_P, f.top_p);
+                storage.set(STORAGE.keys.RETRY, f.retry);
+                storage.set(STORAGE.keys.RPM, f.rpm || '');
+                storage.set(STORAGE.keys.TPM, f.tpm || '');
+                storage.set(STORAGE.keys.EXTRA_BODY, f.extra_body || '');
+                // 平台相关
+                storage.set(`translator_platform_${f.platform}_apikey`, f.api_key);
+                storage.set(`translator_platform_${f.platform}_model_id`, f.model_id);
+                storage.set('translator_provider', f.provider);
+                if (f.platform === 'custom') storage.set('translator_platform_custom_base_url', f.base_url);
+            };
 
-                // 1. 基础配置映射 (手动映射那些名字不一样的)
-                s('translator_last_workflow', f.workflow_type);
-                s('translator_convert_engin', f.convert_engine);
-                s('translator_md2docx_engine', f.md2docx_engine);
-                s('translator_mineru_token', f.mineru_token);
-                s('translator_model_version', f.model_version);
-                s('translator_mineru_language', f.mineru_language);
-
-                // Mineru Deploy 相关
-                s('mineru_deploy_base_url', f.mineru_deploy_base_url);
-                s('mineru_deploy_backend', f.mineru_deploy_backend);
-                s('mineru_deploy_parse_method', f.mineru_deploy_parse_method);
-                s('mineru_deploy_start_page', f.mineru_deploy_start_page);
-                s('mineru_deploy_end_page', f.mineru_deploy_end_page);
-                s('mineru_deploy_formula_enable', f.mineru_deploy_formula_enable);
-                s('mineru_deploy_table_enable', f.mineru_deploy_table_enable);
-                s('mineru_deploy_server_url', f.mineru_deploy_server_url);
-                s('mineru_deploy_lang_list', JSON.stringify(f.mineru_deploy_lang_list));
-
-                // 杂项
-                s('translator_formula_ocr', f.formula_ocr);
-                s('translator_code_ocr', f.code_ocr);
-                s('translator_skip_translate', f.skip_translate);
-                s('translator_platform_last_platform', f.platform);
-                s('translator_system_proxy_enable', f.system_proxy_enable);
-                s('translator_force_json', f.force_json);
-                s('translator_to_lang', f.to_lang);
-                s('translator_custom_to_lang', f.custom_to_lang);
-                s('translator_thinking_mode', f.thinking);
-
-                // 名字一样的直接存
-                s('custom_prompt', f.custom_prompt);
-                s('chunk_size', f.chunk_size);
-                s('concurrent', f.concurrent);
-                s('temperature', f.temperature);
-                s('top_p', f.top_p);
-                s('retry', f.retry);
-                s('rpm', f.rpm || '');
-                s('tpm', f.tpm || '');
-                s('extra_body', f.extra_body || '');
-
-                // 平台相关 (API Key 等)
-                s(`translator_platform_${f.platform}_apikey`, f.api_key);
-                s(`translator_platform_${f.platform}_model_id`, f.model_id);
-                s('translator_provider', f.provider);
-                if (f.platform === 'custom') s('translator_platform_custom_base_url', f.base_url);
-
-                // 2. 术语表相关
-                s('glossary_generate_enable', f.glossary_generate_enable);
-                s('glossary_agent_custom_prompt', f.glossary_agent_custom_prompt);
-                s('glossary_agent_config_choice', f.glossary_agent_config_choice);
-                s('glossary_agent_platform_last_platform', f.glossary_agent_platform);
-                s('glossary_agent_to_lang', f.glossary_agent_to_lang);
-                s('glossary_agent_custom_to_lang', f.glossary_agent_custom_to_lang);
-                s('glossary_agent_chunk_size', f.glossary_agent_chunk_size);
-                s('glossary_agent_concurrent', f.glossary_agent_concurrent);
-                s('glossary_agent_temperature', f.glossary_agent_temperature);
-                s('glossary_agent_top_p', f.glossary_agent_top_p);
-                s('glossary_agent_retry', f.glossary_agent_retry);
-                s('glossary_agent_thinking_mode', f.glossary_agent_thinking);
-                s('glossary_agent_system_proxy_enable', f.glossary_agent_system_proxy_enable);
-                s('glossary_agent_force_json', f.glossary_agent_force_json);
-                s('glossary_agent_rpm', f.glossary_agent_rpm || '');
-                s('glossary_agent_tpm', f.glossary_agent_tpm || '');
-                s('glossary_agent_extra_body', f.glossary_agent_extra_body || '');
-
+            const saveGlossaryConfig = () => {
+                const f = form;
+                storage.set('glossary_generate_enable', f.glossary_generate_enable);
+                storage.set('glossary_agent_custom_prompt', f.glossary_agent_custom_prompt);
+                storage.set('glossary_agent_config_choice', f.glossary_agent_config_choice);
+                storage.set('glossary_agent_platform_last_platform', f.glossary_agent_platform);
+                storage.set('glossary_agent_to_lang', f.glossary_agent_to_lang);
+                storage.set('glossary_agent_custom_to_lang', f.glossary_agent_custom_to_lang);
+                storage.set('glossary_agent_chunk_size', f.glossary_agent_chunk_size);
+                storage.set('glossary_agent_concurrent', f.glossary_agent_concurrent);
+                storage.set('glossary_agent_temperature', f.glossary_agent_temperature);
+                storage.set('glossary_agent_top_p', f.glossary_agent_top_p);
+                storage.set('glossary_agent_retry', f.glossary_agent_retry);
+                storage.set('glossary_agent_thinking_mode', f.glossary_agent_thinking);
+                storage.set('glossary_agent_system_proxy_enable', f.glossary_agent_system_proxy_enable);
+                storage.set('glossary_agent_force_json', f.glossary_agent_force_json);
+                storage.set('glossary_agent_rpm', f.glossary_agent_rpm || '');
+                storage.set('glossary_agent_tpm', f.glossary_agent_tpm || '');
+                storage.set('glossary_agent_extra_body', f.glossary_agent_extra_body || '');
                 // 术语表平台 Key
-                s(`glossary_agent_platform_${f.glossary_agent_platform}_apikey`, f.glossary_agent_key);
-                s(`glossary_agent_platform_${f.glossary_agent_platform}_model_id`, f.glossary_agent_model_id);
-                s('glossary_agent_provider', f.glossary_agent_provider);
-                if (f.glossary_agent_platform === 'custom') s('glossary_agent_platform_custom_base_url', f.glossary_agent_baseurl);
+                storage.set(`glossary_agent_platform_${f.glossary_agent_platform}_apikey`, f.glossary_agent_key);
+                storage.set(`glossary_agent_platform_${f.glossary_agent_platform}_model_id`, f.glossary_agent_model_id);
+                storage.set('glossary_agent_provider', f.glossary_agent_provider);
+                if (f.glossary_agent_platform === 'custom') storage.set('glossary_agent_platform_custom_base_url', f.glossary_agent_baseurl);
+            };
 
-                // 3. 自动循环保存所有具体工作流参数 (txt, docx, xlsx...)
+            const saveWorkflowParamsConfig = () => {
                 for (const [wfType, params] of Object.entries(workflowParams)) {
                     for (const [key, val] of Object.entries(params)) {
-                        s(`translator_${wfType}_${key}`, val);
+                        storage.set(`translator_${wfType}_${key}`, val);
                     }
                 }
+            };
+
+            const saveAllSettings = () => {
+                saveMainConfig();
+                saveGlossaryConfig();
+                saveWorkflowParamsConfig();
             };
 
             const updatePlatformParams = (plat, prefix, target, isGlossary = false) => {
@@ -2107,63 +2285,33 @@
                 }
             };
 
-            const buildPayload = () => {
-                // 辅助函数：将空字符串转换为 null，确保后端 exclude_none 生效
-                const emptyToNull = (val) => (!val && val !== 0 && val !== false) ? null : val;
-
-                // Clone basic form
-                const basePayload = {
-                    skip_translate: form.skip_translate,
-                    base_url: emptyToNull(form.base_url),
-                    api_key: form.api_key || "",
-                    model_id: emptyToNull(form.model_id),
-                    provider: emptyToNull(form.provider), // Add provider
-                    to_lang: form.to_lang === 'custom' ? form.custom_to_lang : form.to_lang,
-                    thinking: form.thinking,
-                    chunk_size: Number(form.chunk_size),
-                    concurrent: Number(form.concurrent),
-                    temperature: Number(form.temperature),
-                    top_p: Number(form.top_p),
-                    retry: Number(form.retry),
-                    custom_prompt: emptyToNull(form.custom_prompt),
-                    glossary_dict: Object.keys(glossaryData.value).length ? glossaryData.value : null,
-                    system_proxy_enable: form.system_proxy_enable,
-                    force_json: form.force_json,
-                    glossary_generate_enable: form.glossary_generate_enable,
-                    workflow_type: form.workflow_type,
-                    rpm: emptyToNull(form.rpm),
-                    tpm: emptyToNull(form.tpm),
-                    extra_body: emptyToNull(form.extra_body)
+            // ===== 构建请求载荷 - 提取辅助函数 =====
+            const buildAgentConfig = (basePayload) => {
+                const isCustom = form.glossary_agent_config_choice === 'custom';
+                return {
+                    base_url: isCustom ? emptyToNull(form.glossary_agent_baseurl) : basePayload.base_url,
+                    api_key: isCustom ? (form.glossary_agent_key || "") : basePayload.api_key,
+                    model_id: isCustom ? emptyToNull(form.glossary_agent_model_id) : basePayload.model_id,
+                    provider: isCustom ? emptyToNull(form.glossary_agent_provider) : basePayload.provider,
+                    to_lang: isCustom ? (form.glossary_agent_to_lang === 'custom' ? form.glossary_agent_custom_to_lang : form.glossary_agent_to_lang) : basePayload.to_lang,
+                    custom_prompt: emptyToNull(form.glossary_agent_custom_prompt),
+                    temperature: isCustom ? Number(form.glossary_agent_temperature) : basePayload.temperature,
+                    top_p: isCustom ? Number(form.glossary_agent_top_p) : basePayload.top_p,
+                    concurrent: isCustom ? Number(form.glossary_agent_concurrent) : basePayload.concurrent,
+                    retry: isCustom ? Number(form.glossary_agent_retry) : basePayload.retry,
+                    thinking: isCustom ? form.glossary_agent_thinking : basePayload.thinking,
+                    system_proxy_enable: isCustom ? form.glossary_agent_system_proxy_enable : basePayload.system_proxy_enable,
+                    chunk_size: isCustom ? Number(form.glossary_agent_chunk_size) : basePayload.chunk_size,
+                    force_json: isCustom ? form.glossary_agent_force_json : basePayload.force_json,
+                    rpm: isCustom ? emptyToNull(form.glossary_agent_rpm) : basePayload.rpm,
+                    tpm: isCustom ? emptyToNull(form.glossary_agent_tpm) : basePayload.tpm,
+                    extra_body: isCustom ? emptyToNull(form.glossary_agent_extra_body) : basePayload.extra_body
                 };
+            };
 
-                // Agent Config
-                if (basePayload.glossary_generate_enable) {
-                    const isCustom = form.glossary_agent_config_choice === 'custom';
-                    basePayload.glossary_agent_config = {
-                        base_url: isCustom ? emptyToNull(form.glossary_agent_baseurl) : basePayload.base_url,
-                        api_key: isCustom ? (form.glossary_agent_key || "") : basePayload.api_key,
-                        model_id: isCustom ? emptyToNull(form.glossary_agent_model_id) : basePayload.model_id,
-                        provider: isCustom ? emptyToNull(form.glossary_agent_provider) : basePayload.provider, // Add provider
-                        to_lang: isCustom ? (form.glossary_agent_to_lang === 'custom' ? form.glossary_agent_custom_to_lang : form.glossary_agent_to_lang) : basePayload.to_lang,
-                        custom_prompt: emptyToNull(form.glossary_agent_custom_prompt),
-                        temperature: isCustom ? Number(form.glossary_agent_temperature) : basePayload.temperature,
-                        top_p: isCustom ? Number(form.glossary_agent_top_p) : basePayload.top_p,
-                        concurrent: isCustom ? Number(form.glossary_agent_concurrent) : basePayload.concurrent,
-                        retry: isCustom ? Number(form.glossary_agent_retry) : basePayload.retry,
-                        thinking: isCustom ? form.glossary_agent_thinking : basePayload.thinking,
-                        system_proxy_enable: isCustom ? form.glossary_agent_system_proxy_enable : basePayload.system_proxy_enable,
-                        chunk_size: isCustom ? Number(form.glossary_agent_chunk_size) : basePayload.chunk_size,
-                        force_json: isCustom ? form.glossary_agent_force_json : basePayload.force_json,
-                        rpm: isCustom ? emptyToNull(form.glossary_agent_rpm) : basePayload.rpm,
-                        tpm: isCustom ? emptyToNull(form.glossary_agent_tpm) : basePayload.tpm,
-                        extra_body: isCustom ? emptyToNull(form.glossary_agent_extra_body) : basePayload.extra_body
-                    };
-                }
-
-                // Specific Workflow Params
+            const buildWorkflowPayload = (basePayload) => {
                 if (form.workflow_type === 'markdown_based') {
                     basePayload.convert_engine = form.convert_engine;
-                    // 将字符串 "null" 转换为真正的 null
                     basePayload.md2docx_engine = form.md2docx_engine === 'null' ? null : form.md2docx_engine;
                     if (form.convert_engine === 'mineru') {
                         basePayload.mineru_token = emptyToNull(form.mineru_token);
@@ -2173,18 +2321,14 @@
                     } else if (form.convert_engine === 'mineru_deploy') {
                         basePayload.mineru_deploy_base_url = emptyToNull(form.mineru_deploy_base_url);
                         basePayload.mineru_deploy_backend = form.mineru_deploy_backend;
-                        basePayload.mineru_deploy_parse_method = form.mineru_deploy_parse_method; // Added
+                        basePayload.mineru_deploy_parse_method = form.mineru_deploy_parse_method;
                         basePayload.mineru_deploy_formula_enable = form.mineru_deploy_formula_enable;
-                        basePayload.mineru_deploy_table_enable = form.mineru_deploy_table_enable; // Added
+                        basePayload.mineru_deploy_table_enable = form.mineru_deploy_table_enable;
                         basePayload.mineru_deploy_start_page_id = parseInt(form.mineru_deploy_start_page) || 0;
                         basePayload.mineru_deploy_end_page_id = parseInt(form.mineru_deploy_end_page) || 99999;
-
-                        // Condition: Pipeline or Hybrid backends support lang_list
                         if (['pipeline', 'hybrid-auto-engine', 'hybrid-http-client'].includes(basePayload.mineru_deploy_backend)) {
                             basePayload.mineru_deploy_lang_list = form.mineru_deploy_lang_list.length > 0 ? form.mineru_deploy_lang_list : null;
                         }
-
-                        // Condition: HTTP Client backends need server_url
                         if (['vlm-http-client', 'hybrid-http-client'].includes(basePayload.mineru_deploy_backend)) {
                             basePayload.mineru_deploy_server_url = emptyToNull(form.mineru_deploy_server_url);
                         }
@@ -2209,7 +2353,38 @@
                     }
                     Object.assign(basePayload, params);
                 }
+            };
 
+            const buildPayload = () => {
+                const basePayload = {
+                    skip_translate: form.skip_translate,
+                    base_url: emptyToNull(form.base_url),
+                    api_key: form.api_key || "",
+                    model_id: emptyToNull(form.model_id),
+                    provider: emptyToNull(form.provider),
+                    to_lang: form.to_lang === 'custom' ? form.custom_to_lang : form.to_lang,
+                    thinking: form.thinking,
+                    chunk_size: Number(form.chunk_size),
+                    concurrent: Number(form.concurrent),
+                    temperature: Number(form.temperature),
+                    top_p: Number(form.top_p),
+                    retry: Number(form.retry),
+                    custom_prompt: emptyToNull(form.custom_prompt),
+                    glossary_dict: Object.keys(glossaryData.value).length ? glossaryData.value : null,
+                    system_proxy_enable: form.system_proxy_enable,
+                    force_json: form.force_json,
+                    glossary_generate_enable: form.glossary_generate_enable,
+                    workflow_type: form.workflow_type,
+                    rpm: emptyToNull(form.rpm),
+                    tpm: emptyToNull(form.tpm),
+                    extra_body: emptyToNull(form.extra_body)
+                };
+
+                if (basePayload.glossary_generate_enable) {
+                    basePayload.glossary_agent_config = buildAgentConfig(basePayload);
+                }
+
+                buildWorkflowPayload(basePayload);
                 return basePayload;
             };
 
