@@ -199,7 +199,7 @@
   "defaultWorkflowModalTitle": "Ánh xạ quy trình theo phần mở rộng",
   "defaultWorkflowModalHelp": "Kéo các chip phần mở rộng vào vùng quy trình để gán lại. Kéo phần mở rộng vào vùng xóa để xóa ánh xạ tùy chỉnh (sẽ quay về ánh xạ mặc định).",
   "deleteExtTooltip": "Kéo vào đây để xóa ánh xạ",
-  "uploadFolderBtn": "Tải lên thư mục",
+  "importFolderBtn": "Nhập thư mục",
   "runAllBtn": "Chạy tất cả",
   "queueConcurrentLabel": "Số tác vụ đồng thời",
   "queueConcurrentHelp": "Số tác vụ dịch đồng thời khi chạy hàng loạt (1-10)",

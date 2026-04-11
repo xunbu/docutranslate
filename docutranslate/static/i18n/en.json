@@ -199,7 +199,7 @@
   "defaultWorkflowModalTitle": "File Extension Workflow Mappings",
   "defaultWorkflowModalHelp": "Drag extension chips to workflow zones to reassign them. Drag an extension to the delete zone to remove its custom mapping (it will fall back to the default mapping).",
   "deleteExtTooltip": "Drag here to delete mapping",
-  "uploadFolderBtn": "Upload Folder",
+  "importFolderBtn": "Import Folder",
   "runAllBtn": "Run All",
   "queueConcurrentLabel": "Task Concurrency",
   "queueConcurrentHelp": "Number of tasks to run concurrently in batch mode (1-10)",

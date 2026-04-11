@@ -199,7 +199,7 @@
   "defaultWorkflowModalTitle": "文件后缀工作流映射",
   "defaultWorkflowModalHelp": "拖拽后缀方块到对应工作流区域，或从其他工作流拖拽过来重新分配。也可以将后缀拖到删除区域移除映射（将使用默认映射）。",
   "deleteExtTooltip": "拖拽至此删除映射",
-  "uploadFolderBtn": "上传文件夹",
+  "importFolderBtn": "导入文件夹",
   "runAllBtn": "批量运行",
   "queueConcurrentLabel": "任务并发数",
   "queueConcurrentHelp": "设置批量运行时同时翻译的任务数量（1-10）",

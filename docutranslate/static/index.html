@@ -1053,7 +1053,7 @@
                             <input type="file" id="folderInput" ref="folderInput" class="d-none" webkitdirectory directory multiple
                                    @change="handleFolderSelect($event)">
                             <button class="btn btn-outline-primary" @click="$refs.folderInput.click()">
-                                <i class="bi bi-folder-fill me-2"></i><span>{{ t('uploadFolderBtn') }}</span>
+                                <i class="bi bi-folder-fill me-2"></i><span>{{ t('importFolderBtn') }}</span>
                             </button>
                             <button class="btn btn-success" @click="runAllPendingTasks()" v-if="hasPendingTasks">
                                 <i class="bi bi-play-fill me-2"></i><span>{{ t('runAllBtn') }}</span>
