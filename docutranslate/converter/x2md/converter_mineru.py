@@ -62,7 +62,8 @@ class ConverterMineru(X2MarkdownConverter):
         self.formula = config.formula_ocr
         self.model_version = config.model_version
         self.attachments: list[AttachMent] = []
-        self.max_pages = 600  # Mineru 的限制
+        self.max_pages = 200  # 每个切片最大页数
+        self.max_size_mb = 200  # 每个切片最大文件大小 (MB)
 
     def _get_header(self):
         return {
@@ -83,33 +84,70 @@ class ConverterMineru(X2MarkdownConverter):
 
     def _split_pdf(self, content: bytes) -> List[bytes]:
         """
-        检查 PDF 页数，如果超过限制则进行拆分。
+        检查 PDF 页数和文件大小，如果超过限制则进行拆分。
+        每个切片 <= 200页 且 <= 200MB。
         返回拆分后的 bytes 列表。如果不超限，返回包含原内容的单元素列表。
         """
         if not HAS_PYPDF:
-            self.logger.warning("未安装 pypdf，无法进行 PDF 页数检查和拆分。如果文件超过 600 页可能会失败。")
+            self.logger.warning("未安装 pypdf，无法进行 PDF 页数检查和拆分。如果文件超过限制可能会失败。")
             return [content]
+
+        max_size_bytes = self.max_size_mb * 1024 * 1024
 
         try:
             reader = PdfReader(io.BytesIO(content))
             total_pages = len(reader.pages)
 
-            if total_pages <= self.max_pages:
+            # 首先检查是否需要拆分
+            original_size = len(content)
+            if total_pages <= self.max_pages and original_size <= max_size_bytes:
                 return [content]
 
-            self.logger.info(f"PDF 页数 ({total_pages}) 超过限制 ({self.max_pages})，正在进行拆分...")
+            self.logger.info(f"PDF 需要拆分: {total_pages}页, {original_size / 1024 / 1024:.1f}MB (限制: {self.max_pages}页, {self.max_size_mb}MB)")
             chunks = []
 
-            for i in range(0, total_pages, self.max_pages):
+            start_page = 0
+            while start_page < total_pages:
+                # 尝试找到最大的 end_page，使得切片既不超过页数限制，也不超过大小限制
+                # 先按最大页数尝试
+                tentative_end = min(start_page + self.max_pages, total_pages)
+
+                # 使用二分查找找到合适的切片大小
+                best_end = start_page + 1
+                low = start_page + 1
+                high = tentative_end
+
+                while low <= high:
+                    mid = (low + high) // 2
+                    writer = PdfWriter()
+                    for page_num in range(start_page, mid):
+                        writer.add_page(reader.pages[page_num])
+                    with io.BytesIO() as output_stream:
+                        writer.write(output_stream)
+                        size = len(output_stream.getvalue())
+                    if size <= max_size_bytes:
+                        best_end = mid
+                        low = mid + 1
+                    else:
+                        high = mid - 1
+
+                # 使用找到的 best_end 创建切片
                 writer = PdfWriter()
-                end_page = min(i + self.max_pages, total_pages)
-
-                for page_num in range(i, end_page):
+                for page_num in range(start_page, best_end):
                     writer.add_page(reader.pages[page_num])
-
                 with io.BytesIO() as output_stream:
                     writer.write(output_stream)
-                    chunks.append(output_stream.getvalue())
+                    chunk_content = output_stream.getvalue()
+                    chunks.append(chunk_content)
+                    chunk_size_mb = len(chunk_content) / 1024 / 1024
+                    page_range = f"页 {start_page + 1}-{best_end}" if best_end > start_page + 1 else f"页 {start_page + 1}"
+                    self.logger.info(f"  切片 {len(chunks)}: {page_range}, {chunk_size_mb:.1f}MB")
+
+                    # 如果单页就超过大小限制，发出警告
+                    if best_end == start_page + 1 and chunk_size_mb > self.max_size_mb:
+                        self.logger.warning(f"    警告: 第 {start_page + 1} 页大小 ({chunk_size_mb:.1f}MB) 超过单文件限制 ({self.max_size_mb}MB)，仍将尝试上传")
+
+                start_page = best_end
 
             self.logger.info(f"PDF 已拆分为 {len(chunks)} 个部分。")
             return chunks
