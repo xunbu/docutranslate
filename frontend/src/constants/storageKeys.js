@@ -1,0 +1,26 @@
+// Storage key constants
+export const STORAGE = {
+    keys: {
+        WORKFLOW: 'translator_last_workflow',
+        ENGINE: 'translator_convert_engin',
+        MD2DOCX: 'translator_md2docx_engine',
+        PLATFORM: 'translator_platform_last_platform',
+        CHUNK_SIZE: 'chunk_size',
+        CONCURRENT: 'concurrent',
+        TEMPERATURE: 'temperature',
+        TOP_P: 'top_p',
+        RETRY: 'retry',
+        RPM: 'rpm',
+        TPM: 'tpm',
+        EXTRA_BODY: 'extra_body',
+        CUSTOM_PROMPT: 'custom_prompt',
+        QUEUE_CONCURRENT: 'queue_concurrent',
+        ACTIVE_TASK_IDS: 'active_task_ids',
+        UI_LANGUAGE: 'ui_language',
+        UI_SYNC_SCROLL: 'ui_sync_scroll_enabled',
+        THEME: 'theme',
+        DEFAULT_WORKFLOWS: 'default_workflows',
+        CUSTOM_EXTENSIONS: 'custom_extensions',
+    },
+    prefix: (name, platform, suffix) => `${name}_${platform}_${suffix}`,
+};
