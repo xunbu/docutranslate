@@ -15,6 +15,7 @@
                     :glossaryCount="glossaryCount"
                     :version="version"
                     :stepMap="stepMap"
+                    :defaultParams="defaultParams"
                     @update:showMineruToken="val => showMineruToken = val"
                     @saveSetting="saveSetting"
                     @saveSettingArray="saveSettingArray"
@@ -146,7 +147,13 @@ const i18nData = ref({});
 const glossaryData = ref({});
 const tasks = ref([]);
 const enginList = ref([]);
-const defaultParams = reactive({});
+const defaultParams = reactive({
+    chunk_size: 4000,
+    concurrent: 5,
+    temperature: 0.7,
+    top_p: 0.9,
+    retry: 3
+});
 
 // Refs for DOM elements
 const glossaryInput = ref(null);

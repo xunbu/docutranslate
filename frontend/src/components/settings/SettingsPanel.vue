@@ -105,6 +105,7 @@ const props = defineProps({
     glossaryCount: Number,
     version: String,
     stepMap: Object,
+    defaultParams: Object,
 });
 
 const emit = defineEmits([
