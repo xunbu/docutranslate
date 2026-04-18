@@ -1,16 +1,6 @@
-@import "tailwindcss";
-
-/* 配置 Tailwind 深色模式使用 data-theme 属性 */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
-
-@theme {
-  --color-primary: #0066cc;
-  --color-primary-hover: #0052a3;
-  --color-success: #198754;
-  --color-danger: #dc3545;
-  --color-warning: #ffc107;
-  --color-info: #0dcaf0;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 /* 基础样式 */
 :root {
