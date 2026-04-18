@@ -4,9 +4,7 @@
         <template #header>
             <strong>
                 <span class="step-number">{{ stepNumber }} </span>
-                <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-                </svg>
+                <Heroicon name="LanguageIcon" class="w-5 h-5 inline-block mr-2" />
                 <span>{{ t('translationSettingsTitleText') }}</span>
             </strong>
         </template>
@@ -41,9 +39,7 @@
             <div class="flex items-center mb-1">
                 <label class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ t('thinkingModeLabel') }}</label>
                 <Tooltip :content="t('thinkingModeTooltip')">
-                    <svg class="w-4 h-4 ml-2 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <Heroicon name="QuestionMarkCircleIcon" class="w-4 h-4 ml-2 text-gray-400 cursor-help" />
                 </Tooltip>
             </div>
             <div class="flex rounded overflow-hidden border border-gray-300 dark:border-gray-600" role="group">
@@ -115,9 +111,7 @@
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {{ t('extraBodyLabel') }} <small class="text-sm text-gray-500 dark:text-gray-400">(JSON)</small>
                 <Tooltip :content="t('extraBodyTooltip')">
-                    <svg class="w-4 h-4 inline-block ml-2 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <Heroicon name="QuestionMarkCircleIcon" class="w-4 h-4 inline-block ml-2 text-gray-400 cursor-help" />
                 </Tooltip>
             </label>
             <textarea class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary resize-none" v-model="form.extra_body"
@@ -133,6 +127,7 @@ import { ref, inject } from 'vue';
 import Collapse from '../ui/Collapse.vue';
 import Tooltip from '../ui/Tooltip.vue';
 import SliderControl from '../common/SliderControl.vue';
+import Heroicon from '../ui/Heroicon.vue';
 
 const props = defineProps({
     t: Function,

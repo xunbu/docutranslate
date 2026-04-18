@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@heroicons/vue": "^2.2.0",
     "papaparse": "^5.5.3",
     "split.js": "^1.6.5",
     "vue": "^3.4.0"

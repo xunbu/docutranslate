@@ -5,16 +5,11 @@
                 <h4 class="mb-0 me-3 fw-bold ml-3 text-lg" :title="t('pageTitle')">DocuTranslate</h4>
                 <div class="btn-group">
                     <button type="button" class="btn btn-sm btn-outline-info" @click="showTutorial = true">
-                        <svg class="w-4 h-4 me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9a3 3 0 011.924-2.786c.903-.42 1.96-.42 2.863 0a3 3 0 011.924 2.786c0 1.452-1.168 2.625-2.606 2.786a3 3 0 00-2.606 2.786v.001M12 18.75a.75.75 0 11-1.5 0 .75.75 0 011.5 0z" />
-                        </svg>
+                        <Heroicon name="QuestionMarkCircleIcon" class="w-4 h-4 me-1" solid />
                         <span>{{ t('tutorialBtn') }}</span>
                     </button>
                     <button type="button" class="btn btn-sm btn-outline-warning" @click="showContributors = true">
-                        <svg class="w-4 h-4 me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-2.24-2.9l-1.76-.44V17a3 3 0 01-3 3h-2a3 3 0 01-3-3v-1.34l-1.76.44A3 3 0 006 18v2h5" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 11a3 3 0 11-6 0 3 3 0 016 0zm8 0a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
+                        <Heroicon name="UserGroupIcon" class="w-4 h-4 me-1" solid />
                         <span>{{ t('projectContributeBtn') }}</span>
                     </button>
                 </div>
@@ -50,15 +45,11 @@
         <!-- Import/Export -->
         <div class="d-flex justify-content-center gap-2 mt-4">
             <button type="button" class="btn btn-outline-primary" @click="configFile.click()">
-                <svg class="w-4 h-4 me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
+                <Heroicon name="ArrowUpTrayIcon" class="w-4 h-4 me-1" />
                 <span>{{ t('importConfigBtn') }}</span>
             </button>
             <button type="button" class="btn btn-outline-secondary" @click="handleExportConfig">
-                <svg class="w-4 h-4 me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
+                <Heroicon name="ArrowDownTrayIcon" class="w-4 h-4 me-1" />
                 <span>{{ t('exportConfigBtn') }}</span>
             </button>
         </div>
@@ -105,6 +96,7 @@ import Modal from '../ui/Modal.vue';
 import TutorialContent from '../modals/TutorialContent.vue';
 import ContributorsContent from '../modals/ContributorsContent.vue';
 import DefaultWorkflowModal from '../modals/DefaultWorkflowModal.vue';
+import Heroicon from '../ui/Heroicon.vue';
 
 const props = defineProps({
     t: Function,
