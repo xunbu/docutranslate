@@ -7,15 +7,15 @@
                     {{ previewMode === 'bilingual' ? t('preview_bilingual') : t('preview_translatedOnly') }}</h5>
                 <div class="btn-group me-auto ms-4">
                     <button class="btn btn-sm" :class="previewMode === 'bilingual' ? 'btn-primary' : 'btn-outline-primary'"
-                            @click="setPreviewMode('bilingual')">{{ t('previewBilingualBtn') }}
+                            @click="emit('setPreviewMode', 'bilingual')">{{ t('previewBilingualBtn') }}
                     </button>
                     <button class="btn btn-sm"
                             :class="previewMode === 'translatedOnly' ? 'btn-primary' : 'btn-outline-primary'"
-                            @click="setPreviewMode('translatedOnly')">{{ t('previewTranslatedOnlyBtn') }}
+                            @click="emit('setPreviewMode', 'translatedOnly')">{{ t('previewTranslatedOnlyBtn') }}
                     </button>
                 </div>
                 <button class="btn btn-sm btn-outline-secondary ms-2"
-                        :class="{active: syncScrollEnabled, 'btn-primary': syncScrollEnabled}" @click="toggleSyncScroll"
+                        :class="{active: syncScrollEnabled, 'btn-primary': syncScrollEnabled}" @click="emit('toggleSyncScroll')"
                         data-bs-toggle="tooltip" :data-bs-title="t('syncScrollTooltip')"><i class="bi"
                                                                                    :class="syncScrollEnabled ? 'bi-link' : 'bi-link-45deg'"></i>
                 </button>

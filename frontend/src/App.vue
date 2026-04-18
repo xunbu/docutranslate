@@ -159,7 +159,6 @@ const defaultParams = reactive({
 const glossaryInput = ref(null);
 const configFile = ref(null);
 const folderInput = ref(null);
-const previewOffcanvas = ref(null);
 const previewOffcanvasComponent = ref(null);
 
 // UI State
@@ -576,17 +575,13 @@ const createNewTask = (backendId = null) => {
     const task = reactive({
         uiId, backendId, file: null, fileName: '', logs: '', statusMessage: '',
         statusClass: 'text-muted', isTranslating: false, isFinished: false, isProcessing: false,
-        validationError: false, downloads: null, attachment: null, initializing: !!backendId, isDragOver: false,
+        validationError: false, downloads: null, attachment: null, initializing: false, isDragOver: false,
         progressPercent: 0, detectedWorkflow: null
     });
     tasks.value.unshift(task);
     if (backendId) {
-        fetch(`/service/task/${backendId}`).then(r => r.json()).then(d => {
-            if (d.file_name) task.fileName = d.file_name;
-            task.initializing = false;
-        }).catch(() => {
-            task.initializing = false;
-        });
+        task.isTranslating = true;
+        pollStatus(task);
     }
 };
 
@@ -924,10 +919,9 @@ const pollStatus = (task) => {
                     task.downloads = d.downloads || {};
                     task.attachment = d.attachment || {};
                     task.statusClass = 'text-success';
-                    task.statusMessage = t('taskCardStatusFinished');
                 } else {
                     task.statusClass = 'text-danger';
-                    task.statusMessage = d.error_flag ? (d.status_message || t('taskCardStatusError')) : d.status_message;
+                    task.statusMessage = d.error_flag ? (d.status_message || 'Failed') : d.status_message;
                 }
             }
         } catch (e) {
@@ -992,30 +986,48 @@ const setupSyncScroll = () => {
 
 const openPreview = (task) => {
     previewTask.value = task;
-    if (!previewOffcanvas.value) return;
-    const off = new bootstrap.Offcanvas(previewOffcanvas.value);
+    const offcanvasEl = previewOffcanvasComponent.value?.previewOffcanvas;
+    if (!offcanvasEl) return;
+    const off = new bootstrap.Offcanvas(offcanvasEl);
     off.show();
-    previewOffcanvas.value.addEventListener('shown.bs.offcanvas', () => {
-        initSplit();
-        if (!task.downloads || !task.downloads.html) return;
-        if (originalPane.value) originalPane.value.innerHTML = '';
-        if (translatedFrame.value) {
-            translatedFrame.value.src = 'about:blank';
-            translatedFrame.value.onload = () => {
-                fetch(task.downloads.html).then(r => r.text()).then(html => {
-                    const doc = translatedFrame.value.contentWindow.document;
-                    doc.open();
-                    doc.write(html);
-                    doc.close();
-                    if (task.downloads.original_html) {
-                        fetch(task.downloads.original_html).then(r2 => r2.text()).then(origHtml => {
-                            if (originalPane.value) originalPane.value.innerHTML = origHtml;
-                        });
-                    }
-                });
-            };
+
+    // Get refs from component
+    splitContainer.value = previewOffcanvasComponent.value?.splitContainer;
+    originalPane.value = previewOffcanvasComponent.value?.originalPane;
+    translatedFrame.value = previewOffcanvasComponent.value?.translatedFrame;
+
+    // Load Original Content
+    if (originalPane.value) originalPane.value.innerHTML = '';
+    if (task.file) {
+        const ext = task.file.name.split('.').pop().toLowerCase();
+        if (['txt', 'md', 'json', 'html', 'js', 'py', 'css', 'java', 'c', 'cpp'].includes(ext) || task.file.type.startsWith('text/')) {
+            task.file.text().then(txt => {
+                if (originalPane.value) originalPane.value.innerHTML = `<pre>${txt}</pre>`;
+            });
+        } else if (['pdf'].includes(ext) || task.file.type === 'application/pdf') {
+            const iframe = document.createElement('iframe');
+            iframe.src = URL.createObjectURL(task.file);
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+            if (originalPane.value) originalPane.value.appendChild(iframe);
+        } else {
+            if (originalPane.value) originalPane.value.innerHTML = `<p class="p-3 text-muted">${t('preview_cantPreviewType') || '无法预览此文件类型'} (${ext})</p>`;
         }
-    }, {once: true});
+    } else {
+        if (originalPane.value) originalPane.value.innerHTML = `<p class="p-3 text-muted">${t('preview_noOriginalCache') || '无原始文件缓存'}</p>`;
+    }
+
+    // Load Translated Content
+    if (translatedFrame.value) translatedFrame.value.src = 'about:blank';
+    if (task.downloads && task.downloads.html) {
+        fetch(task.downloads.html).then(r => r.text()).then(h => {
+            if (translatedFrame.value) translatedFrame.value.srcdoc = h;
+        });
+    }
+
+    // Re-init Split.js and Sync Scroll listeners
+    setTimeout(initSplit, 300);
 };
 
 const setPreviewMode = (m) => {
@@ -1115,10 +1127,17 @@ const importConfig = (e) => {
     e.target.value = '';
 };
 
-const setLang = (l) => {
+const setLang = async (l) => {
     currentLang.value = l;
     localStorage.setItem('ui_language', l);
-    document.documentElement.lang = l === 'zh' ? 'zh-CN' : 'en';
+    document.documentElement.lang = l === 'zh' ? 'zh-CN' : (l === 'vi' ? 'vi' : 'en');
+    // Reload i18n data
+    try {
+        const res = await fetch(`/static/i18n/${l}.json`);
+        i18nData.value = await res.json();
+    } catch (e) {
+        console.error('Failed to load i18n:', e);
+    }
 };
 const setTheme = (t) => {
     localStorage.setItem('theme', t);
@@ -1250,17 +1269,6 @@ onMounted(async () => {
             initSplit();
         }
     });
-
-    // Expose preview refs to PreviewOffcanvas component
-    watch(previewOffcanvasComponent, (comp) => {
-        if (comp) {
-            // Expose the refs to the component
-            previewOffcanvas.value = comp.previewOffcanvas;
-            splitContainer.value = comp.splitContainer;
-            originalPane.value = comp.originalPane;
-            translatedFrame.value = comp.translatedFrame;
-        }
-    }, {flush: 'post'});
 });
 
 const t = (k, params) => {
