@@ -10,7 +10,7 @@
                     <div class="mb-3">
                         <label class="form-label">{{ t('queueConcurrentLabel') }}</label>
                         <input type="number" class="form-control"
-                               v-model.number="queueConcurrent" min="1" max="10"
+                               v-model.number="queue_concurrent" min="1" max="10"
                                @change="handleChange">
                         <div class="form-text">{{ t('queueConcurrentHelp') || '设置批量运行时同时翻译的任务数量（1-10）' }}</div>
                     </div>
@@ -28,21 +28,20 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { inject } from 'vue';
 
 const props = defineProps({
     t: Function,
-    queueConcurrent: Number,
 });
 
-const emit = defineEmits(['update:queueConcurrent', 'save']);
+const emit = defineEmits(['save']);
 
-const queueConcurrent = computed({
-    get: () => props.queueConcurrent,
-    set: (val) => emit('update:queueConcurrent', val)
-});
+// Inject from parent
+const queue_concurrent = inject('queue_concurrent');
+const saveSetting = inject('saveSetting');
 
 const handleChange = () => {
-    emit('save', queueConcurrent.value);
+    saveSetting('queue_concurrent', queue_concurrent.value);
+    emit('save', queue_concurrent.value);
 };
 </script>

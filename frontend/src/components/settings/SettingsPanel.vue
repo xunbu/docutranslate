@@ -21,47 +21,22 @@
 
                 <WorkflowConfig
                     :t="t"
-                    :form="form"
-                    :workflowParams="workflowParams"
-                    :errors="errors"
                     :enginList="enginList"
                     :showMineruToken="showMineruToken"
                     :showIdentityOption="showIdentityOption"
-                    @update:showMineruToken="val => emit('update:showMineruToken', val)"
-                    @saveSetting="saveSetting"
-                    @saveSettingArray="saveSettingArray"
-                    @saveWorkflowParam="saveWorkflowParam"
-                    @clearError="clearError"
-                    @openDefaultWorkflowModal="emit('openDefaultWorkflowModal')" />
+                    @update:showMineruToken="val => emit('update:showMineruToken', val)" />
 
                 <AISettings
                     :t="t"
-                    :form="form"
-                    :errors="errors"
-                    :stepNumber="stepMap.ai"
-                    @saveSetting="saveSetting"
-                    @clearError="clearError" />
+                    :stepNumber="stepMap.ai" />
 
                 <TranslationSettings
                     :t="t"
-                    :form="form"
-                    :errors="errors"
-                    :defaultParams="defaultParams"
-                    :stepNumber="stepMap.trans"
-                    @saveSetting="saveSetting"
-                    @clearError="clearError" />
+                    :stepNumber="stepMap.trans" />
 
                 <GlossarySettings
                     :t="t"
-                    :form="form"
-                    :defaultParams="defaultParams"
-                    :glossaryCount="glossaryCount"
-                    :stepNumber="stepMap.glossary"
-                    @saveSetting="saveSetting"
-                    @handleGlossaryFiles="e => emit('handleGlossaryFiles', e)"
-                    @openGlossaryModal="emit('openGlossaryModal')"
-                    @clearGlossary="emit('clearGlossary')"
-                    @downloadGlossaryTemplate="emit('downloadGlossaryTemplate')" />
+                    :stepNumber="stepMap.glossary" />
 
             </div>
         </form>
@@ -71,10 +46,10 @@
             <button type="button" class="btn btn-outline-primary" @click="configFile.click()"><i
                     class="bi bi-box-arrow-in-down me-1"></i><span>{{ t('importConfigBtn') }}</span>
             </button>
-            <button type="button" class="btn btn-outline-secondary" @click="emit('exportConfig')"><i
+            <button type="button" class="btn btn-outline-secondary" @click="handleExportConfig"><i
                     class="bi bi-box-arrow-up me-1"></i><span>{{ t('exportConfigBtn') }}</span></button>
         </div>
-        <input type="file" ref="configFile" class="d-none" accept=".json" @change="e => emit('importConfig', e)">
+        <input type="file" ref="configFile" class="d-none" accept=".json" @change="handleImportConfig">
 
         <!-- Project Info -->
         <div class="mt-4 text-center text-muted small project-info">
@@ -88,7 +63,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { ref, inject } from 'vue';
 import WorkflowConfig from './WorkflowConfig.vue';
 import AISettings from './AISettings.vue';
 import TranslationSettings from './TranslationSettings.vue';
@@ -96,47 +71,41 @@ import GlossarySettings from './GlossarySettings.vue';
 
 const props = defineProps({
     t: Function,
-    form: Object,
-    workflowParams: Object,
-    errors: Object,
     enginList: Array,
     showMineruToken: Boolean,
     showIdentityOption: Boolean,
-    glossaryCount: Number,
     version: String,
     stepMap: Object,
-    defaultParams: Object,
 });
 
 const emit = defineEmits([
     'update:showMineruToken',
-    'saveSetting',
-    'saveSettingArray',
-    'saveWorkflowParam',
-    'clearError',
-    'openDefaultWorkflowModal',
-    'openGlossaryModal',
-    'handleGlossaryFiles',
-    'clearGlossary',
-    'downloadGlossaryTemplate',
-    'importConfig',
-    'exportConfig',
 ]);
 
-const saveSetting = (k, v) => {
-    localStorage.setItem(k, v);
-    emit('saveSetting', k, v);
-};
-const saveSettingArray = (k, v) => {
-    localStorage.setItem(k, JSON.stringify(v));
-    emit('saveSettingArray', k, v);
-};
-const saveWorkflowParam = (k) => {
-    emit('saveWorkflowParam', k);
-};
-const clearError = (k) => {
-    emit('clearError', k);
-};
+// Inject from parent
+const form = inject('form');
+const workflowParams = inject('workflowParams');
+const errors = inject('errors');
+const defaultParams = inject('defaultParams');
+const glossaryCount = inject('glossaryCount');
+const saveSetting = inject('saveSetting');
+const saveSettingArray = inject('saveSettingArray');
+const saveWorkflowParam = inject('saveWorkflowParam');
+const clearError = inject('clearError');
+const handleGlossaryFiles = inject('handleGlossaryFiles');
+const clearGlossary = inject('clearGlossary');
+const openGlossaryModal = inject('openGlossaryModal');
+const downloadGlossaryTemplate = inject('downloadGlossaryTemplate');
+const exportConfig = inject('exportConfig');
+const importConfig = inject('importConfig');
 
 const configFile = ref(null);
+
+const handleExportConfig = () => {
+    exportConfig();
+};
+
+const handleImportConfig = (e) => {
+    importConfig(e, props.t);
+};
 </script>

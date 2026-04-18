@@ -13,23 +13,23 @@
             <div class="accordion-body">
                 <div class="mb-3">
                     <label class="form-label">{{ t('glossaryLabel') }}</label>
-                    <input class="form-control" type="file" @change="e => emit('handleGlossaryFiles', e)"
+                    <input class="form-control" type="file" @change="handleGlossaryFiles"
                            multiple accept=".csv" ref="glossaryInput">
                     <div class="form-text">{{ t('glossaryHelp') }}</div>
                     <div class="btn-group mt-2">
                         <button type="button" class="btn btn-sm btn-outline-info"
-                                @click="emit('openGlossaryModal')">
+                                @click="openGlossaryModal">
                             <i class="bi bi-card-list me-1"></i><span>{{ t('viewGlossaryBtn') }} <span
                                 v-if="glossaryCount">({{glossaryCount}})</span></span>
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-danger"
-                                @click="emit('clearGlossary')">
+                                @click="clearGlossary">
                             <i class="bi bi-trash me-1"></i><span>{{ t('clearGlossaryBtn')
                             }}</span>
                         </button>
                     </div>
                     <div class="mt-2">
-                        <a href="javascript:void(0)" @click="emit('downloadGlossaryTemplate')" class="text-decoration-none small">
+                        <a href="javascript:void(0)" @click="downloadGlossaryTemplate" class="text-decoration-none small">
                             <i class="bi bi-download me-1"></i>{{ t('downloadGlossaryTemplateBtn') }}
                         </a>
                     </div>
@@ -196,28 +196,24 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { inject, ref } from 'vue';
 import PlatformSelector from '../common/PlatformSelector.vue';
 import SliderControl from '../common/SliderControl.vue';
 
 const props = defineProps({
     t: Function,
-    form: Object,
-    defaultParams: Object,
-    glossaryCount: Number,
     stepNumber: Number,
 });
 
-const emit = defineEmits([
-    'saveSetting',
-    'handleGlossaryFiles',
-    'openGlossaryModal',
-    'clearGlossary',
-    'downloadGlossaryTemplate',
-]);
+// Inject from parent
+const form = inject('form');
+const defaultParams = inject('defaultParams');
+const glossaryCount = inject('glossaryCount');
+const saveSetting = inject('saveSetting');
+const handleGlossaryFiles = inject('handleGlossaryFiles');
+const clearGlossary = inject('clearGlossary');
+const openGlossaryModal = inject('openGlossaryModal');
+const downloadGlossaryTemplate = inject('downloadGlossaryTemplate');
 
-const saveSetting = (k, v) => {
-    localStorage.setItem(k, v);
-    emit('saveSetting', k, v);
-};
+const glossaryInput = ref(null);
 </script>

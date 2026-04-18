@@ -33,5 +33,10 @@
 </template>
 
 <script setup>
-defineProps(['t', 'glossaryData']);
+import { inject } from 'vue';
+
+defineProps(['t']);
+
+// Inject from parent
+const glossaryData = inject('glossaryData');
 </script>

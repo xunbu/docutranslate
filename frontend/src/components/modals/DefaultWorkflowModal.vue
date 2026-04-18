@@ -88,14 +88,17 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, inject } from 'vue';
 
 const props = defineProps({
     t: Function,
-    defaultWorkflows: Object,
 });
 
-const emit = defineEmits(['update:defaultWorkflows', 'save']);
+const emit = defineEmits(['save']);
+
+// Inject from parent
+const default_workflows = inject('default_workflows');
+const saveDefaultWorkflows = inject('saveDefaultWorkflows');
 
 const DEFAULT_EXTENSIONS = ['pdf','png','jpg','jpeg','gif','bmp','webp','txt','md','docx','doc','xlsx','csv','xls','epub','pptx','ppt','srt','ass','json','html','htm'];
 const DEFAULT_WORKFLOW_MAPPING = {
@@ -155,7 +158,7 @@ const getSimpleWorkflowLabel = (wf) => {
 };
 
 const getWorkflowExtensions = (workflow) => {
-    return ALL_EXTENSIONS.value.filter(ext => props.defaultWorkflows[ext] === workflow);
+    return ALL_EXTENSIONS.value.filter(ext => default_workflows[ext] === workflow);
 };
 
 const onDragStart = (e, ext) => {
@@ -170,16 +173,15 @@ const onDragEnd = (e) => {
 const onDropWorkflow = (e, workflow) => {
     const ext = e.dataTransfer.getData('text/plain');
     if (ext && ALL_EXTENSIONS.value.includes(ext)) {
-        const newWorkflows = { ...props.defaultWorkflows, [ext]: workflow };
-        emit('update:defaultWorkflows', newWorkflows);
+        default_workflows[ext] = workflow;
+        saveDefaultWorkflows();
         emit('save');
     }
 };
 
 const deleteExtension = (ext) => {
-    const newWorkflows = { ...props.defaultWorkflows };
-    delete newWorkflows[ext];
-    emit('update:defaultWorkflows', newWorkflows);
+    delete default_workflows[ext];
+    saveDefaultWorkflows();
     emit('save');
     const idx = ALL_EXTENSIONS.value.indexOf(ext);
     if (idx !== -1) {
@@ -203,22 +205,23 @@ const addExtToWorkflow = (workflow, event) => {
 
     addExtensionError.value = '';
     ALL_EXTENSIONS.value.push(raw);
-    const newWorkflows = { ...props.defaultWorkflows, [raw]: workflow };
-    emit('update:defaultWorkflows', newWorkflows);
+    default_workflows[raw] = workflow;
+    saveDefaultWorkflows();
     emit('save');
     input.value = '';
 };
 
 const resetDefaultWorkflows = () => {
     ALL_EXTENSIONS.value = [...DEFAULT_EXTENSIONS];
-    emit('update:defaultWorkflows', { ...DEFAULT_WORKFLOW_MAPPING });
+    Object.assign(default_workflows, DEFAULT_WORKFLOW_MAPPING);
+    saveDefaultWorkflows();
     emit('save');
 };
 
 // Initialize ALL_EXTENSIONS from saved data
 const initFromSaved = () => {
     const allExts = new Set([...DEFAULT_EXTENSIONS]);
-    Object.keys(props.defaultWorkflows).forEach(ext => allExts.add(ext));
+    Object.keys(default_workflows).forEach(ext => allExts.add(ext));
     ALL_EXTENSIONS.value = [...allExts];
 };
 

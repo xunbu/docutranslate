@@ -13,7 +13,7 @@
             <div class="accordion-body">
                 <!-- Top: Configure default workflow button -->
                 <div class="mb-3">
-                    <button type="button" class="btn btn-outline-primary" @click="emit('openDefaultWorkflowModal')">
+                    <button type="button" class="btn btn-outline-primary" @click="openDefaultWorkflowModal">
                         <i class="bi bi-gear-fill me-2"></i>{{ t('openExtWorkflowBtn') }}
                     </button>
                 </div>
@@ -286,15 +286,12 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { mineruLangOptions } from '../../constants/mineruLanguages';
 import { capitalize } from '../../utils/helpers';
 
 const props = defineProps({
     t: Function,
-    form: Object,
-    workflowParams: Object,
-    errors: Object,
     enginList: Array,
     showMineruToken: Boolean,
     showIdentityOption: Boolean,
@@ -302,26 +299,19 @@ const props = defineProps({
 
 const emit = defineEmits([
     'update:showMineruToken',
-    'saveSetting',
-    'saveSettingArray',
-    'saveWorkflowParam',
-    'clearError',
-    'openDefaultWorkflowModal',
 ]);
 
-const saveSetting = (k, v) => {
-    localStorage.setItem(k, v);
-    emit('saveSetting', k, v);
-};
-const saveSettingArray = (k, v) => {
-    localStorage.setItem(k, JSON.stringify(v));
-    emit('saveSettingArray', k, v);
-};
-const saveWorkflowParam = (k) => {
-    emit('saveWorkflowParam', k);
-};
-const clearError = (k) => {
-    emit('clearError', k);
+// Inject from parent
+const form = inject('form');
+const workflowParams = inject('workflowParams');
+const errors = inject('errors');
+const saveSetting = inject('saveSetting');
+const saveSettingArray = inject('saveSettingArray');
+const saveWorkflowParam = inject('saveWorkflowParam');
+const clearError = inject('clearError');
+
+const openDefaultWorkflowModal = () => {
+    new bootstrap.Modal(document.getElementById('defaultWorkflowModal')).show();
 };
 
 const currentWorkflowConfig = computed(() => {
@@ -378,11 +368,11 @@ const currentWorkflowConfig = computed(() => {
         },
         'json': {titleKey: 'jsonSettingsTitleText', icon: 'bi-signpost-split', hasInsertMode: false},
     };
-    return map[props.form.workflow_type];
+    return map[form.workflow_type];
 });
 
 const ocrOptions = computed(() => ({
-    showFormula: ['mineru', 'docling'].includes(props.form.convert_engine),
-    showCode: props.form.convert_engine === 'docling'
+    showFormula: ['mineru', 'docling'].includes(form.convert_engine),
+    showCode: form.convert_engine === 'docling'
 }));
 </script>

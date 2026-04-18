@@ -114,23 +114,18 @@
 </template>
 
 <script setup>
+import { inject } from 'vue';
 import SliderControl from '../common/SliderControl.vue';
 
 const props = defineProps({
     t: Function,
-    form: Object,
-    errors: Object,
-    defaultParams: Object,
     stepNumber: Number,
 });
 
-const emit = defineEmits(['saveSetting', 'clearError']);
-
-const saveSetting = (k, v) => {
-    localStorage.setItem(k, v);
-    emit('saveSetting', k, v);
-};
-const clearError = (k) => {
-    emit('clearError', k);
-};
+// Inject from parent
+const form = inject('form');
+const errors = inject('errors');
+const defaultParams = inject('defaultParams');
+const saveSetting = inject('saveSetting');
+const clearError = inject('clearError');
 </script>

@@ -7,15 +7,15 @@
                     {{ previewMode === 'bilingual' ? t('preview_bilingual') : t('preview_translatedOnly') }}</h5>
                 <div class="btn-group me-auto ms-4">
                     <button class="btn btn-sm" :class="previewMode === 'bilingual' ? 'btn-primary' : 'btn-outline-primary'"
-                            @click="emit('setPreviewMode', 'bilingual')">{{ t('previewBilingualBtn') }}
+                            @click="setPreviewMode('bilingual')">{{ t('previewBilingualBtn') }}
                     </button>
                     <button class="btn btn-sm"
                             :class="previewMode === 'translatedOnly' ? 'btn-primary' : 'btn-outline-primary'"
-                            @click="emit('setPreviewMode', 'translatedOnly')">{{ t('previewTranslatedOnlyBtn') }}
+                            @click="setPreviewMode('translatedOnly')">{{ t('previewTranslatedOnlyBtn') }}
                     </button>
                 </div>
                 <button class="btn btn-sm btn-outline-secondary ms-2"
-                        :class="{active: syncScrollEnabled, 'btn-primary': syncScrollEnabled}" @click="emit('toggleSyncScroll')"
+                        :class="{active: syncScrollEnabled, 'btn-primary': syncScrollEnabled}" @click="toggleSyncScroll"
                         data-bs-toggle="tooltip" :data-bs-title="t('syncScrollTooltip')"><i class="bi"
                                                                                    :class="syncScrollEnabled ? 'bi-link' : 'bi-link-45deg'"></i>
                 </button>
@@ -34,7 +34,7 @@
                             </a>
                         </li>
                         <li v-if="previewTask.downloads.html">
-                            <a class="dropdown-item" href="#" @click.prevent="printPdf(previewTask.downloads.html)">
+                            <a class="dropdown-item" href="#" @click.prevent="handlePrintPdf(previewTask.downloads.html)">
                                 <i class="bi bi-file-earmark-pdf me-2"></i>PDF
                             </a>
                         </li>
@@ -63,21 +63,24 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, inject } from 'vue';
 import { getFileIcon } from '../../utils/helpers';
 
 const props = defineProps({
     t: Function,
-    previewMode: String,
-    syncScrollEnabled: Boolean,
-    previewTask: Object,
 });
 
 const emit = defineEmits([
-    'setPreviewMode',
-    'toggleSyncScroll',
     'printPdf',
 ]);
+
+// Inject from parent
+const previewMode = inject('previewMode');
+const syncScrollEnabled = inject('syncScrollEnabled');
+const previewTask = inject('previewTask');
+const setPreviewMode = inject('setPreviewMode');
+const toggleSyncScroll = inject('toggleSyncScroll');
+const printPdf = inject('printPdf');
 
 const previewOffcanvas = ref(null);
 const splitContainer = ref(null);
@@ -94,4 +97,9 @@ defineExpose({
 });
 
 const getWorkflowIcon = (key) => getFileIcon(key);
+
+const handlePrintPdf = (url) => {
+    printPdf(url);
+    emit('printPdf', url);
+};
 </script>
