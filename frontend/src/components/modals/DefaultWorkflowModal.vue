@@ -1,94 +1,83 @@
 <template>
-    <div class="modal fade" id="defaultWorkflowModal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">{{ t('defaultWorkflowModalTitle') }}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <Modal v-model="visible" :title="t('defaultWorkflowModalTitle')" size="xl">
+        <div v-if="addExtensionError" class="mb-3 p-2 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 rounded text-sm">
+            {{ addExtensionError }}
+        </div>
+        <!-- Workflow Cards - 2 Column Layout -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <div
+                v-for="wf in workflowOptions"
+                :key="wf.value"
+                class="border rounded transition-colors"
+                :class="workflowDragOver === wf.value ? 'border-primary ring-2 ring-primary/25' : 'border-gray-200 dark:border-gray-700'"
+                @dragover.prevent="workflowDragOver = wf.value"
+                @dragleave.prevent="workflowDragOver = null"
+                @drop.prevent="onDropWorkflow($event, wf.value); workflowDragOver = null">
+                <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ getSimpleWorkflowLabel(wf.value) }}</span>
+                    <span class="px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded">
+                        {{ getWorkflowExtensions(wf.value).length }}
+                    </span>
                 </div>
-                <div class="modal-body">
-                    <div v-if="addExtensionError" class="alert alert-danger py-2 mb-3 small">
-                        {{ addExtensionError }}
+                <div class="p-2 min-h-[80px]">
+                    <div class="flex flex-wrap gap-1 mb-2">
+                        <span
+                            v-for="ext in getWorkflowExtensions(wf.value)"
+                            :key="ext"
+                            class="inline-flex items-center gap-1 px-2 py-0.5 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded cursor-grab"
+                            :class="{ 'opacity-50': draggingExt === ext }"
+                            draggable="true"
+                            @dragstart="onDragStart($event, ext)"
+                            @dragend="onDragEnd($event)">
+                            <span>.{{ ext }}</span>
+                            <button
+                                type="button"
+                                class="w-3 h-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                @click.stop="deleteExtension(ext)"
+                                :title="t('deleteExtTooltip')">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </span>
                     </div>
-                    <!-- Workflow Cards - 2 Column Layout -->
-                    <div class="row g-2">
-                        <div class="col-md-6" v-for="wf in workflowOptions" :key="wf.value">
-                            <div class="card h-100 workflow-card"
-                                 :class="{'drag-over': workflowDragOver === wf.value}"
-                                 @dragover.prevent="workflowDragOver = wf.value"
-                                 @dragleave.prevent="workflowDragOver = null"
-                                 @drop.prevent="onDropWorkflow($event, wf.value); workflowDragOver = null">
-                                <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                                    <span class="fw-medium">{{ getSimpleWorkflowLabel(wf.value) }}</span>
-                                    <span class="badge bg-secondary">{{ getWorkflowExtensions(wf.value).length }}</span>
-                                </div>
-                                <div class="card-body p-2 min-h-8">
-                                    <div class="d-flex flex-wrap gap-1 mb-2">
-                                        <span v-for="ext in getWorkflowExtensions(wf.value)" :key="ext"
-                                              class="badge bg-light text-dark border d-flex align-items-center gap-1 pe-1 ext-badge"
-                                              draggable="true"
-                                              @dragstart="onDragStart($event, ext)"
-                                              @dragend="onDragEnd($event)">
-                                            <span>.{{ ext }}</span>
-                                            <button type="button" class="btn-close btn-close-xs ms-1"
-                                                    @click.stop="deleteExtension(ext)"
-                                                    :title="t('deleteExtTooltip')"></button>
-                                        </span>
-                                    </div>
-                                    <!-- Inline add extension -->
-                                    <div class="input-group input-group-sm" style="max-width: 140px;">
-                                        <span class="input-group-text">.</span>
-                                        <input type="text" class="form-control"
-                                               @keyup.enter="addExtToWorkflow(wf.value, $event)"
-                                               maxlength="10">
-                                        <button class="btn btn-outline-primary" type="button"
-                                                @click="addExtToWorkflow(wf.value, $event)">
-                                            <i class="bi bi-plus-lg"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Inline add extension -->
+                    <div class="flex items-center gap-1 max-w-[140px]">
+                        <span class="text-gray-500">.</span>
+                        <input
+                            type="text"
+                            class="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary"
+                            maxlength="10"
+                            @keyup.enter="addExtToWorkflow(wf.value, $event)">
+                        <button
+                            type="button"
+                            class="px-2 py-1 text-sm border border-primary text-primary rounded hover:bg-primary hover:text-white transition-colors"
+                            @click="addExtToWorkflow(wf.value, $event)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                            </svg>
+                        </button>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" @click="resetDefaultWorkflows" data-bs-toggle="tooltip" :title="t('resetBtn')">
-                        <i class="bi bi-arrow-counterclockwise"></i>
-                    </button>
                 </div>
             </div>
         </div>
-    </div>
-
-    <style>
-        .btn-close-xs {
-            transform: scale(0.6);
-            opacity: 0.6;
-        }
-        .btn-close-xs:hover {
-            opacity: 1;
-        }
-        .min-h-8 {
-            min-height: 80px;
-        }
-        .ext-badge {
-            cursor: grab;
-        }
-        .ext-badge:active {
-            cursor: grabbing;
-        }
-        .ext-badge.dragging {
-            opacity: 0.5;
-        }
-        .workflow-card.drag-over {
-            border-color: var(--bs-primary);
-            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-        }
-    </style>
+        <template #footer>
+            <button
+                type="button"
+                class="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                @click="resetDefaultWorkflows"
+                :title="t('resetBtn')">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            </button>
+        </template>
+    </Modal>
 </template>
 
 <script setup>
 import { ref, computed, inject } from 'vue';
+import Modal from '../ui/Modal.vue';
 
 const props = defineProps({
     t: Function,
@@ -116,10 +105,8 @@ const DEFAULT_WORKFLOW_MAPPING = {
 const ALL_EXTENSIONS = ref([...DEFAULT_EXTENSIONS]);
 const workflowDragOver = ref(null);
 const addExtensionError = ref('');
-
-const customExtensions = computed(() => {
-    return ALL_EXTENSIONS.value.filter(ext => !DEFAULT_EXTENSIONS.includes(ext));
-});
+const draggingExt = ref(null);
+const visible = ref(false);
 
 const workflowOptions = [
     { value: 'markdown_based', label: 'Markdown' },
@@ -163,11 +150,11 @@ const getWorkflowExtensions = (workflow) => {
 
 const onDragStart = (e, ext) => {
     e.dataTransfer.setData('text/plain', ext);
-    e.target.classList.add('dragging');
+    draggingExt.value = ext;
 };
 
 const onDragEnd = (e) => {
-    e.target.classList.remove('dragging');
+    draggingExt.value = null;
 };
 
 const onDropWorkflow = (e, workflow) => {
@@ -190,7 +177,7 @@ const deleteExtension = (ext) => {
 };
 
 const addExtToWorkflow = (workflow, event) => {
-    const input = event.target.closest('.input-group').querySelector('input');
+    const input = event.target.closest('.flex').querySelector('input');
     const raw = (input.value || '').trim().toLowerCase().replace(/^\.+/, '');
 
     if (!raw) return;
@@ -226,4 +213,9 @@ const initFromSaved = () => {
 };
 
 initFromSaved();
+
+defineExpose({
+    show: () => { visible.value = true; },
+    hide: () => { visible.value = false; }
+});
 </script>

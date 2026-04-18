@@ -1,9 +1,9 @@
 <template>
 <div>
-    <div class="container-fluid main-container">
-        <div class="row gx-4">
+    <div class="main-container">
+        <div class="main-row">
             <!-- Left: Settings Panel -->
-            <div class="col-lg-4">
+            <div class="settings-col">
                 <SettingsPanel
                     :t="t"
                     :enginList="enginList"
@@ -15,7 +15,7 @@
             </div>
 
             <!-- Right: Task Area -->
-            <div class="col-lg-8">
+            <div class="task-col">
                 <TaskArea
                     :t="t"
                     @clearAllTasks="clearAllTasks"
@@ -36,19 +36,20 @@
     </div>
 
     <!-- Modals -->
-    <GlossaryModal :t="t" />
+    <GlossaryModal ref="glossaryModalRefLocal" :t="t" />
     <DefaultWorkflowModal
         :t="t"
         @save="saveDefaultWorkflows" />
     <TutorialModal :t="t" />
     <ContributorsModal :t="t" />
     <QueueSettingsModal
+        ref="queueSettingsModalRef"
         :t="t"
         @save="val => saveSetting('queue_concurrent', val)" />
 
     <!-- Preview Offcanvas -->
     <PreviewOffcanvas
-        ref="previewOffcanvasComponent"
+        ref="previewOffcanvasRef"
         :t="t"
         @printPdf="printPdf" />
     <iframe id="printFrame" ref="printFrame" style="display: none;"></iframe>
@@ -62,7 +63,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide } from 'vue';
+import { ref, computed, onMounted, provide, watch } from 'vue';
 import TutorialModal from './components/modals/TutorialModal.vue';
 import ContributorsModal from './components/modals/ContributorsModal.vue';
 import QueueSettingsModal from './components/modals/QueueSettingsModal.vue';
@@ -95,15 +96,36 @@ const { form, workflowParams, errors, defaultParams, default_workflows, queue_co
 
 const { currentLang, t, setLanguage, loadI18n } = i18n;
 
-const { glossaryData, glossaryCount, handleGlossaryFiles, clearGlossary,
+const { glossaryData, glossaryCount, glossaryModalRef, handleGlossaryFiles, clearGlossary,
         openGlossaryModal, downloadGlossaryTemplate } = glossary;
 
 const { tasks, hasPendingTasks, createNewTask, removeTask, clearAllTasks,
         handleTaskFileSelect, handleTaskFileDrop, triggerFileInput, selectTaskWorkflow,
         handleFolderSelect, runAllPendingTasks, toggleTaskState, copyLog } = tasksComposable;
 
-const { previewMode, syncScrollEnabled, previewTask, previewOffcanvasComponent,
-        openPreview, setPreviewMode, toggleSyncScroll, printPdf, initSplit } = preview;
+const { previewMode, syncScrollEnabled, previewTask, isOpen, previewOffcanvasComponent,
+        openPreview, closePreview, setPreviewMode, toggleSyncScroll, printPdf, initSplit } = preview;
+
+// Local ref for template binding, sync to composable
+const previewOffcanvasRef = ref(null);
+watch(previewOffcanvasRef, (val) => {
+    previewOffcanvasComponent.value = val;
+}, { immediate: true });
+
+// Sync glossaryModalRef to composable
+const glossaryModalRefLocal = ref(null);
+watch(glossaryModalRefLocal, (val) => {
+    glossaryModalRef.value = val;
+}, { immediate: true });
+
+// Queue settings modal ref
+const queueSettingsModalRef = ref(null);
+const openQueueSettings = () => {
+    if (queueSettingsModalRef.value) {
+        queueSettingsModalRef.value.show();
+    }
+};
+provide('openQueueSettings', openQueueSettings);
 
 // ===== Provide to child components =====
 provide('form', form);
@@ -119,6 +141,7 @@ provide('hasPendingTasks', hasPendingTasks);
 provide('previewMode', previewMode);
 provide('syncScrollEnabled', syncScrollEnabled);
 provide('previewTask', previewTask);
+provide('previewIsOpen', isOpen);
 
 // Provide methods
 provide('clearError', clearError);
@@ -147,6 +170,7 @@ provide('runAllPendingTasks', runAllPendingTasks);
 provide('toggleTaskState', toggleTaskState);
 provide('copyLog', copyLog);
 provide('openPreview', openPreview);
+provide('closePreview', closePreview);
 provide('saveDefaultWorkflows', saveDefaultWorkflows);
 
 // ===== Local State =====
@@ -170,8 +194,8 @@ const stepMap = computed(() => {
 // ===== Theme =====
 const setTheme = (theme) => {
     localStorage.setItem('theme', theme);
-    if (theme === 'auto') document.documentElement.setAttribute('data-bs-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-    else document.documentElement.setAttribute('data-bs-theme', theme);
+    if (theme === 'auto') document.documentElement.setAttribute('data-theme', window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    else document.documentElement.setAttribute('data-theme', theme);
 };
 
 // ===== Lifecycle =====
@@ -210,11 +234,9 @@ onMounted(async () => {
         else createNewTask();
     }
 
-    new bootstrap.Tooltip(document.body, {selector: '[data-bs-toggle="tooltip"]'});
-
     // Global resize handler for preview
     window.addEventListener('resize', () => {
-        if (document.getElementById('previewOffcanvas')?.classList.contains('show')) {
+        if (isOpen.value) {
             initSplit();
         }
     });

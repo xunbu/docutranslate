@@ -288,11 +288,13 @@ export function useTasks(settings, glossary, i18n) {
         if (task.initializing) return;
         if (task.isTranslating) {
             task.statusMessage = t('status_cancelling');
+            task.isProcessing = false;
             if (task.backendId) {
                 try { await fetch(`/service/cancel/${task.backendId}`, {method: 'POST'}); } catch (e) {}
             }
             runningCount.value = Math.max(0, runningCount.value - 1);
             task.isTranslating = false;
+            task.isFinished = false;
             task.statusMessage = t('taskCardStatusCancelled');
             task.statusClass = 'text-warning';
             return;
@@ -421,12 +423,18 @@ export function useTasks(settings, glossary, i18n) {
     const copyLog = (e, l) => {
         navigator.clipboard.writeText(l.replace(/<br>/g, '\n')).then(() => {
             const btn = e.currentTarget;
-            const icon = btn.querySelector('i');
-            btn.classList.replace('btn-outline-secondary', 'btn-success');
-            icon.classList.replace('bi-clipboard', 'bi-check-lg');
+            const svg = btn.querySelector('svg');
+            btn.classList.add('text-success');
+            btn.classList.remove('text-gray-600', 'dark:text-gray-400');
+            if (svg) {
+                svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />';
+            }
             setTimeout(() => {
-                btn.classList.replace('btn-success', 'btn-outline-secondary');
-                icon.classList.replace('bi-check-lg', 'bi-clipboard');
+                btn.classList.remove('text-success');
+                btn.classList.add('text-gray-600', 'dark:text-gray-400');
+                if (svg) {
+                    svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />';
+                }
             }, 2000);
         });
     };

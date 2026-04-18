@@ -2,6 +2,7 @@ import { ref, computed } from 'vue';
 
 export function useGlossary() {
     const glossaryData = ref({});
+    const glossaryModalRef = ref(null);
 
     const glossaryCount = computed(() => Object.keys(glossaryData.value).length);
 
@@ -25,7 +26,9 @@ export function useGlossary() {
     };
 
     const openGlossaryModal = () => {
-        new bootstrap.Modal(document.getElementById('glossaryModal')).show();
+        if (glossaryModalRef.value) {
+            glossaryModalRef.value.show();
+        }
     };
 
     const downloadGlossaryTemplate = () => {
@@ -35,6 +38,7 @@ export function useGlossary() {
     return {
         glossaryData,
         glossaryCount,
+        glossaryModalRef,
         handleGlossaryFiles,
         clearGlossary,
         openGlossaryModal,
