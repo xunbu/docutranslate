@@ -226,8 +226,7 @@ html,
   line-height: 1.5; /* 1 */
   -webkit-text-size-adjust: 100%; /* 2 */
   -moz-tab-size: 4; /* 3 */
-  -o-tab-size: 4;
-     tab-size: 4; /* 3 */
+  tab-size: 4; /* 3 */
   font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji"; /* 4 */
   font-feature-settings: normal; /* 5 */
   font-variation-settings: normal; /* 6 */
@@ -526,11 +525,6 @@ textarea {
 2. Set the default placeholder color to the user's configured gray 400 color.
 */
 
-input::-moz-placeholder, textarea::-moz-placeholder {
-  opacity: 1; /* 1 */
-  color: #9ca3af; /* 2 */
-}
-
 input::placeholder,
 textarea::placeholder {
   opacity: 1; /* 1 */
@@ -694,10 +688,12 @@ video {
   margin-bottom: 1rem;
 }
 .me-1 {
-  margin-inline-end: 0.25rem;
+  -webkit-margin-end: 0.25rem;
+          margin-inline-end: 0.25rem;
 }
 .me-3 {
-  margin-inline-end: 0.75rem;
+  -webkit-margin-end: 0.75rem;
+          margin-inline-end: 0.75rem;
 }
 .ml-1 {
   margin-left: 0.25rem;
@@ -895,6 +891,7 @@ video {
   animation: spin 1s linear infinite;
 }
 .cursor-grab {
+  cursor: -webkit-grab;
   cursor: grab;
 }
 .cursor-help {
@@ -1347,7 +1344,9 @@ video {
   filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
 }
 .transition {
+  transition-property: color, background-color, border-color, fill, stroke, opacity, box-shadow, transform, filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter, -webkit-text-decoration-color, -webkit-backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
@@ -1357,7 +1356,9 @@ video {
   transition-duration: 150ms;
 }
 .transition-colors {
+  transition-property: color, background-color, border-color, fill, stroke, -webkit-text-decoration-color;
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, -webkit-text-decoration-color;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   transition-duration: 150ms;
 }
@@ -2047,30 +2048,59 @@ input[type="range"]::-webkit-slider-thumb {
 [data-theme="dark"] .settings-panel .d-flex.justify-content-between.align-items-center {
   border-bottom-color: #374151;
 }
+.file\:mr-3::-webkit-file-upload-button {
+  margin-right: 0.75rem;
+}
 .file\:mr-3::file-selector-button {
   margin-right: 0.75rem;
+}
+.file\:rounded::-webkit-file-upload-button {
+  border-radius: 0.25rem;
 }
 .file\:rounded::file-selector-button {
   border-radius: 0.25rem;
 }
+.file\:border-0::-webkit-file-upload-button {
+  border-width: 0px;
+}
 .file\:border-0::file-selector-button {
   border-width: 0px;
+}
+.file\:bg-gray-100::-webkit-file-upload-button {
+  --tw-bg-opacity: 1;
+  background-color: rgb(243 244 246 / var(--tw-bg-opacity, 1));
 }
 .file\:bg-gray-100::file-selector-button {
   --tw-bg-opacity: 1;
   background-color: rgb(243 244 246 / var(--tw-bg-opacity, 1));
 }
+.file\:px-3::-webkit-file-upload-button {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
 .file\:px-3::file-selector-button {
   padding-left: 0.75rem;
   padding-right: 0.75rem;
+}
+.file\:py-1::-webkit-file-upload-button {
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
 }
 .file\:py-1::file-selector-button {
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
 }
+.file\:text-sm::-webkit-file-upload-button {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+}
 .file\:text-sm::file-selector-button {
   font-size: 0.875rem;
   line-height: 1.25rem;
+}
+.file\:text-gray-700::-webkit-file-upload-button {
+  --tw-text-opacity: 1;
+  color: rgb(55 65 81 / var(--tw-text-opacity, 1));
 }
 .file\:text-gray-700::file-selector-button {
   --tw-text-opacity: 1;
@@ -2129,7 +2159,8 @@ input[type="range"]::-webkit-slider-thumb {
   color: rgb(255 255 255 / var(--tw-text-opacity, 1));
 }
 .hover\:underline:hover {
-  text-decoration-line: underline;
+  -webkit-text-decoration-line: underline;
+          text-decoration-line: underline;
 }
 .hover\:opacity-100:hover {
   opacity: 1;
@@ -2297,9 +2328,17 @@ input[type="range"]::-webkit-slider-thumb {
   --tw-text-opacity: 1;
   color: rgb(253 224 71 / var(--tw-text-opacity, 1));
 }
+.dark\:file\:bg-gray-600:where([data-theme="dark"], [data-theme="dark"] *)::-webkit-file-upload-button {
+  --tw-bg-opacity: 1;
+  background-color: rgb(75 85 99 / var(--tw-bg-opacity, 1));
+}
 .dark\:file\:bg-gray-600:where([data-theme="dark"], [data-theme="dark"] *)::file-selector-button {
   --tw-bg-opacity: 1;
   background-color: rgb(75 85 99 / var(--tw-bg-opacity, 1));
+}
+.dark\:file\:text-gray-200:where([data-theme="dark"], [data-theme="dark"] *)::-webkit-file-upload-button {
+  --tw-text-opacity: 1;
+  color: rgb(229 231 235 / var(--tw-text-opacity, 1));
 }
 .dark\:file\:text-gray-200:where([data-theme="dark"], [data-theme="dark"] *)::file-selector-button {
   --tw-text-opacity: 1;

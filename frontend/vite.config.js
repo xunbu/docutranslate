@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
+import legacy from '@vitejs/plugin-legacy'
 
 export default defineConfig({
   base: '/static/',
@@ -11,6 +12,10 @@ export default defineConfig({
           includeAbsolute: false
         }
       }
+    }),
+    legacy({
+      targets: ['Chrome >= 60', 'Safari >= 11', 'Firefox >= 60', 'Edge >= 79'],
+      additionalLegacyPolyfills: ['regenerator-runtime/runtime']
     })
   ],
   build: {
