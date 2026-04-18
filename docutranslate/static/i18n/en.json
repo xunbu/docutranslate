@@ -202,7 +202,7 @@
   "importFolderBtn": "Import Folder",
   "runAllBtn": "Run All",
   "queueConcurrentLabel": "Task Concurrency",
-  "queueConcurrentHelp": "Number of tasks to run concurrently in batch mode (1-10)",
+  "queueConcurrentHelp": "Number of tasks to run concurrently in batch mode",
   "queueConcurrentNote": "Manually starting tasks one by one is not affected by this limit",
   "saveBtn": "Save",
   "cancelBtn": "Cancel",

@@ -1,5 +1,5 @@
 <template>
-<div>
+<div id="app-root">
     <div class="main-container">
         <div class="main-row">
             <!-- Left: Settings Panel -->

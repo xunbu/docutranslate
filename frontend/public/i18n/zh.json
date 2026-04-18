@@ -202,7 +202,7 @@
   "importFolderBtn": "导入文件夹",
   "runAllBtn": "批量运行",
   "queueConcurrentLabel": "任务并发数",
-  "queueConcurrentHelp": "设置批量运行时同时翻译的任务数量（1-10）",
+  "queueConcurrentHelp": "设置批量运行时同时翻译的任务数量",
   "queueConcurrentNote": "手动逐个点击开始翻译不受此限制影响",
   "saveBtn": "保存",
   "cancelBtn": "取消",

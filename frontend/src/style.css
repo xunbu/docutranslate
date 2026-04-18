@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* 配置 Tailwind 深色模式使用 data-theme 属性 */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 @theme {
   --color-primary: #0066cc;
   --color-primary-hover: #0052a3;
@@ -17,23 +20,29 @@
   --bs-warning: #ffc107;
   --bs-border-color: #dee2e6;
   --bs-body-bg: #fff;
+  --bs-body-color: #212529;
 }
 
 /* 暗色主题 */
 [data-theme="dark"] {
   --bs-border-color: #495057;
-  --bs-body-bg: #212529;
+  --bs-body-bg: #111827;
+  --bs-body-color: #f3f4f6;
   color-scheme: dark;
 }
 
 html {
   font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  font-size: 17px;
+  height: 100%;
+  background-color: var(--bs-body-bg);
 }
 
 body {
   background-color: var(--bs-body-bg);
+  color: var(--bs-body-color);
   margin: 0;
-  min-height: 100vh;
+  height: 100%;
 }
 
 button:focus {
@@ -126,6 +135,8 @@ button:focus {
   flex-wrap: wrap;
   margin-left: -0.5rem;
   margin-right: -0.5rem;
+  flex: 1;
+  min-height: 0;
 }
 
 .settings-col {
@@ -133,6 +144,8 @@ button:focus {
   width: 100%;
   padding-left: 0.5rem;
   padding-right: 0.5rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .task-col {
@@ -140,6 +153,8 @@ button:focus {
   width: 100%;
   padding-left: 0.5rem;
   padding-right: 0.5rem;
+  display: flex;
+  flex-direction: column;
 }
 
 @media (min-width: 992px) {
@@ -153,7 +168,7 @@ button:focus {
 
 /* ===== 设置面板 ===== */
 .settings-panel {
-  height: calc(100vh - 2rem);
+  flex: 1;
   overflow-y: auto;
   padding-right: 15px;
 }
@@ -167,72 +182,39 @@ button:focus {
 
 /* ===== 任务区域 ===== */
 .task-area {
-  height: calc(100vh - 2rem);
+  flex: 1;
   overflow-y: auto;
 }
 
 /* ===== 任务卡片 - 扁平化 ===== */
+/* Note: TaskCard.vue uses Tailwind classes for styling, these rules are kept for compatibility */
 .task-card {
-  border: 1px solid var(--bs-border-color);
-  border-radius: 0.25rem;
-  box-shadow: none;
-  transition: border-color 0.2s ease;
-  background: var(--bs-body-bg);
-  margin-bottom: 1rem;
-}
-.task-card:hover {
-  border-color: var(--bs-primary);
-  box-shadow: none;
+  font-size: 15px;
 }
 .task-card-header {
   border-radius: 0.25rem 0.25rem 0 0 !important;
   font-weight: 500;
-  border-bottom: 1px solid var(--bs-border-color);
-  background: transparent;
   padding: 0.75rem 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-.task-card:hover .task-card-header {
-  border-bottom-color: var(--bs-primary);
 }
 .task-card-body {
   padding: 1rem;
 }
 .task-card-footer {
   padding: 0.75rem 1rem;
-  border-top: 1px solid var(--bs-border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(0,0,0,0.02);
 }
 
 /* ===== 文件拖放区 - 扁平化 ===== */
+/* Note: file-drop-area styling is handled by Tailwind classes in TaskCard.vue */
 .file-drop-area {
-  border: 2px dashed var(--bs-border-color);
-  border-radius: 0.25rem;
   padding: 2rem;
   text-align: center;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
-  background: transparent;
-}
-
-.file-drop-area.drag-over {
-  border-color: var(--bs-primary);
-  background: rgba(13,110,253,0.04);
-}
-
-.file-drop-area.file-selected {
-  border-style: solid;
-  border-color: var(--bs-success);
-  background: rgba(25,135,84,0.04);
-}
-
-.file-drop-area.input-error {
-  border-color: var(--bs-danger);
 }
 
 /* ===== 日志区域 - 极简风格 ===== */
@@ -661,4 +643,33 @@ input[type="range"]::-webkit-slider-thumb {
     padding-right: 0;
     margin-bottom: 2rem;
   }
+}
+
+/* ===== 深色模式补充 ===== */
+
+/* Collapse 面板深色模式 */
+[data-theme="dark"] .collapse-panel {
+  border-bottom-color: #374151;
+}
+[data-theme="dark"] .collapse-header {
+  color: #e5e7eb;
+}
+[data-theme="dark"] .collapse-body {
+  background-color: transparent;
+}
+
+/* 步骤编号深色模式 */
+[data-theme="dark"] .step-number {
+  background-color: rgba(0, 102, 204, 0.2);
+  color: #60a5fa;
+}
+
+/* 主容器深色模式 */
+[data-theme="dark"] .main-container {
+  background-color: #111827;
+}
+
+/* 设置面板边框深色模式 */
+[data-theme="dark"] .settings-panel .d-flex.justify-content-between.align-items-center {
+  border-bottom-color: #374151;
 }

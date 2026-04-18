@@ -43,7 +43,7 @@
                     </div>
                     <!-- Inline add extension -->
                     <div class="flex items-center gap-1 max-w-[140px]">
-                        <span class="text-gray-500">.</span>
+                        <span class="text-gray-500 dark:text-gray-400">.</span>
                         <input
                             type="text"
                             class="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-primary"

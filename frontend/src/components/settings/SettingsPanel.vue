@@ -2,7 +2,7 @@
     <div class="settings-panel">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div class="d-flex align-items-center">
-                <h4 class="mb-0 me-3 fw-bold" :title="t('pageTitle')">DocuTranslate</h4>
+                <h4 class="mb-0 me-3 fw-bold ml-3 text-lg" :title="t('pageTitle')">DocuTranslate</h4>
                 <div class="btn-group">
                     <button type="button" class="btn btn-sm btn-outline-info" @click="showTutorial = true">
                         <svg class="w-4 h-4 me-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

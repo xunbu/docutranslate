@@ -1,5 +1,5 @@
 <template>
-    <Modal v-model="visible" :title="t('queueConcurrentLabel')" size="sm">
+    <Modal v-model="visible" title="设置" size="sm">
         <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 {{ t('queueConcurrentLabel') }}
@@ -8,10 +8,9 @@
                 type="number"
                 v-model.number="queue_concurrent"
                 min="1"
-                max="10"
                 class="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
                 @change="handleChange">
-            <p class="mt-1 text-sm text-gray-500">{{ t('queueConcurrentHelp') || '设置批量运行时同时翻译的任务数量（1-10）' }}</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ t('queueConcurrentHelp') || '设置批量运行时同时翻译的任务数量' }}</p>
         </div>
         <div class="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-300 rounded text-sm">
             <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">

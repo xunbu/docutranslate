@@ -45,7 +45,7 @@
                     </svg>
                     <span>{{ t('newTaskBtn') }}</span>
                 </button>
-                <Tooltip :content="t('queueConcurrentLabel')" placement="top">
+                <Tooltip content="设置" placement="top">
                     <button
                         type="button"
                         class="p-2 text-sm border border-primary text-primary rounded hover:bg-primary hover:text-white transition-colors"
@@ -59,7 +59,7 @@
             </div>
         </div>
         <div id="task-container">
-            <div v-if="tasks.length === 0" class="flex flex-col items-center justify-center text-gray-500 mt-5">
+            <div v-if="tasks.length === 0" class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 mt-5">
                 <img src="/static/favicon.ico" alt="LOGO" style="width:10%;min-width: 55px; height: auto;">
                 <p class="mt-3">{{ t('noTaskPlaceholder') }}</p>
             </div>

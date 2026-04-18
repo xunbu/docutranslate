@@ -202,7 +202,7 @@
   "importFolderBtn": "Nhập thư mục",
   "runAllBtn": "Chạy tất cả",
   "queueConcurrentLabel": "Số tác vụ đồng thời",
-  "queueConcurrentHelp": "Số tác vụ dịch đồng thời khi chạy hàng loạt (1-10)",
+  "queueConcurrentHelp": "Số tác vụ dịch đồng thời khi chạy hàng loạt",
   "queueConcurrentNote": "Việc bắt đầu thủ công từng tác vụ không bị giới hạn này ảnh hưởng",
   "saveBtn": "Lưu",
   "cancelBtn": "Hủy",

@@ -16,8 +16,12 @@
                 <div class="w-full md:w-5/12">
                     <input type="file" class="hidden" :id="'fileInput-' + task.uiId" @change="onFileSelect">
                     <div
-                        class="file-drop-area"
-                        :class="{'drag-over': task.isDragOver, 'file-selected': !!task.file, 'input-error': task.validationError}"
+                        class="file-drop-area border-2 border-dashed border-gray-300 dark:border-gray-600 rounded transition-colors"
+                        :class="{
+                            'border-primary bg-blue-50 dark:bg-blue-900/20': task.isDragOver,
+                            'border-solid border-success bg-green-50 dark:bg-green-900/20': !!task.file,
+                            'border-danger': task.validationError
+                        }"
                         @click.stop="triggerFileInput"
                         @dragenter.prevent="task.isDragOver = true"
                         @dragover.prevent="task.isDragOver = true"

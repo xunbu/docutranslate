@@ -5,7 +5,8 @@
             <strong>
                 <span class="step-number">{{ stepNumber }} </span>
                 <svg class="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M17.664 17.664l-.707-.707M12 21v-1M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l.707.707M3 12h1m5.663-5h4.673" />
+                    <circle cx="12" cy="12" r="4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" />
                 </svg>
                 <span>{{ t('aiSettingsTitleText') }}</span>
             </strong>

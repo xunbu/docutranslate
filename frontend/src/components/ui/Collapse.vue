@@ -1,16 +1,16 @@
 <template>
-  <div class="collapse-panel">
+  <div class="collapse-panel border-b border-gray-200 dark:border-gray-700">
     <button
       type="button"
-      class="collapse-header"
-      :class="{ 'open': isOpen }"
+      class="collapse-header text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/50"
+      :class="{ 'open': isOpen, 'bg-blue-50 dark:bg-blue-900/20': isOpen }"
       @click="toggle"
     >
       <span class="font-medium">
         <slot name="header">{{ title }}</slot>
       </span>
       <svg
-        class="w-5 h-5 collapse-icon"
+        class="w-5 h-5 collapse-icon text-gray-500 dark:text-gray-400"
         :class="{ 'open': isOpen }"
         fill="none"
         stroke="currentColor"
@@ -27,7 +27,7 @@
       @after-leave="onAfterLeave"
     >
       <div v-show="isOpen" class="overflow-hidden">
-        <div class="collapse-body">
+        <div class="collapse-body bg-white dark:bg-gray-800">
           <slot></slot>
         </div>
       </div>

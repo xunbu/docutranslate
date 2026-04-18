@@ -13,7 +13,7 @@
                     <td class="px-4 py-2 text-gray-700 dark:text-gray-300">{{ dst }}</td>
                 </tr>
                 <tr v-if="Object.keys(glossaryData).length === 0">
-                    <td colspan="2" class="px-4 py-4 text-center text-gray-500">{{ t('glossaryEmpty') }}</td>
+                    <td colspan="2" class="px-4 py-4 text-center text-gray-500 dark:text-gray-400">{{ t('glossaryEmpty') }}</td>
                 </tr>
             </tbody>
         </table>
