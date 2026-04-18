@@ -488,13 +488,11 @@ const updatePlatformParams = (plat, prefix, target, isGlossary = false) => {
     if (isGlossary) {
         target.glossary_agent_key = get(`${prefix}_${plat}_apikey`);
         target.glossary_agent_model_id = get(`${prefix}_${plat}_model_id`);
-        if (plat === 'custom')
-            target.glossary_agent_baseurl = get(`${prefix}_custom_base_url`);
+        target.glossary_agent_baseurl = plat === 'custom' ? get(`${prefix}_custom_base_url`) : plat;
     } else {
         target.api_key = get(`${prefix}_${plat}_apikey`);
         target.model_id = get(`${prefix}_${plat}_model_id`);
-        if (plat === 'custom')
-            target.base_url = get(`${prefix}_custom_base_url`);
+        target.base_url = plat === 'custom' ? get(`${prefix}_custom_base_url`) : plat;
     }
 };
 
@@ -550,64 +548,36 @@ const saveWorkflowParam = (keySuffix) => {
 
 // ===== 术语表相关 =====
 const handleGlossaryFiles = (e) => {
-    const files = Array.from(e.target.files);
+    const files = e.target.files;
     if (!files.length) return;
-
-    files.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            const text = ev.target.result;
-            const lines = text.split(/\r?\n/);
-            lines.forEach(line => {
-                const parts = line.split(',');
-                if (parts.length >= 2) {
-                    const key = parts[0].trim();
-                    const val = parts.slice(1).join(',').trim();
-                    if (key && val) glossaryData.value[key] = val;
-                }
-            });
-        };
-        reader.readAsText(file);
+    Array.from(files).forEach(f => {
+        Papa.parse(f, {
+            header: true, skipEmptyLines: true,
+            complete: (res) => {
+                if (res.data) res.data.forEach(r => {
+                    if (r.src && r.dst) glossaryData.value[r.src.trim()] = r.dst.trim();
+                });
+            }
+        });
     });
-    e.target.value = '';
 };
 
 const clearGlossary = () => { glossaryData.value = {}; };
 const openGlossaryModal = () => new bootstrap.Modal(document.getElementById('glossaryModal')).show();
 const downloadGlossaryTemplate = () => {
-    const content = 'source,target\nHello,你好\nWorld,世界';
-    const blob = new Blob([content], {type: 'text/csv'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'glossary_template.csv';
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 100);
+    window.open('/service/glossary/template', '_blank');
 };
 
 // ===== 任务管理 =====
 let _importingConfig = false;
-let _taskIdCounter = 0;
 
 const createNewTask = (backendId = null) => {
+    const uiId = 'card_' + Math.random().toString(36).substring(2, 9);
     const task = reactive({
-        uiId: 'card_' + (++_taskIdCounter),
-        backendId: backendId,
-        file: null,
-        fileName: '',
-        logs: '',
-        statusMessage: '',
-        statusClass: 'text-muted',
-        isTranslating: false,
-        isFinished: false,
-        isProcessing: false,
-        validationError: false,
-        downloads: null,
-        attachment: null,
-        initializing: !!backendId,
-        isDragOver: false,
-        progressPercent: 0,
-        detectedWorkflow: null
+        uiId, backendId, file: null, fileName: '', logs: '', statusMessage: '',
+        statusClass: 'text-muted', isTranslating: false, isFinished: false, isProcessing: false,
+        validationError: false, downloads: null, attachment: null, initializing: !!backendId, isDragOver: false,
+        progressPercent: 0, detectedWorkflow: null
     });
     tasks.value.unshift(task);
     if (backendId) {
@@ -620,27 +590,37 @@ const createNewTask = (backendId = null) => {
     }
 };
 
+const saveActiveTasks = () => {
+    if (window.location.pathname.includes('/admin')) return;
+    const ids = tasks.value.map(t => t.backendId).filter(id => id);
+    localStorage.setItem('active_task_ids', JSON.stringify(ids));
+};
+
 const removeTask = async (task) => {
     if (task.isTranslating) {
         if (!confirm(t('confirmRemoveTranslatingTask'))) return;
         try { await toggleTaskState(task); } catch (e) {}
     }
-    const idx = tasks.value.indexOf(task);
-    if (idx >= 0) tasks.value.splice(idx, 1);
+    if (task.backendId) try {
+        await fetch(`/service/release/${task.backendId}`, {method: 'POST'});
+    } catch (e) {}
+    tasks.value = tasks.value.filter(t => t.uiId !== task.uiId);
+    saveActiveTasks();
 };
 
 const clearAllTasks = async () => {
     if (!confirm(t('confirmClearAllTasks'))) return;
     for (const task of [...tasks.value]) {
-        if (task.isTranslating) {
-            try { await toggleTaskState(task); } catch(e) {}
-        }
+        if (task.backendId) try {
+            await fetch(`/service/release/${task.backendId}`, {method: 'POST'});
+        } catch (e) {}
     }
     tasks.value = [];
+    saveActiveTasks();
 };
 
 const handleTaskFileSelect = (e, task) => {
-    const f = e.target.files[0];
+    const f = e.target.files ? e.target.files[0] : e.dataTransfer.files[0];
     if (!f) return;
     task.file = f;
     task.fileName = f.name;
@@ -660,7 +640,7 @@ const handleTaskFileSelect = (e, task) => {
     task.detectedWorkflow = newWorkflow;
     saveSetting('translator_last_workflow', newWorkflow);
 
-    e.target.value = '';
+    if (e.target) e.target.value = '';
 };
 const handleTaskFileDrop = (e, task) => handleTaskFileSelect(e, task);
 
@@ -676,119 +656,140 @@ const selectTaskWorkflow = (task) => {
     }
 };
 
-watch(tasks, (newTasks) => {
-    const ids = newTasks.map(t => t.backendId).filter(Boolean);
-    localStorage.setItem(STORAGE.keys.ACTIVE_TASK_IDS, JSON.stringify(ids));
-}, {deep: true});
+// ===== Translation Logic =====
+const buildPayload = () => {
+    const basePayload = {
+        skip_translate: form.skip_translate,
+        base_url: emptyToNull(form.base_url),
+        api_key: form.api_key || "",
+        model_id: emptyToNull(form.model_id),
+        provider: emptyToNull(form.provider),
+        to_lang: form.to_lang === 'custom' ? form.custom_to_lang : form.to_lang,
+        thinking: form.thinking,
+        chunk_size: Number(form.chunk_size),
+        concurrent: Number(form.concurrent),
+        temperature: Number(form.temperature),
+        top_p: Number(form.top_p),
+        retry: Number(form.retry),
+        custom_prompt: emptyToNull(form.custom_prompt),
+        glossary_dict: Object.keys(glossaryData.value).length ? glossaryData.value : null,
+        system_proxy_enable: form.system_proxy_enable,
+        force_json: form.force_json,
+        glossary_generate_enable: form.glossary_generate_enable,
+        workflow_type: form.workflow_type,
+        rpm: emptyToNull(form.rpm),
+        tpm: emptyToNull(form.tpm),
+        extra_body: emptyToNull(form.extra_body)
+    };
 
-// ===== 翻译逻辑 =====
-const buildFormData = (task) => {
-    const fd = new FormData();
-
-    fd.append('workflow', form.workflow_type);
-    fd.append('convert_engine', form.convert_engine);
-    fd.append('md2docx_engine', form.md2docx_engine || '');
-    fd.append('skip_translate', form.skip_translate ? 'true' : 'false');
-
-    if (!form.skip_translate) {
-        fd.append('platform', form.platform);
-        fd.append('base_url', form.base_url || '');
-        fd.append('api_key', form.api_key);
-        fd.append('model_id', form.model_id);
-        fd.append('provider', form.provider || '');
-        fd.append('system_proxy_enable', form.system_proxy_enable ? 'true' : 'false');
-        fd.append('force_json', form.force_json ? 'true' : 'false');
-        fd.append('to_lang', form.to_lang);
-        fd.append('custom_to_lang', form.custom_to_lang || '');
-        fd.append('thinking', form.thinking);
-        fd.append('custom_prompt', form.custom_prompt || '');
-        fd.append('chunk_size', String(form.chunk_size));
-        fd.append('concurrent', String(form.concurrent));
-        fd.append('temperature', String(form.temperature));
-        fd.append('top_p', String(form.top_p));
-        fd.append('retry', String(form.retry));
-        if (form.rpm) fd.append('rpm', String(form.rpm));
-        if (form.tpm) fd.append('tpm', String(form.tpm));
-        if (form.extra_body) fd.append('extra_body', form.extra_body);
-
-        fd.append('glossary_generate_enable', form.glossary_generate_enable ? 'true' : 'false');
-        if (form.glossary_generate_enable) {
-            fd.append('glossary_agent_config_choice', form.glossary_agent_config_choice);
-            fd.append('glossary_agent_platform', form.glossary_agent_platform);
-            fd.append('glossary_agent_baseurl', form.glossary_agent_baseurl || '');
-            fd.append('glossary_agent_key', form.glossary_agent_key || '');
-            fd.append('glossary_agent_model_id', form.glossary_agent_model_id || '');
-            fd.append('glossary_agent_provider', form.glossary_agent_provider || '');
-            fd.append('glossary_agent_to_lang', form.glossary_agent_to_lang);
-            fd.append('glossary_agent_custom_to_lang', form.glossary_agent_custom_to_lang || '');
-            fd.append('glossary_agent_chunk_size', String(form.glossary_agent_chunk_size));
-            fd.append('glossary_agent_concurrent', String(form.glossary_agent_concurrent));
-            fd.append('glossary_agent_temperature', String(form.glossary_agent_temperature));
-            fd.append('glossary_agent_top_p', String(form.glossary_agent_top_p));
-            fd.append('glossary_agent_retry', String(form.glossary_agent_retry));
-            fd.append('glossary_agent_thinking', form.glossary_agent_thinking);
-            fd.append('glossary_agent_system_proxy_enable', form.glossary_agent_system_proxy_enable ? 'true' : 'false');
-            fd.append('glossary_agent_force_json', form.glossary_agent_force_json ? 'true' : 'false');
-            if (form.glossary_agent_rpm) fd.append('glossary_agent_rpm', String(form.glossary_agent_rpm));
-            if (form.glossary_agent_tpm) fd.append('glossary_agent_tpm', String(form.glossary_agent_tpm));
-            if (form.glossary_agent_extra_body) fd.append('glossary_agent_extra_body', form.glossary_agent_extra_body);
-        }
-        if (Object.keys(glossaryData.value).length > 0) {
-            fd.append('glossary', JSON.stringify(glossaryData.value));
-        }
+    if (basePayload.glossary_generate_enable) {
+        const isCustom = form.glossary_agent_config_choice === 'custom';
+        basePayload.glossary_agent_config = {
+            base_url: isCustom ? emptyToNull(form.glossary_agent_baseurl) : basePayload.base_url,
+            api_key: isCustom ? (form.glossary_agent_key || "") : basePayload.api_key,
+            model_id: isCustom ? emptyToNull(form.glossary_agent_model_id) : basePayload.model_id,
+            provider: isCustom ? emptyToNull(form.glossary_agent_provider) : basePayload.provider,
+            to_lang: isCustom ? (form.glossary_agent_to_lang === 'custom' ? form.glossary_agent_custom_to_lang : form.glossary_agent_to_lang) : basePayload.to_lang,
+            custom_prompt: emptyToNull(form.glossary_agent_custom_prompt),
+            temperature: isCustom ? Number(form.glossary_agent_temperature) : basePayload.temperature,
+            top_p: isCustom ? Number(form.glossary_agent_top_p) : basePayload.top_p,
+            concurrent: isCustom ? Number(form.glossary_agent_concurrent) : basePayload.concurrent,
+            retry: isCustom ? Number(form.glossary_agent_retry) : basePayload.retry,
+            thinking: isCustom ? form.glossary_agent_thinking : basePayload.thinking,
+            system_proxy_enable: isCustom ? form.glossary_agent_system_proxy_enable : basePayload.system_proxy_enable,
+            chunk_size: isCustom ? Number(form.glossary_agent_chunk_size) : basePayload.chunk_size,
+            force_json: isCustom ? form.glossary_agent_force_json : basePayload.force_json,
+            rpm: isCustom ? emptyToNull(form.glossary_agent_rpm) : basePayload.rpm,
+            tpm: isCustom ? emptyToNull(form.glossary_agent_tpm) : basePayload.tpm,
+            extra_body: isCustom ? emptyToNull(form.glossary_agent_extra_body) : basePayload.extra_body
+        };
     }
 
     // Workflow-specific params
-    const wp = workflowParams[form.workflow_type];
-    if (wp) {
-        if (wp.insert_mode !== undefined) fd.append('insert_mode', wp.insert_mode);
-        if (wp.insert_mode !== undefined && ['append', 'prepend'].includes(wp.insert_mode) && wp.separator !== undefined)
-            fd.append('separator', wp.separator);
-        if (wp.segment_mode !== undefined) fd.append('segment_mode', wp.segment_mode);
-        if (wp.translate_regions !== undefined) fd.append('translate_regions', wp.translate_regions);
-        if (wp.json_paths !== undefined) fd.append('json_paths', wp.json_paths);
+    if (form.workflow_type === 'markdown_based') {
+        basePayload.convert_engine = form.convert_engine;
+        basePayload.md2docx_engine = form.md2docx_engine === 'null' ? null : form.md2docx_engine;
+        if (form.convert_engine === 'mineru') {
+            basePayload.mineru_token = emptyToNull(form.mineru_token);
+            basePayload.model_version = form.model_version;
+            basePayload.formula_ocr = form.formula_ocr;
+            basePayload.mineru_language = form.mineru_language;
+        } else if (form.convert_engine === 'mineru_deploy') {
+            basePayload.mineru_deploy_base_url = emptyToNull(form.mineru_deploy_base_url);
+            basePayload.mineru_deploy_backend = form.mineru_deploy_backend;
+            basePayload.mineru_deploy_parse_method = form.mineru_deploy_parse_method;
+            basePayload.mineru_deploy_formula_enable = form.mineru_deploy_formula_enable;
+            basePayload.mineru_deploy_table_enable = form.mineru_deploy_table_enable;
+            basePayload.mineru_deploy_start_page_id = parseInt(form.mineru_deploy_start_page) || 0;
+            basePayload.mineru_deploy_end_page_id = parseInt(form.mineru_deploy_end_page) || 99999;
+            if (['pipeline', 'hybrid-auto-engine', 'hybrid-http-client'].includes(form.mineru_deploy_backend)) {
+                basePayload.mineru_deploy_lang_list = form.mineru_deploy_lang_list.length > 0 ? form.mineru_deploy_lang_list : null;
+            }
+            if (['vlm-http-client', 'hybrid-http-client'].includes(form.mineru_deploy_backend)) {
+                basePayload.mineru_deploy_server_url = emptyToNull(form.mineru_deploy_server_url);
+            }
+        } else if (form.convert_engine === 'docling') {
+            basePayload.code_ocr = form.code_ocr;
+            basePayload.formula_ocr = form.formula_ocr;
+        }
+    } else {
+        const params = {...workflowParams[form.workflow_type]};
+        if (params.separator) {
+            params.separator = params.separator.replace(/\\n/g, '\n');
+        }
+        if (form.workflow_type === 'json') {
+            params.json_paths = params.json_paths.split('\n').map(p => p.trim()).filter(p => p);
+        } else if (form.workflow_type === 'xlsx') {
+            if (params.translate_regions && typeof params.translate_regions === 'string' && params.translate_regions.trim()) {
+                params.translate_regions = params.translate_regions.split('\n').map(p => p.trim()).filter(p => p);
+                if (params.translate_regions.length === 0) delete params.translate_regions;
+            } else {
+                delete params.translate_regions;
+            }
+        }
+        Object.assign(basePayload, params);
     }
 
-    // Mineru specific
-    if (form.convert_engine === 'mineru') {
-        fd.append('mineru_token', form.mineru_token);
-        fd.append('model_version', form.model_version);
-        fd.append('mineru_language', form.mineru_language);
-        fd.append('formula_ocr', form.formula_ocr ? 'true' : 'false');
-        fd.append('code_ocr', form.code_ocr ? 'true' : 'false');
-    } else if (form.convert_engine === 'mineru_deploy') {
-        fd.append('mineru_deploy_base_url', form.mineru_deploy_base_url);
-        fd.append('mineru_deploy_backend', form.mineru_deploy_backend);
-        fd.append('mineru_deploy_parse_method', form.mineru_deploy_parse_method);
-        fd.append('mineru_deploy_start_page', String(form.mineru_deploy_start_page));
-        fd.append('mineru_deploy_end_page', String(form.mineru_deploy_end_page));
-        fd.append('mineru_deploy_formula_enable', form.mineru_deploy_formula_enable ? 'true' : 'false');
-        fd.append('mineru_deploy_table_enable', form.mineru_deploy_table_enable ? 'true' : 'false');
-        fd.append('mineru_deploy_lang_list', JSON.stringify(form.mineru_deploy_lang_list));
-        if (form.mineru_deploy_server_url)
-            fd.append('mineru_deploy_server_url', form.mineru_deploy_server_url);
-        fd.append('formula_ocr', form.formula_ocr ? 'true' : 'false');
-        fd.append('code_ocr', form.code_ocr ? 'true' : 'false');
-    }
+    return basePayload;
+};
 
+const buildFormData = (task) => {
+    const fd = new FormData();
     if (task.file) fd.append('file', task.file);
+    fd.append('payload', JSON.stringify(buildPayload()));
     saveAllSettings();
     return fd;
 };
 
-const validateTask = (task) => {
-    let ok = true;
+const validateForm = () => {
+    let isValid = true;
+    Object.keys(errors).forEach(k => errors[k] = false);
+
     if (!form.skip_translate) {
-        if (!form.api_key) { errors.api_key = true; ok = false; }
-        if (!form.model_id) { errors.model_id = true; ok = false; }
-        if (form.platform === 'custom' && !form.base_url) { errors.base_url = true; ok = false; }
-        if (form.to_lang === 'custom' && !form.custom_to_lang) { errors.custom_to_lang = true; ok = false; }
-        if (form.workflow_type === 'json' && !workflowParams.json.json_paths) { errors.json_paths = true; ok = false; }
+        if (!form.model_id) { errors.model_id = true; isValid = false; }
+        if (form.platform === 'custom' && !form.base_url) { errors.base_url = true; isValid = false; }
+        if (form.to_lang === 'custom' && !form.custom_to_lang) { errors.custom_to_lang = true; isValid = false; }
     }
-    if (form.convert_engine === 'mineru' && !form.mineru_token) { errors.mineru_token = true; ok = false; }
-    if (form.convert_engine === 'mineru_deploy' && !form.mineru_deploy_base_url) { errors.mineru_deploy_base_url = true; ok = false; }
-    if (!task.file && !task.backendId) { task.validationError = true; ok = false; }
-    return ok;
+
+    if (form.workflow_type === 'markdown_based') {
+        if (form.convert_engine === 'mineru' && !form.mineru_token) { errors.mineru_token = true; isValid = false; }
+        if (form.convert_engine === 'mineru_deploy' && !form.mineru_deploy_base_url) { errors.mineru_deploy_base_url = true; isValid = false; }
+    } else if (form.workflow_type === 'json') {
+        if (!workflowParams.json.json_paths || !workflowParams.json.json_paths.trim()) {
+            errors.json_paths = true; isValid = false;
+        }
+    }
+
+    if (!isValid) {
+        nextTick(() => {
+            const errorEl = document.querySelector('.is-invalid');
+            if (errorEl) {
+                errorEl.scrollIntoView({behavior: 'smooth', block: 'center'});
+                errorEl.focus();
+            }
+        });
+    }
+    return isValid;
 };
 
 const appendLog = (task, msg, isError = false) => {
@@ -803,89 +804,136 @@ const appendLog = (task, msg, isError = false) => {
 const toggleTaskState = async (task) => {
     if (task.initializing) return;
     if (task.isTranslating) {
+        task.statusMessage = t('status_cancelling');
         if (task.backendId) {
-            try { await fetch(`/service/task/${task.backendId}/cancel`, {method: 'POST'}); } catch (e) {}
+            try { await fetch(`/service/cancel/${task.backendId}`, {method: 'POST'}); } catch (e) {}
         }
+        runningCount.value = Math.max(0, runningCount.value - 1);
         task.isTranslating = false;
         task.statusMessage = t('taskCardStatusCancelled');
         task.statusClass = 'text-warning';
         return;
     }
 
-    if (!validateTask(task)) {
-        appendLog(task, t('taskCardValidationFailed'), true);
+    if (task.isFinished) {
+        task.isFinished = false;
+        task.logs = '';
+        task.downloads = null;
+        toggleTaskState(task);
         return;
     }
 
-    task.isTranslating = true;
-    task.isFinished = false;
-    task.isProcessing = true;
-    task.progressPercent = 0;
-    task.statusMessage = t('taskCardStatusUploading');
-    task.statusClass = 'text-primary';
-    task.downloads = null;
-    task.attachment = null;
-    task.logs = '';
+    if (!task.file) {
+        task.validationError = true;
+        return;
+    }
 
+    if (!validateForm()) {
+        task.statusMessage = t('status_fillRequired') || "请检查左侧配置项 (Please check settings)";
+        task.statusClass = 'text-danger';
+        return;
+    }
+
+    task.initializing = true;
     try {
-        if (task.backendId) {
-            const resp = await fetch(`/service/task/${task.backendId}/restart`, {method: 'POST'});
-            const data = await resp.json();
-            if (!data.ok) throw new Error(data.error || 'Restart failed');
-        } else {
-            const fd = buildFormData(task);
-            const resp = await fetch('/service/translate', {method: 'POST', body: fd});
-            const data = await resp.json();
-            if (!data.ok) throw new Error(data.error || 'Upload failed');
-            task.backendId = data.task_id;
+        const savedWorkflow = form.workflow_type;
+        if (task.detectedWorkflow) {
+            form.workflow_type = task.detectedWorkflow;
         }
+        const formData = new FormData();
+        formData.append('file', task.file);
+        formData.append('payload', JSON.stringify(buildPayload()));
+        form.workflow_type = savedWorkflow;
+        const res = await fetch('/service/translate/file', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (res.ok && data.task_started) {
+            task.backendId = data.task_id;
+            task.isTranslating = true;
+            task.initializing = false;
+            saveActiveTasks();
+            pollStatus(task);
+            task.statusMessage = data.message;
+        } else {
+            throw new Error(data.message || data.detail || 'Error');
+        }
+    } catch (e) {
+        task.statusMessage = e.message;
+        task.statusClass = 'text-danger';
+        task.isTranslating = false;
+        task.initializing = false;
+        runningCount.value = Math.max(0, runningCount.value - 1);
+    }
+};
 
-        appendLog(task, t('taskCardStatusWaiting'));
-        const poll = async () => {
-            if (!task.isTranslating) return;
-            try {
-                const resp = await fetch(`/service/task/${task.backendId}`);
-                const d = await resp.json();
+const pollStatus = (task) => {
+    const interval = setInterval(async () => {
+        if (!task.isTranslating) {
+            clearInterval(interval);
+            return;
+        }
+        try {
+            // Fetch Logs
+            const logRes = await fetch(`/service/logs/${task.backendId}`);
+            const logData = await logRes.json();
+            if (logData.logs && logData.logs.length) {
+                task.logs += logData.logs.map(l => l.replace(/</g, "&lt;").replace(/>/g, "&gt;")).join('<br>') + '<br>';
+                nextTick(() => {
+                    const logEl = document.getElementById('log-' + task.uiId);
+                    if (logEl) logEl.scrollTop = logEl.scrollHeight;
+                });
+            }
 
-                if (d.status_message) task.statusMessage = d.status_message;
-                if (d.is_processing !== undefined) task.isProcessing = d.is_processing;
-                if (d.progress_percent !== undefined) task.progressPercent = d.progress_percent;
-                if (d.log) appendLog(task, d.log);
-                if (d.original_filename) task.fileName = d.original_filename;
+            // Fetch Status
+            const statRes = await fetch(`/service/status/${task.backendId}`);
 
-                if (d.is_processing) {
-                    task.statusClass = 'text-primary';
-                } else if (d.download_ready) {
-                    task.downloads = d.downloads || {};
-                    task.attachment = d.attachment || {};
+            // Handle 404 (Task not found / Expired)
+            if (!statRes.ok) {
+                if (statRes.status === 404) {
+                    clearInterval(interval);
                     task.isTranslating = false;
-                    task.isFinished = true;
                     task.isProcessing = false;
-                    task.statusMessage = t('taskCardStatusFinished');
-                    task.statusClass = 'text-success';
-                    return;
-                } else if (d.error_flag) {
-                    task.isTranslating = false;
-                    task.isFinished = false;
-                    task.isProcessing = false;
-                    task.statusMessage = d.status_message || t('taskCardStatusError');
                     task.statusClass = 'text-danger';
+                    task.statusMessage = '任务不存在或已过期 (Task not found)';
+                    const savedIds = JSON.parse(localStorage.getItem('active_task_ids') || '[]');
+                    const newIds = savedIds.filter(id => id !== task.backendId);
+                    localStorage.setItem('active_task_ids', JSON.stringify(newIds));
                     return;
                 }
-            } catch (e) {
-                appendLog(task, `Poll error: ${e.message}`, true);
+                return;
             }
-            setTimeout(poll, 1000);
-        };
-        poll();
-    } catch (e) {
-        task.isTranslating = false;
-        task.isProcessing = false;
-        task.statusMessage = t('taskCardStatusError');
-        task.statusClass = 'text-danger';
-        appendLog(task, `Error: ${e.message}`, true);
-        throw e;
-    }
+
+            const d = await statRes.json();
+            task.statusMessage = d.status_message;
+            task.isProcessing = d.is_processing;
+            task.progressPercent = d.progress_percent || 0;
+
+            if (d.original_filename && !task.fileName) {
+                task.fileName = d.original_filename;
+            }
+
+            if (!d.is_processing) {
+                clearInterval(interval);
+                task.isTranslating = false;
+                task.isFinished = true;
+                task.isProcessing = false;
+                runningCount.value = Math.max(0, runningCount.value - 1);
+                if (d.download_ready && !d.error_flag) {
+                    task.downloads = d.downloads || {};
+                    task.attachment = d.attachment || {};
+                    task.statusClass = 'text-success';
+                    task.statusMessage = t('taskCardStatusFinished');
+                } else {
+                    task.statusClass = 'text-danger';
+                    task.statusMessage = d.error_flag ? (d.status_message || t('taskCardStatusError')) : d.status_message;
+                }
+            }
+        } catch (e) {
+            // Continue polling on error
+        }
+    }, 1500);
 };
 
 // ===== Preview Logic =====
@@ -898,18 +946,49 @@ const previewTask = ref(null);
 const initSplit = () => {
     if (splitInstance.value) {
         try { splitInstance.value.destroy(); } catch (e) {}
+        splitInstance.value = null;
     }
-    if (!splitContainer.value) return;
-    splitInstance.value = new Split(splitContainer.value.children, {
-        sizes: [50, 50],
-        minSize: 100,
-        gutterSize: 8,
-        cursor: 'col-resize',
-        direction: 'horizontal'
-    });
+    const isMobile = window.innerWidth < 992;
+    if (splitContainer.value) {
+        splitContainer.value.style.flexDirection = isMobile ? 'column' : 'row';
+    }
+    if (previewMode.value === 'bilingual') {
+        nextTick(() => {
+            const el1 = document.getElementById('originalPreviewContainer');
+            const el2 = document.getElementById('translatedPreviewContainer');
+            if (el1 && el2) {
+                splitInstance.value = new Split(['#originalPreviewContainer', '#translatedPreviewContainer'], {
+                    sizes: [50, 50], minSize: 150, gutterSize: 10,
+                    direction: isMobile ? 'vertical' : 'horizontal',
+                    cursor: isMobile ? 'row-resize' : 'col-resize'
+                });
+            }
+        });
+    }
+    setupSyncScroll();
 };
 
-let _syncScrollHandler = null;
+
+const setupSyncScroll = () => {
+    let isScrolling = false;
+    const onScroll = (src, tgt) => {
+        if (!syncScrollEnabled.value || isScrolling) return;
+        const pct = src.scrollTop / (src.scrollHeight - src.clientHeight);
+        tgt.scrollTop = pct * (tgt.scrollHeight - tgt.clientHeight);
+        isScrolling = true;
+        requestAnimationFrame(() => isScrolling = false);
+    };
+
+    if (originalPane.value) originalPane.value.onscroll = () => {
+        if (translatedFrame.value && translatedFrame.value.contentWindow)
+            onScroll(originalPane.value, translatedFrame.value.contentWindow.document.documentElement);
+    };
+
+    if (translatedFrame.value) translatedFrame.value.onload = () => {
+        const win = translatedFrame.value.contentWindow;
+        if (win) win.onscroll = () => onScroll(win.document.documentElement, originalPane.value);
+    };
+};
 
 const openPreview = (task) => {
     previewTask.value = task;
@@ -931,24 +1010,6 @@ const openPreview = (task) => {
                     if (task.downloads.original_html) {
                         fetch(task.downloads.original_html).then(r2 => r2.text()).then(origHtml => {
                             if (originalPane.value) originalPane.value.innerHTML = origHtml;
-                            if (syncScrollEnabled.value) {
-                                if (_syncScrollHandler) window.removeEventListener('scroll', _syncScrollHandler, true);
-                                _syncScrollHandler = (e) => {
-                                    if (!syncScrollEnabled.value) return;
-                                    const t = e.target;
-                                    if (t === originalPane.value) {
-                                        if (translatedFrame.value && translatedFrame.value.contentWindow)
-                                            translatedFrame.value.contentWindow.scrollTo(0, t.scrollTop);
-                                    } else if (t === translatedFrame.value?.contentWindow?.document?.scrollingElement) {
-                                        if (originalPane.value)
-                                            originalPane.value.scrollTop = translatedFrame.value.contentWindow.scrollY;
-                                    }
-                                };
-                                if (originalPane.value)
-                                    originalPane.value.addEventListener('scroll', _syncScrollHandler, true);
-                                if (translatedFrame.value && translatedFrame.value.contentWindow)
-                                    translatedFrame.value.contentWindow.addEventListener('scroll', _syncScrollHandler, true);
-                            }
                         });
                     }
                 });
@@ -968,12 +1029,42 @@ const toggleSyncScroll = () => {
 };
 
 const printPdf = (url) => {
+    const msg = t('pdf_preparing') || "正在准备打印，请稍候...";
+    const toastContainer = document.createElement('div');
+    toastContainer.className = 'toast-container position-fixed top-0 start-50 translate-middle-x p-3';
+    toastContainer.style.zIndex = '1090';
+    toastContainer.innerHTML = `
+    <div class="toast align-items-center text-bg-primary border-0 fade show" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="bi bi-printer-fill me-2"></i>${msg}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    </div>
+`;
+    document.body.appendChild(toastContainer);
+    setTimeout(() => {
+        const toast = toastContainer.querySelector('.toast');
+        if (toast) {
+            toast.classList.remove('show');
+            setTimeout(() => {
+                if (toastContainer.parentNode) toastContainer.remove();
+            }, 500);
+        }
+    }, 3000);
+
     const pf = document.getElementById('printFrame');
     if (!pf) return;
-    pf.onload = () => {
-        pf.contentWindow.print();
-    };
-    pf.src = url;
+    fetch(url).then(r => r.text()).then(h => {
+        pf.srcdoc = h;
+        pf.onload = () => {
+            setTimeout(() => {
+                pf.contentWindow.focus();
+                pf.contentWindow.print();
+            }, 500);
+        };
+    });
 };
 
 const copyLog = (e, l) => {
@@ -1078,7 +1169,7 @@ const startNextPendingTask = () => {
     const maxConcurrent = Math.max(1, queue_concurrent.value);
     while (pendingQueue.length > 0 && runningCount.value < maxConcurrent) {
         const task = pendingQueue.shift();
-        if (task.file && !task.isTranslating && !t.isFinished) {
+        if (task.file && !task.isTranslating && !task.isFinished) {
             runningCount.value++;
             toggleTaskState(task).finally(() => { startNextPendingTask(); });
         }

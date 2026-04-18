@@ -172,6 +172,7 @@ const onDropWorkflow = (e, workflow) => {
     if (ext && ALL_EXTENSIONS.value.includes(ext)) {
         const newWorkflows = { ...props.defaultWorkflows, [ext]: workflow };
         emit('update:defaultWorkflows', newWorkflows);
+        emit('save');
     }
 };
 
@@ -179,6 +180,7 @@ const deleteExtension = (ext) => {
     const newWorkflows = { ...props.defaultWorkflows };
     delete newWorkflows[ext];
     emit('update:defaultWorkflows', newWorkflows);
+    emit('save');
     const idx = ALL_EXTENSIONS.value.indexOf(ext);
     if (idx !== -1) {
         ALL_EXTENSIONS.value.splice(idx, 1);
@@ -203,6 +205,7 @@ const addExtToWorkflow = (workflow, event) => {
     ALL_EXTENSIONS.value.push(raw);
     const newWorkflows = { ...props.defaultWorkflows, [raw]: workflow };
     emit('update:defaultWorkflows', newWorkflows);
+    emit('save');
     input.value = '';
 };
 

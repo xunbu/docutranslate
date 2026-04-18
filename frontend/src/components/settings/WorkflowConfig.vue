@@ -13,7 +13,7 @@
             <div class="accordion-body">
                 <!-- Top: Configure default workflow button -->
                 <div class="mb-3">
-                    <button type="button" class="btn btn-outline-primary" @click="openDefaultWorkflowModal">
+                    <button type="button" class="btn btn-outline-primary" @click="emit('openDefaultWorkflowModal')">
                         <i class="bi bi-gear-fill me-2"></i>{{ t('openExtWorkflowBtn') }}
                     </button>
                 </div>
@@ -123,7 +123,7 @@
                                        @change="saveSetting('translator_mineru_token', form.mineru_token); clearError('mineru_token')"
                                        :placeholder="t('mineruTokenPlaceholder')">
                                 <button class="btn btn-outline-secondary" type="button"
-                                        @click="showMineruToken = !showMineruToken"><i class="bi"
+                                        @click="emit('update:showMineruToken', !showMineruToken)"><i class="bi"
                                                                                        :class="showMineruToken ? 'bi-eye' : 'bi-eye-slash'"></i>
                                 </button>
                             </div>
@@ -308,6 +308,21 @@ const emit = defineEmits([
     'clearError',
     'openDefaultWorkflowModal',
 ]);
+
+const saveSetting = (k, v) => {
+    localStorage.setItem(k, v);
+    emit('saveSetting', k, v);
+};
+const saveSettingArray = (k, v) => {
+    localStorage.setItem(k, JSON.stringify(v));
+    emit('saveSettingArray', k, v);
+};
+const saveWorkflowParam = (k) => {
+    emit('saveWorkflowParam', k);
+};
+const clearError = (k) => {
+    emit('clearError', k);
+};
 
 const currentWorkflowConfig = computed(() => {
     const map = {

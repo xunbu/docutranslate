@@ -116,7 +116,7 @@
 <script setup>
 import SliderControl from '../common/SliderControl.vue';
 
-defineProps({
+const props = defineProps({
     t: Function,
     form: Object,
     errors: Object,
@@ -124,5 +124,13 @@ defineProps({
     stepNumber: Number,
 });
 
-defineEmits(['saveSetting', 'clearError']);
+const emit = defineEmits(['saveSetting', 'clearError']);
+
+const saveSetting = (k, v) => {
+    localStorage.setItem(k, v);
+    emit('saveSetting', k, v);
+};
+const clearError = (k) => {
+    emit('clearError', k);
+};
 </script>

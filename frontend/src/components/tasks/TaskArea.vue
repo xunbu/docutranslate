@@ -3,17 +3,17 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h4 class="mb-0"><i class="bi bi-list-task me-2"></i><span>{{ t('taskListTitle') }}</span></h4>
             <div class="d-flex gap-2">
-                <button class="btn btn-outline-danger" @click="clearAllTasks" v-if="tasks.length > 0"><i
+                <button class="btn btn-outline-danger" @click="emit('clearAllTasks')" v-if="tasks.length > 0"><i
                         class="bi bi-trash me-2"></i><span>{{ t('clearAllTasksBtn') }}</span></button>
                 <input type="file" id="folderInput" ref="folderInput" class="d-none" webkitdirectory directory multiple
-                       @change="handleFolderSelect">
+                       @change="emit('handleFolderSelect', $event)">
                 <button class="btn btn-outline-primary" @click="$refs.folderInput.click()">
                     <i class="bi bi-folder-fill me-2"></i><span>{{ t('importFolderBtn') }}</span>
                 </button>
-                <button class="btn btn-success" @click="runAllPendingTasks" v-if="hasPendingTasks">
+                <button class="btn btn-success" @click="emit('runAllPendingTasks')" v-if="hasPendingTasks">
                     <i class="bi bi-play-fill me-2"></i><span>{{ t('runAllBtn') }}</span>
                 </button>
-                <button class="btn btn-primary" @click="createNewTask"><i
+                <button class="btn btn-primary" @click="emit('createNewTask')"><i
                         class="bi bi-plus-circle-fill me-2"></i><span>{{ t('newTaskBtn') }}</span></button>
                 <button type="button" class="btn btn-outline-primary icon-btn"
                         :title="t('queueConcurrentLabel')"
@@ -32,15 +32,15 @@
                 :key="task.uiId"
                 :t="t"
                 :task="task"
-                @selectTask="selectTaskWorkflow"
-                @removeTask="removeTask"
-                @fileSelect="handleTaskFileSelect"
-                @fileDrop="handleTaskFileDrop"
-                @triggerFileInput="triggerFileInput"
-                @copyLog="copyLog"
-                @openPreview="openPreview"
-                @printPdf="printPdf"
-                @toggleTaskState="toggleTaskState" />
+                @selectTask="(task) => emit('selectTask', task)"
+                @removeTask="(task) => emit('removeTask', task)"
+                @fileSelect="(e, task) => emit('fileSelect', e, task)"
+                @fileDrop="(e, task) => emit('fileDrop', e, task)"
+                @triggerFileInput="(uiId) => emit('triggerFileInput', uiId)"
+                @copyLog="(e, logs) => emit('copyLog', e, logs)"
+                @openPreview="(task) => emit('openPreview', task)"
+                @printPdf="(url) => emit('printPdf', url)"
+                @toggleTaskState="(task) => emit('toggleTaskState', task)" />
         </div>
     </div>
 </template>
@@ -60,10 +60,10 @@ const emit = defineEmits([
     'handleFolderSelect',
     'runAllPendingTasks',
     'createNewTask',
-    'selectTaskWorkflow',
+    'selectTask',
     'removeTask',
-    'handleTaskFileSelect',
-    'handleTaskFileDrop',
+    'fileSelect',
+    'fileDrop',
     'triggerFileInput',
     'copyLog',
     'openPreview',

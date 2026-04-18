@@ -27,12 +27,12 @@
                     :enginList="enginList"
                     :showMineruToken="showMineruToken"
                     :showIdentityOption="showIdentityOption"
-                    @update:showMineruToken="val => showMineruToken = val"
+                    @update:showMineruToken="val => emit('update:showMineruToken', val)"
                     @saveSetting="saveSetting"
                     @saveSettingArray="saveSettingArray"
                     @saveWorkflowParam="saveWorkflowParam"
                     @clearError="clearError"
-                    @openDefaultWorkflowModal="openDefaultWorkflowModal" />
+                    @openDefaultWorkflowModal="emit('openDefaultWorkflowModal')" />
 
                 <AISettings
                     :t="t"
@@ -58,10 +58,10 @@
                     :glossaryCount="glossaryCount"
                     :stepNumber="stepMap.glossary"
                     @saveSetting="saveSetting"
-                    @handleGlossaryFiles="handleGlossaryFiles"
-                    @openGlossaryModal="openGlossaryModal"
-                    @clearGlossary="clearGlossary"
-                    @downloadGlossaryTemplate="downloadGlossaryTemplate" />
+                    @handleGlossaryFiles="e => emit('handleGlossaryFiles', e)"
+                    @openGlossaryModal="emit('openGlossaryModal')"
+                    @clearGlossary="emit('clearGlossary')"
+                    @downloadGlossaryTemplate="emit('downloadGlossaryTemplate')" />
 
             </div>
         </form>
@@ -71,10 +71,10 @@
             <button type="button" class="btn btn-outline-primary" @click="configFile.click()"><i
                     class="bi bi-box-arrow-in-down me-1"></i><span>{{ t('importConfigBtn') }}</span>
             </button>
-            <button type="button" class="btn btn-outline-secondary" @click="exportConfig"><i
+            <button type="button" class="btn btn-outline-secondary" @click="emit('exportConfig')"><i
                     class="bi bi-box-arrow-up me-1"></i><span>{{ t('exportConfigBtn') }}</span></button>
         </div>
-        <input type="file" ref="configFile" class="d-none" accept=".json" @change="importConfig">
+        <input type="file" ref="configFile" class="d-none" accept=".json" @change="e => emit('importConfig', e)">
 
         <!-- Project Info -->
         <div class="mt-4 text-center text-muted small project-info">
@@ -109,6 +109,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits([
+    'update:showMineruToken',
     'saveSetting',
     'saveSettingArray',
     'saveWorkflowParam',
@@ -122,6 +123,20 @@ const emit = defineEmits([
     'exportConfig',
 ]);
 
+const saveSetting = (k, v) => {
+    localStorage.setItem(k, v);
+    emit('saveSetting', k, v);
+};
+const saveSettingArray = (k, v) => {
+    localStorage.setItem(k, JSON.stringify(v));
+    emit('saveSettingArray', k, v);
+};
+const saveWorkflowParam = (k) => {
+    emit('saveWorkflowParam', k);
+};
+const clearError = (k) => {
+    emit('clearError', k);
+};
+
 const configFile = ref(null);
-const showMineruToken = ref(props.showMineruToken);
 </script>

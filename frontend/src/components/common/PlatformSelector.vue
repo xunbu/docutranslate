@@ -55,7 +55,7 @@ const platforms = KNOWN_PLATFORMS;
 const providers = PROVIDERS;
 const apiHrefMap = API_HREF_MAP;
 
-const apiHref = computed(() => apiHrefMap[props.platform]);
+const apiHref = computed(() => apiHrefMap[props.baseUrl]);
 
 const save = (key, val) => localStorage.setItem(key, val);
 
@@ -74,20 +74,24 @@ const handlePlatformChange = (val) => {
 
 const handleProviderChange = (val) => {
     emit('update:provider', val);
+    save(`${props.prefix}_${props.platform}_provider`, val);
 };
 
 const handleBaseUrlChange = (val) => {
     emit('update:baseUrl', val);
     emit('clearError', 'base_url');
+    if (props.platform === 'custom') save(`${props.prefix}_custom_base_url`, val);
 };
 
 const handleApiKeyChange = (val) => {
     emit('update:apiKey', val);
     emit('clearError', 'api_key');
+    save(`${props.prefix}_${props.platform}_apikey`, val);
 };
 
 const handleModelChange = (val) => {
     emit('update:modelId', val);
     emit('clearError', 'model_id');
+    save(`${props.prefix}_${props.platform}_model_id`, val);
 };
 </script>

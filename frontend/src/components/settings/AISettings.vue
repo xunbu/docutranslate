@@ -55,12 +55,20 @@
 <script setup>
 import PlatformSelector from '../common/PlatformSelector.vue';
 
-defineProps({
+const props = defineProps({
     t: Function,
     form: Object,
     errors: Object,
     stepNumber: Number,
 });
 
-defineEmits(['saveSetting', 'clearError']);
+const emit = defineEmits(['saveSetting', 'clearError']);
+
+const saveSetting = (k, v) => {
+    localStorage.setItem(k, v);
+    emit('saveSetting', k, v);
+};
+const clearError = (k) => {
+    emit('clearError', k);
+};
 </script>

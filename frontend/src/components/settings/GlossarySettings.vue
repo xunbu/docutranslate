@@ -13,23 +13,23 @@
             <div class="accordion-body">
                 <div class="mb-3">
                     <label class="form-label">{{ t('glossaryLabel') }}</label>
-                    <input class="form-control" type="file" @change="handleGlossaryFiles"
+                    <input class="form-control" type="file" @change="e => emit('handleGlossaryFiles', e)"
                            multiple accept=".csv" ref="glossaryInput">
                     <div class="form-text">{{ t('glossaryHelp') }}</div>
                     <div class="btn-group mt-2">
                         <button type="button" class="btn btn-sm btn-outline-info"
-                                @click="openGlossaryModal">
+                                @click="emit('openGlossaryModal')">
                             <i class="bi bi-card-list me-1"></i><span>{{ t('viewGlossaryBtn') }} <span
                                 v-if="glossaryCount">({{glossaryCount}})</span></span>
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-danger"
-                                @click="clearGlossary">
+                                @click="emit('clearGlossary')">
                             <i class="bi bi-trash me-1"></i><span>{{ t('clearGlossaryBtn')
                             }}</span>
                         </button>
                     </div>
                     <div class="mt-2">
-                        <a href="javascript:void(0)" @click="downloadGlossaryTemplate" class="text-decoration-none small">
+                        <a href="javascript:void(0)" @click="emit('downloadGlossaryTemplate')" class="text-decoration-none small">
                             <i class="bi bi-download me-1"></i>{{ t('downloadGlossaryTemplateBtn') }}
                         </a>
                     </div>
@@ -215,4 +215,9 @@ const emit = defineEmits([
     'clearGlossary',
     'downloadGlossaryTemplate',
 ]);
+
+const saveSetting = (k, v) => {
+    localStorage.setItem(k, v);
+    emit('saveSetting', k, v);
+};
 </script>
