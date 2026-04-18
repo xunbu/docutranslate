@@ -496,11 +496,13 @@ const updatePlatformParams = (plat, prefix, target, isGlossary = false) => {
 };
 
 watch(() => form.platform, (newPlat) => {
+    if (_importingConfig) return;
     updatePlatformParams(newPlat, 'translator_platform', form);
     saveSetting(STORAGE.keys.PLATFORM, newPlat);
     loadPlatformConfig();
 });
 watch(() => form.glossary_agent_platform, (newPlat) => {
+    if (_importingConfig) return;
     updatePlatformParams(newPlat, 'glossary_agent_platform', form, true);
     saveSetting('glossary_agent_platform_last_platform', newPlat);
     loadGlossaryConfig(defaultParams);
