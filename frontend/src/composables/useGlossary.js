@@ -1,4 +1,5 @@
 import { ref, computed } from 'vue';
+import Papa from 'papaparse';
 
 export function useGlossary() {
     const glossaryData = ref({});

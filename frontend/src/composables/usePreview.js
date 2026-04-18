@@ -1,4 +1,5 @@
 import { ref, nextTick, watch } from 'vue';
+import Split from 'split.js';
 
 export function usePreview(i18n) {
     const { t } = i18n;
@@ -44,8 +45,8 @@ export function usePreview(i18n) {
             nextTick(() => {
                 const el1 = document.getElementById('originalPreviewContainer');
                 const el2 = document.getElementById('translatedPreviewContainer');
-                if (el1 && el2 && window.Split) {
-                    splitInstance.value = window.Split(['#originalPreviewContainer', '#translatedPreviewContainer'], {
+                if (el1 && el2) {
+                    splitInstance.value = Split(['#originalPreviewContainer', '#translatedPreviewContainer'], {
                         sizes: [50, 50], minSize: 150, gutterSize: 10,
                         direction: isMobile ? 'vertical' : 'horizontal',
                         cursor: isMobile ? 'row-resize' : 'col-resize'

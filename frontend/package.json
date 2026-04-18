@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "papaparse": "^5.5.3",
+    "split.js": "^1.6.5",
     "vue": "^3.4.0"
   },
   "devDependencies": {
