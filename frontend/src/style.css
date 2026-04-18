@@ -256,7 +256,6 @@ button:focus {
   display: flex;
   flex-direction: row;
   height: 100%;
-  gap: 0.5rem;
 }
 
 .preview-pane-wrapper {
@@ -265,6 +264,7 @@ button:focus {
   overflow: hidden;
   flex: 1;
   min-width: 0;
+  min-height: 0;
 }
 
 .preview-pane-wrapper .preview-pane {
@@ -281,6 +281,7 @@ button:focus {
   background-repeat: no-repeat;
   background-position: 50%;
   z-index: 10;
+  flex-shrink: 0;
 }
 
 .gutter.gutter-horizontal {
@@ -295,6 +296,14 @@ button:focus {
   border-top: 1px solid var(--bs-border-color);
   border-bottom: 1px solid var(--bs-border-color);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='4' viewBox='0 0 24 4' fill='none' stroke='%239ca3af' stroke-width='1.5' stroke-linecap='round'%3E%3Cline x1='4' y1='2' x2='8' y2='2'/%3E%3Cline x1='12' y1='2' x2='16' y2='2'/%3E%3Cline x1='20' y1='2' x2='20' y2='2'/%3E%3C/svg%3E");
+}
+
+.gutter:hover {
+  background-color: #f0f0f0;
+}
+
+[data-theme="dark"] .gutter:hover {
+  background-color: #374151;
 }
 
 [data-theme="dark"] .gutter.gutter-horizontal {
