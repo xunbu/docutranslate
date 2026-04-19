@@ -253,6 +253,7 @@ class UniversalParamsMixin(BaseModel):
     insert_mode: Optional[Literal["replace", "append", "prepend"]] = None
     separator: Optional[str] = None
     translate_regions: Optional[List[str]] = None
+    segment_mode: Optional[Literal["line", "paragraph", "none"]] = None
 
     # Json 相关
     json_paths: Optional[List[str]] = None
@@ -384,6 +385,10 @@ class TextWorkflowParams(BaseWorkflowParams):
     separator: str = Field(
         "\n",
         description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
+    )
+    segment_mode: Literal["line", "paragraph", "none"] = Field(
+        default="line",
+        description="分段模式: 'line'(按行), 'paragraph'(按段), 'none'(全文)",
     )
 
 
