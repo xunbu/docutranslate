@@ -41,7 +41,7 @@ const buttonClass = computed(() => {
     success: 'bg-success text-white hover:bg-green-600 focus:ring-success',
     danger: 'bg-danger text-white hover:bg-red-600 focus:ring-danger',
     warning: 'bg-warning text-gray-800 hover:bg-yellow-500 focus:ring-warning',
-    'outline-primary': 'border border-primary text-primary hover:bg-primary hover:text-white focus:ring-primary',
+    'outline-primary': 'border border-primary text-primary hover:bg-primary hover:text-white focus:ring-primary dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400 dark:hover:text-gray-900',
     'outline-secondary': 'border border-gray-300 text-gray-700 hover:bg-gray-100 focus:ring-gray-400 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700',
     'outline-danger': 'border border-danger text-danger hover:bg-danger hover:text-white focus:ring-danger',
     link: 'text-primary hover:underline focus:ring-0'

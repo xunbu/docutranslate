@@ -41,7 +41,7 @@
                 <a
                     href="javascript:void(0)"
                     @click="downloadGlossaryTemplate"
-                    class="text-sm text-primary hover:underline inline-flex items-center"
+                    class="text-sm text-primary dark:text-blue-400 hover:underline inline-flex items-center"
                 >
                     <Heroicon name="ArrowDownTrayIcon" class="w-4 h-4 mr-1" />
                     {{ t('downloadGlossaryTemplateBtn') }}

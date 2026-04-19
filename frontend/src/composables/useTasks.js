@@ -69,15 +69,8 @@ export function useTasks(settings, glossary, i18n) {
         if (!f) return;
         task.file = f;
         task.fileName = f.name;
-        task.logs = '';
-        task.statusMessage = '';
-        task.statusClass = 'text-muted';
-        task.isFinished = false;
-        task.isProcessing = false;
-        task.downloads = null;
-        task.attachment = null;
         task.validationError = false;
-        task.progressPercent = 0;
+        task.isDragOver = false;
 
         const ext = f.name.split('.').pop().toLowerCase();
         const newWorkflow = default_workflows[ext] || 'markdown_based';
@@ -301,6 +294,12 @@ export function useTasks(settings, glossary, i18n) {
         }
 
         if (task.isFinished) {
+            // Re-translation requires a file
+            if (!task.file) {
+                task.validationError = true;
+                setTimeout(() => { task.validationError = false; }, 3000);
+                return;
+            }
             task.isFinished = false;
             task.logs = '';
             task.downloads = null;
@@ -310,6 +309,8 @@ export function useTasks(settings, glossary, i18n) {
 
         if (!task.file) {
             task.validationError = true;
+            // Auto-clear validation error after 3 seconds
+            setTimeout(() => { task.validationError = false; }, 3000);
             return;
         }
 
@@ -381,7 +382,7 @@ export function useTasks(settings, glossary, i18n) {
                         task.isTranslating = false;
                         task.isProcessing = false;
                         task.statusClass = 'text-danger';
-                        task.statusMessage = '任务不存在或已过期 (Task not found)';
+                        task.statusMessage = t('status_taskNotFound');
                         const savedIds = JSON.parse(localStorage.getItem('active_task_ids') || '[]');
                         const newIds = savedIds.filter(id => id !== task.backendId);
                         localStorage.setItem('active_task_ids', JSON.stringify(newIds));

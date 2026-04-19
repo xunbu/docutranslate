@@ -63,7 +63,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, provide, watch } from 'vue';
+import { ref, reactive, computed, onMounted, provide, watch } from 'vue';
 import TutorialModal from './components/modals/TutorialModal.vue';
 import ContributorsModal from './components/modals/ContributorsModal.vue';
 import QueueSettingsModal from './components/modals/QueueSettingsModal.vue';
@@ -101,7 +101,7 @@ const { glossaryData, glossaryCount, glossaryModalRef, handleGlossaryFiles, clea
 
 const { tasks, hasPendingTasks, createNewTask, removeTask, clearAllTasks,
         handleTaskFileSelect, handleTaskFileDrop, triggerFileInput, selectTaskWorkflow,
-        handleFolderSelect, runAllPendingTasks, toggleTaskState, copyLog } = tasksComposable;
+        handleFolderSelect, runAllPendingTasks, toggleTaskState, copyLog, pollStatus } = tasksComposable;
 
 const { previewMode, syncScrollEnabled, previewTask, isOpen, previewOffcanvasComponent,
         openPreview, closePreview, setPreviewMode, toggleSyncScroll, printPdf, initSplit } = preview;
@@ -142,6 +142,7 @@ provide('previewMode', previewMode);
 provide('syncScrollEnabled', syncScrollEnabled);
 provide('previewTask', previewTask);
 provide('previewIsOpen', isOpen);
+provide('initSplit', initSplit);
 
 // Provide methods
 provide('clearError', clearError);
@@ -230,7 +231,17 @@ onMounted(async () => {
         } catch (e) {}
     } else {
         const savedIds = JSON.parse(localStorage.getItem('active_task_ids') || '[]');
-        if (savedIds.length) savedIds.forEach(id => createNewTask(id));
+        if (savedIds.length) savedIds.forEach(id => {
+            const task = reactive({
+                uiId: 'card_' + Math.random().toString(36).substring(2, 9),
+                backendId: id, file: null, fileName: '', logs: '', statusMessage: '',
+                statusClass: 'text-muted', isTranslating: true, isFinished: false, isProcessing: false,
+                validationError: false, downloads: null, attachment: null, initializing: false, isDragOver: false,
+                progressPercent: 0, detectedWorkflow: null
+            });
+            tasks.value.push(task);
+            pollStatus(task);
+        });
         else createNewTask();
     }
 
