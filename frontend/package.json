@@ -18,13 +18,14 @@
   ],
   "dependencies": {
     "@heroicons/vue": "^2.2.0",
+    "jschardet": "^3.1.4",
     "papaparse": "^5.5.3",
     "split.js": "^1.6.5",
     "vue": "^3.4.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.0",
     "@vitejs/plugin-legacy": "^5.0.0",
+    "@vitejs/plugin-vue": "^5.0.0",
     "autoprefixer": "^10.5.0",
     "postcss": "^8.5.10",
     "tailwindcss": "^3.4.0",

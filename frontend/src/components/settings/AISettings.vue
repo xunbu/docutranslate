@@ -3,7 +3,6 @@
     <Collapse>
         <template #header>
             <strong>
-                <span class="step-number">{{ stepNumber }} </span>
                 <Heroicon name="SparklesIcon" class="w-5 h-5 inline-block mr-2" />
                 <span>{{ t('aiSettingsTitleText') }}</span>
             </strong>
@@ -62,7 +61,6 @@ import Heroicon from '../ui/Heroicon.vue';
 
 const props = defineProps({
     t: Function,
-    stepNumber: Number,
 });
 
 // Inject from parent

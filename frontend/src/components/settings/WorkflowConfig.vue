@@ -3,7 +3,6 @@
     <Collapse v-model="isWorkflowConfigOpen">
         <template #header>
             <strong>
-                <span class="step-number">1 </span>
                 <Heroicon name="Cog6ToothIcon" class="w-5 h-5 inline-block mr-2" />
                 <span>{{ t('workflowConfigTitle') }}</span>
             </strong>

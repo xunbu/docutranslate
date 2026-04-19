@@ -3,7 +3,6 @@
     <Collapse v-show="!form.skip_translate" v-model="isOpen">
         <template #header>
             <strong>
-                <span class="step-number">{{ stepNumber }} </span>
                 <Heroicon name="LanguageIcon" class="w-5 h-5 inline-block mr-2" />
                 <span>{{ t('translationSettingsTitleText') }}</span>
             </strong>
@@ -131,7 +130,6 @@ import Heroicon from '../ui/Heroicon.vue';
 
 const props = defineProps({
     t: Function,
-    stepNumber: Number,
 });
 
 // Collapse state

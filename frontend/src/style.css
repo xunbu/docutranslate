@@ -307,21 +307,6 @@ button:focus {
   gap: 0.5rem;
 }
 
-/* ===== 步骤编号 ===== */
-.step-number {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
-  margin-right: 0.25rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 50%;
-  background-color: rgba(0, 102, 204, 0.1);
-  color: var(--bs-primary);
-}
-
 /* ===== 语言列表容器 ===== */
 .lang-list-container {
   max-height: 200px;
@@ -626,12 +611,6 @@ input[type="range"]::-webkit-slider-thumb {
 }
 [data-theme="dark"] .collapse-body {
   background-color: transparent;
-}
-
-/* 步骤编号深色模式 */
-[data-theme="dark"] .step-number {
-  background-color: rgba(0, 102, 204, 0.2);
-  color: #60a5fa;
 }
 
 /* 主容器深色模式 */

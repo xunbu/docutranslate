@@ -3,7 +3,6 @@
     <Collapse v-model="isOpen">
         <template #header>
             <strong>
-                <span class="step-number">{{ stepNumber }} </span>
                 <Heroicon name="BookOpenIcon" class="w-5 h-5 inline-block mr-2" />
                 <span>{{ t('glossaryGenTitle') }}</span>
             </strong>
@@ -286,7 +285,6 @@ import Heroicon from '../ui/Heroicon.vue';
 
 const props = defineProps({
     t: Function,
-    stepNumber: Number,
 });
 
 // Inject from parent

@@ -28,16 +28,13 @@
                     @openDefaultWorkflowModal="openDefaultWorkflowModal" />
 
                 <AISettings
-                    :t="t"
-                    :stepNumber="stepMap.ai" />
+                    :t="t" />
 
                 <TranslationSettings
-                    :t="t"
-                    :stepNumber="stepMap.trans" />
+                    :t="t" />
 
                 <GlossarySettings
-                    :t="t"
-                    :stepNumber="stepMap.glossary" />
+                    :t="t" />
 
             </div>
         </form>
@@ -104,7 +101,6 @@ const props = defineProps({
     showMineruToken: Boolean,
     showIdentityOption: Boolean,
     version: String,
-    stepMap: Object,
 });
 
 const emit = defineEmits([

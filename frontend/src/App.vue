@@ -10,7 +10,6 @@
                     :showMineruToken="showMineruToken"
                     :showIdentityOption="showIdentityOption"
                     :version="version"
-                    :stepMap="stepMap"
                     @update:showMineruToken="val => showMineruToken = val" />
             </div>
 
@@ -182,15 +181,6 @@ const showIdentityOption = ref(true);
 const printFrame = ref(null);
 
 // ===== Computed =====
-// Dynamic Step Numbering (matches index.html.bak)
-const stepMap = computed(() => {
-    let step = 2; // 1=Workflow Configuration (merged, includes parsing), from 2 onwards are dynamic
-    const map = {ai: 0, trans: 0, glossary: 0};
-    map.ai = step++;
-    if (!form.skip_translate) map.trans = step++;
-    map.glossary = step++;
-    return map;
-});
 
 // ===== Theme =====
 const setTheme = (theme) => {
