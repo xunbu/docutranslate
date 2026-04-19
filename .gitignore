@@ -22,3 +22,5 @@ docutranslate/output/
 .idea/
 #claude
 .claude/
+# Vite cache
+.vite
