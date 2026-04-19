@@ -32,7 +32,7 @@
           </div>
 
           <!-- Body -->
-          <div class="flex-1 overflow-auto p-4">
+          <div class="flex-1 overflow-hidden">
             <slot></slot>
           </div>
         </div>

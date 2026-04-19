@@ -11,130 +11,148 @@ export function usePreview(i18n) {
 
     // Split.js refs
     const splitInstance = ref(null);
-    const splitContainer = ref(null);
-    const originalPane = ref(null);
-    const translatedFrame = ref(null);
     const previewOffcanvasComponent = ref(null);
 
-    // Watch for offcanvas open to get refs
-    watch(isOpen, (open) => {
-        if (open) {
-            nextTick(() => {
-                // Give time for the component to render
-                setTimeout(() => {
-                    if (previewOffcanvasComponent.value) {
-                        splitContainer.value = previewOffcanvasComponent.value.splitContainer;
-                        originalPane.value = previewOffcanvasComponent.value.originalPane;
-                        translatedFrame.value = previewOffcanvasComponent.value.translatedFrame;
-                    }
-                }, 100);
-            });
-        }
-    });
-
-    const initSplit = () => {
+    const destroySplit = () => {
         if (splitInstance.value) {
-            try { splitInstance.value.destroy(); } catch (e) {}
+            try {
+                splitInstance.value.destroy();
+            } catch (e) {
+                console.error('Error destroying split:', e);
+            }
             splitInstance.value = null;
         }
+    };
+
+    const initSplit = () => {
+        destroySplit();
+
+        if (previewMode.value !== 'bilingual') {
+            return;
+        }
+
+        const el1 = document.getElementById('originalPreviewContainer');
+        const el2 = document.getElementById('translatedPreviewContainer');
+
+        if (!el1 || !el2) {
+            console.warn('Split elements not found');
+            return;
+        }
+
         const isMobile = window.innerWidth < 992;
-        if (splitContainer.value) {
-            splitContainer.value.style.flexDirection = isMobile ? 'column' : 'row';
-        }
-        if (previewMode.value === 'bilingual') {
-            nextTick(() => {
-                const el1 = document.getElementById('originalPreviewContainer');
-                const el2 = document.getElementById('translatedPreviewContainer');
-                if (el1 && el2) {
-                    splitInstance.value = Split(['#originalPreviewContainer', '#translatedPreviewContainer'], {
-                        sizes: [50, 50], minSize: 150, gutterSize: 10,
-                        direction: isMobile ? 'vertical' : 'horizontal',
-                        cursor: isMobile ? 'row-resize' : 'col-resize'
-                    });
-                }
-            });
-        }
+
+        splitInstance.value = Split(['#originalPreviewContainer', '#translatedPreviewContainer'], {
+            sizes: [50, 50],
+            minSize: 100,
+            gutterSize: 10,
+            direction: isMobile ? 'vertical' : 'horizontal',
+            cursor: isMobile ? 'row-resize' : 'col-resize'
+        });
+
         setupSyncScroll();
     };
 
     const setupSyncScroll = () => {
         let isScrolling = false;
+
         const onScroll = (src, tgt) => {
             if (!syncScrollEnabled.value || isScrolling) return;
-            const pct = src.scrollTop / (src.scrollHeight - src.clientHeight);
-            tgt.scrollTop = pct * (tgt.scrollHeight - tgt.clientHeight);
+            if (!src || !tgt) return;
+
+            const srcScrollHeight = src.scrollHeight - src.clientHeight;
+            if (srcScrollHeight <= 0) return;
+
+            const pct = src.scrollTop / srcScrollHeight;
+            const tgtScrollHeight = tgt.scrollHeight - tgt.clientHeight;
+            if (tgtScrollHeight > 0) {
+                tgt.scrollTop = pct * tgtScrollHeight;
+            }
             isScrolling = true;
             requestAnimationFrame(() => isScrolling = false);
         };
 
-        if (originalPane.value) originalPane.value.onscroll = () => {
-            if (translatedFrame.value && translatedFrame.value.contentWindow)
-                onScroll(originalPane.value, translatedFrame.value.contentWindow.document.documentElement);
-        };
+        const originalPane = document.querySelector('#originalPreviewContainer .preview-pane');
+        const translatedFrame = document.querySelector('#translatedPreviewContainer iframe');
 
-        if (translatedFrame.value) translatedFrame.value.onload = () => {
-            const win = translatedFrame.value.contentWindow;
-            if (win) win.onscroll = () => onScroll(win.document.documentElement, originalPane.value);
-        };
+        if (originalPane) {
+            originalPane.onscroll = () => {
+                if (translatedFrame && translatedFrame.contentWindow && translatedFrame.contentWindow.document.documentElement) {
+                    onScroll(originalPane, translatedFrame.contentWindow.document.documentElement);
+                }
+            };
+        }
+
+        if (translatedFrame) {
+            translatedFrame.onload = () => {
+                const win = translatedFrame.contentWindow;
+                if (win && win.document && win.document.documentElement) {
+                    win.onscroll = () => onScroll(win.document.documentElement, originalPane);
+                }
+            };
+        }
     };
 
     const openPreview = (task) => {
         previewTask.value = task;
         isOpen.value = true;
+        // Content loading and split init handled by PreviewOffcanvas.vue watch
+    };
 
-        // Get refs from component after it renders
-        nextTick(() => {
-            setTimeout(() => {
-                if (previewOffcanvasComponent.value) {
-                    splitContainer.value = previewOffcanvasComponent.value.splitContainer;
-                    originalPane.value = previewOffcanvasComponent.value.originalPane;
-                    translatedFrame.value = previewOffcanvasComponent.value.translatedFrame;
-                }
+    const loadPreviewContent = (task) => {
+        const originalPane = document.querySelector('#originalPreviewContainer .preview-pane');
+        const translatedFrame = document.querySelector('#translatedPreviewContainer iframe');
 
-                // Load Original Content
-                if (originalPane.value) originalPane.value.innerHTML = '';
-                if (task.file) {
-                    const ext = task.file.name.split('.').pop().toLowerCase();
-                    if (['txt', 'md', 'json', 'html', 'js', 'py', 'css', 'java', 'c', 'cpp'].includes(ext) || task.file.type.startsWith('text/')) {
-                        task.file.text().then(txt => {
-                            if (originalPane.value) originalPane.value.innerHTML = `<pre>${txt}</pre>`;
-                        });
-                    } else if (['pdf'].includes(ext) || task.file.type === 'application/pdf') {
-                        const iframe = document.createElement('iframe');
-                        iframe.src = URL.createObjectURL(task.file);
-                        iframe.style.width = '100%';
-                        iframe.style.height = '100%';
-                        iframe.style.border = 'none';
-                        if (originalPane.value) originalPane.value.appendChild(iframe);
-                    } else {
-                        if (originalPane.value) originalPane.value.innerHTML = `<p class="p-3 text-gray-500">${t('preview_cantPreviewType') || '无法预览此文件类型'} (${ext})</p>`;
-                    }
-                } else {
-                    if (originalPane.value) originalPane.value.innerHTML = `<p class="p-3 text-gray-500">${t('preview_noOriginalCache') || '无原始文件缓存'}</p>`;
-                }
+        if (!originalPane || !translatedFrame) return;
 
-                // Load Translated Content
-                if (translatedFrame.value) translatedFrame.value.src = 'about:blank';
-                if (task.downloads && task.downloads.html) {
-                    fetch(task.downloads.html).then(r => r.text()).then(h => {
-                        if (translatedFrame.value) translatedFrame.value.srcdoc = h;
-                    });
-                }
+        // Load Original Content
+        originalPane.innerHTML = '';
+        if (task.file) {
+            const ext = task.file.name.split('.').pop().toLowerCase();
+            if (['txt', 'md', 'json', 'html', 'js', 'py', 'css', 'java', 'c', 'cpp'].includes(ext) || task.file.type.startsWith('text/')) {
+                task.file.text().then(txt => {
+                    originalPane.innerHTML = `<pre style="margin:0;padding:1rem;white-space:pre;">${escapeHtml(txt)}</pre>`;
+                });
+            } else if (['pdf'].includes(ext) || task.file.type === 'application/pdf') {
+                const iframe = document.createElement('iframe');
+                iframe.src = URL.createObjectURL(task.file);
+                iframe.style.cssText = 'width:100%;height:100%;border:none;';
+                originalPane.appendChild(iframe);
+            } else {
+                originalPane.innerHTML = `<p class="p-3 text-gray-500">${t('preview_cantPreviewType') || '无法预览此文件类型'} (${ext})</p>`;
+            }
+        } else {
+            originalPane.innerHTML = `<p class="p-3 text-gray-500">${t('preview_noOriginalCache') || '无原始文件缓存'}</p>`;
+        }
 
-                // Re-init Split.js and Sync Scroll listeners
-                initSplit();
-            }, 150);
-        });
+        // Load Translated Content
+        translatedFrame.src = 'about:blank';
+        if (task.downloads && task.downloads.html) {
+            fetch(task.downloads.html)
+                .then(r => r.text())
+                .then(h => {
+                    translatedFrame.srcdoc = h;
+                })
+                .catch(e => console.error('Failed to load translated content:', e));
+        }
+    };
+
+    const escapeHtml = (text) => {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     };
 
     const closePreview = () => {
+        destroySplit();
         isOpen.value = false;
         previewTask.value = null;
     };
 
     const setPreviewMode = (m) => {
         previewMode.value = m;
-        nextTick(() => initSplit());
+        nextTick(() => {
+            setTimeout(() => initSplit(), 100);
+        });
     };
 
     const toggleSyncScroll = () => {
@@ -145,7 +163,6 @@ export function usePreview(i18n) {
     const printPdf = (url) => {
         const msg = t('pdf_preparing') || "正在准备打印，请稍候...";
 
-        // Create toast notification
         const toastContainer = document.createElement('div');
         toastContainer.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[1090]';
         toastContainer.innerHTML = `
@@ -157,9 +174,7 @@ export function usePreview(i18n) {
             </div>
         `;
         document.body.appendChild(toastContainer);
-        setTimeout(() => {
-            toastContainer.remove();
-        }, 3000);
+        setTimeout(() => toastContainer.remove(), 3000);
 
         const pf = document.getElementById('printFrame');
         if (!pf) return;
@@ -180,12 +195,8 @@ export function usePreview(i18n) {
         previewTask,
         isOpen,
         splitInstance,
-        splitContainer,
-        originalPane,
-        translatedFrame,
         previewOffcanvasComponent,
         initSplit,
-        setupSyncScroll,
         openPreview,
         closePreview,
         setPreviewMode,

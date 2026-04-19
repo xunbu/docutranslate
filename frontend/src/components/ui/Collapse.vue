@@ -59,6 +59,9 @@ const toggle = () => {
 // Animation helpers
 const onEnter = (el) => {
   el.style.height = '0'
+  // Force reflow
+  el.offsetHeight
+  el.style.height = el.scrollHeight + 'px'
 }
 
 const onAfterEnter = (el) => {
