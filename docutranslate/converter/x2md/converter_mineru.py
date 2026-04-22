@@ -198,7 +198,8 @@ class ConverterMineru(X2MarkdownConverter):
                 file_url = fileinfo["full_zip_url"]
                 return file_url
             elif fileinfo["state"] == "failed":
-                raise Exception(f"Mineru 处理失败: {fileinfo.get('message', 'Unknown error')}")
+                error_msg = fileinfo.get('err_msg') or fileinfo.get('message') or 'Unknown error'
+                raise Exception(f"Mineru 处理失败: {error_msg}")
             else:
                 time.sleep(3)
 
@@ -213,7 +214,8 @@ class ConverterMineru(X2MarkdownConverter):
                 file_url = fileinfo["full_zip_url"]
                 return file_url
             elif fileinfo["state"] == "failed":
-                raise Exception(f"Mineru 处理失败: {fileinfo.get('message', 'Unknown error')}")
+                error_msg = fileinfo.get('err_msg') or fileinfo.get('message') or 'Unknown error'
+                raise Exception(f"Mineru 处理失败: {error_msg}")
             else:
                 await asyncio.sleep(3)
 
@@ -347,8 +349,11 @@ def get_md_from_zip_url_with_inline_images(
         response = client.get(zip_url)  # 增加超时
         response.raise_for_status()
         # print("ZIP文件下载完成。")
-        return embed_inline_image_from_zip(response.content, filename_in_zip=filename_in_zip,
-                                           encoding=encoding), response.content
+        md_content = embed_inline_image_from_zip(response.content, filename_in_zip=filename_in_zip,
+                                           encoding=encoding)
+        if md_content is None:
+            raise Exception("无法从 ZIP 中提取 Markdown 文件")
+        return md_content, response.content
 
 
     except httpx.HTTPStatusError as e:
@@ -380,8 +385,11 @@ async def get_md_from_zip_url_with_inline_images_async(
         response = await client_async.get(zip_url)  # 增加超时
         response.raise_for_status()
         # print("ZIP文件下载完成。")
-        return await asyncio.to_thread(embed_inline_image_from_zip, response.content, filename_in_zip=filename_in_zip,
-                                       encoding=encoding), response.content
+        md_content = await asyncio.to_thread(embed_inline_image_from_zip, response.content, filename_in_zip=filename_in_zip,
+                                       encoding=encoding)
+        if md_content is None:
+            raise Exception("无法从 ZIP 中提取 Markdown 文件")
+        return md_content, response.content
 
 
     except httpx.HTTPStatusError as e:

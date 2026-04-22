@@ -117,8 +117,19 @@ class ConverterMineruDeploy(X2MarkdownConverter):
         )
 
         response.raise_for_status()  # 检查是否有错误
+
+        # 检查是否返回了 JSON 错误响应
+        content_type = response.headers.get('content-type', '')
+        if 'application/json' in content_type:
+            result = response.json()
+            if result.get('code', 0) != 0:
+                error_msg = result.get('err_msg') or result.get('message') or result.get('error') or 'Unknown error'
+                raise Exception(f"MinerU Deploy 处理失败: {error_msg}")
+
         # Mineru API 返回 zip 时包含图片和 md
         md = embed_inline_image_from_zip(response.content, None)
+        if md is None:
+            raise Exception("无法从 MinerU Deploy 返回的 ZIP 中提取 Markdown 文件")
         # 将原始 zip 存入附件
         self.attachments.append(
             AttachMent("mineru_deploy",
@@ -138,7 +149,18 @@ class ConverterMineruDeploy(X2MarkdownConverter):
         )
 
         response.raise_for_status()
+
+        # 检查是否返回了 JSON 错误响应
+        content_type = response.headers.get('content-type', '')
+        if 'application/json' in content_type:
+            result = response.json()
+            if result.get('code', 0) != 0:
+                error_msg = result.get('err_msg') or result.get('message') or result.get('error') or 'Unknown error'
+                raise Exception(f"MinerU Deploy 处理失败: {error_msg}")
+
         md = await asyncio.to_thread(embed_inline_image_from_zip, response.content, None)
+        if md is None:
+            raise Exception("无法从 MinerU Deploy 返回的 ZIP 中提取 Markdown 文件")
         # 将原始 zip 存入附件
         self.attachments.append(
             AttachMent("mineru_deploy",
