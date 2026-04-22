@@ -1178,6 +1178,9 @@ video {
 .whitespace-nowrap {
   white-space: nowrap;
 }
+.break-all {
+  word-break: break-all;
+}
 .rounded {
   border-radius: 0.25rem;
 }
@@ -1621,6 +1624,7 @@ html {
   font-size: 17px;
   height: 100%;
   background-color: var(--bs-body-bg);
+  overflow-x: hidden;
 }
 
 body {
@@ -1628,6 +1632,7 @@ body {
   color: var(--bs-body-color);
   margin: 0;
   height: 100%;
+  overflow-x: hidden;
 }
 
 button:focus {
@@ -1711,8 +1716,8 @@ button:focus {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  padding-top: 1rem;
-  padding-bottom: 1rem;
+  padding: 1rem 1rem 1rem 1rem;
+  overflow-x: hidden;
 }
 
 .main-row {
@@ -1722,6 +1727,7 @@ button:focus {
   margin-right: -0.5rem;
   flex: 1;
   min-height: 0;
+  overflow-x: hidden;
 }
 
 .settings-col {
@@ -1755,6 +1761,7 @@ button:focus {
 .settings-panel {
   height: calc(100vh - 2rem);
   overflow-y: auto;
+  overflow-x: hidden;
   padding-right: 15px;
 }
 

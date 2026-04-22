@@ -9,7 +9,7 @@ export const KNOWN_PLATFORMS = [
         label: "Gemini",
         provider: "google"
     },
-    {val: "https://api.deepseek.com/v1", label: "DeepSeek", provider: ""},
+    {val: "https://api.deepseek.com/v1", label: "DeepSeek", provider: "deepseek"},
     {
         val: "https://dashscope.aliyuncs.com/compatible-mode/v1",
         label: "阿里云百炼(DashScope)",
@@ -30,7 +30,7 @@ export const KNOWN_PLATFORMS = [
     {val: "http://127.0.0.1:11434/v1", label: "Ollama", provider: "ollama"}
 ];
 
-export const PROVIDERS = ['default', 'google', 'minimax', 'ollama', 'aliyuncs', 'volces', 'siliconflow', 'bigmodel'];
+export const PROVIDERS = ['default', 'google', 'minimax', 'ollama', 'aliyuncs', 'volces', 'siliconflow', 'bigmodel', 'deepseek'];
 
 export const API_HREF_MAP = {
     "https://api.302.ai/v1": ["https://dash.302.ai/settings", ""],

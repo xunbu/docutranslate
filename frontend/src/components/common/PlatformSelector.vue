@@ -3,7 +3,7 @@
     <div class="mb-2">
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('platformLabel') }}</label>
       <select
-        class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+        class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary truncate"
         :value="platform"
         @change="handlePlatformChange($event.target.value)">
         <option v-for="p in platforms" :key="p.val" :value="p.val">{{ p.val === 'custom' ? t(p.label) : p.label }}</option>
@@ -20,8 +20,8 @@
       </select>
     </div>
 
-    <div class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-      Base URL: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs" ref="baseUrlDisplay">{{ baseUrl }}</code>
+    <div class="text-sm text-gray-500 dark:text-gray-400 mb-4 overflow-hidden">
+      Base URL: <code class="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs break-all" ref="baseUrlDisplay">{{ baseUrl }}</code>
     </div>
 
     <div class="mb-4" v-if="platform === 'custom'">

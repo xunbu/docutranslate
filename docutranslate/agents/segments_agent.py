@@ -194,7 +194,10 @@ class SegmentsTranslateAgent(Agent):
         - 如果ID不匹配，构造一个部分成功的结果，并通过 PartialTranslationError 异常抛出，以触发重试。
         - 其他错误（如JSON解析失败、模型偷懒）则抛出普通 ValueError 触发重试。
         """
-        original_segments = get_original_segments(origin_prompt)
+        try:
+            original_segments = get_original_segments(origin_prompt)
+        except ValueError as e:
+            raise AgentResultError(f"无法从prompt中提取初始文本: {e}")
         repaired_result = get_target_segments(result)  # 直接返回解析后的 list 或 dict
         if not repaired_result:
             if original_segments.strip() != "":
@@ -277,7 +280,11 @@ class SegmentsTranslateAgent(Agent):
         处理在所有重试后仍然失败的请求。
         作为备用方案，返回原文内容，并将所有值转换为字符串。
         """
-        original_segments = get_original_segments(origin_prompt)
+        try:
+            original_segments = get_original_segments(origin_prompt)
+        except ValueError as e:
+            logger.error(f"无法从prompt中提取初始文本: {e}")
+            return {}
         if original_segments == "":
             return {}
         try:

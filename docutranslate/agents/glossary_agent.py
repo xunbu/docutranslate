@@ -172,7 +172,11 @@ You are a professional glossary extractor
             raise AgentResultError(f"结果不能正确解析: {e.__repr__()}")
 
     def _error_result_handler(self, origin_prompt: str, logger: Logger):
-        origin_prompt = get_original_segments(origin_prompt)
+        try:
+            origin_prompt = get_original_segments(origin_prompt)
+        except ValueError as e:
+            logger.error(f"无法从prompt中提取初始文本: {e}")
+            return []
         if origin_prompt.strip() == "":
             return []
         try:

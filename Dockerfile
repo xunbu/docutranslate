@@ -43,8 +43,8 @@ EXPOSE 8010
 # 这样不仅更快，而且绝对不会触发 uv sync 去下载 dev 依赖
 ENTRYPOINT ["docutranslate", "-i", "--with-mcp"]
 
-#docker build --build-arg DOC_VERSION=1.7.0a2 -t xunbu/docutranslate:v1.7.0a2 -t xunbu/docutranslate:latest .
-#docker push xunbu/docutranslate:v1.6.0
+#docker build --build-arg DOC_VERSION=1.7.3 -t xunbu/docutranslate:v1.7.3 -t xunbu/docutranslate:latest .
+#docker push xunbu/docutranslate:v1.7.3
 #docker push xunbu/docutranslate:latest
 #docker run -d -p 8010:8010 xunbu/docutranslate:v1.7.0a2
 #docker run -d -p 8010:8010 xunbu/docutranslate:v1.7.0a2 --cors
