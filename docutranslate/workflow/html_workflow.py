@@ -23,6 +23,7 @@ class HtmlWorkflowConfig(WorkflowConfig):
 class HtmlWorkflow(Workflow[HtmlWorkflowConfig, Document, Document], HTMLExportable):
     def __init__(self, config: HtmlWorkflowConfig):
         super().__init__(config=config)
+        self._translator: HtmlTranslator | None = None  # 保存translator引用
         if config.logger:
             for sub_config in [self.config.translator_config]:
                 if sub_config:
@@ -38,6 +39,7 @@ class HtmlWorkflow(Workflow[HtmlWorkflowConfig, Document, Document], HTMLExporta
         # 准备阶段
         self.progress_tracker.update(percent=10, message="正在准备翻译...")
         document, translator = self._pre_translate(self.document_original)
+        self._translator = translator  # 保存translator引用
 
         # 翻译阶段
         translator.translate(document)
@@ -55,6 +57,7 @@ class HtmlWorkflow(Workflow[HtmlWorkflowConfig, Document, Document], HTMLExporta
         # 准备阶段
         self.progress_tracker.update(percent=10, message="正在准备翻译...")
         document, translator = self._pre_translate(self.document_original)
+        self._translator = translator  # 保存translator引用
 
         # 翻译阶段 - 由 agent 更新细粒度进度
         await translator.translate_async(document)
@@ -67,6 +70,17 @@ class HtmlWorkflow(Workflow[HtmlWorkflowConfig, Document, Document], HTMLExporta
         self.progress_tracker.update(percent=100, message="翻译完成")
         self.document_translated = document
         return self
+
+    def get_statistics(self) -> dict:
+        """
+        获取翻译任务的统计信息。
+
+        Returns:
+            dict: 包含glossary、translation和total三个部分的统计信息
+        """
+        if self._translator:
+            return self._translator.get_statistics()
+        return {}
 
     def export_to_html(self, _: ExporterConfig = None) -> str:
 

@@ -56,6 +56,7 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
     def __init__(self, config: MarkdownBasedWorkflowConfig):
         super().__init__(config=config)
         self.convert_engine = config.convert_engine
+        self._translator: MDTranslator | None = None  # 保存translator引用
         if config.logger:
             for sub_config in [self.config.converter_config, self.config.translator_config,
                                self.config.html_exporter_config, self.config.md2docx_exporter_config]:
@@ -111,6 +112,7 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
         # 解析文档阶段
         self.progress_tracker.update(percent=10, message="正在解析文档...")
         convert_engine, convert_config, translator_config, translator = self._pre_translate(self.document_original)
+        self._translator = translator  # 保存translator引用
         document_md = self._get_document_md(convert_engine, convert_config)
 
         # 翻译阶段
@@ -129,6 +131,7 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
         # 解析文档阶段
         self.progress_tracker.update(percent=10, message="正在解析文档...")
         convert_engine, convert_config, translator_config, translator = self._pre_translate(self.document_original)
+        self._translator = translator  # 保存translator引用
         document_md = await asyncio.to_thread(self._get_document_md, convert_engine, convert_config)
 
         # 翻译阶段 - 由 agent 更新细粒度进度
@@ -142,6 +145,17 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
         self.progress_tracker.update(percent=100, message="翻译完成")
         self.document_translated = document_md
         return self
+
+    def get_statistics(self) -> dict:
+        """
+        获取翻译任务的统计信息。
+
+        Returns:
+            dict: 包含glossary、translation和total三个部分的统计信息
+        """
+        if self._translator:
+            return self._translator.get_statistics()
+        return {}
 
     def export_to_html(self, config: MD2HTMLExporterConfig | None = None) -> str:
         config = config or self.config.html_exporter_config

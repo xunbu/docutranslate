@@ -1,5 +1,6 @@
 <template>
     <div class="border rounded mb-2 bg-white dark:bg-gray-800 shadow-sm task-card" @click="onSelectTask">
+        <!-- Header: Task ID + Remove Button -->
         <div class="px-3 py-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50">
             <span class="font-bold text-gray-900 dark:text-gray-100 text-sm">
                 <span>{{ t('taskCardIdLabel') }}</span>:
@@ -9,63 +10,105 @@
                 <Heroicon name="XMarkIcon" class="w-4 h-4" />
             </button>
         </div>
+
+        <!-- Main Content Area -->
         <div class="p-3 bg-white dark:bg-gray-800">
-            <div class="flex flex-col md:flex-row gap-3">
-                <div class="w-full md:w-5/12">
-                    <input type="file" class="hidden" :id="'fileInput-' + task.uiId" @change="onFileSelect">
-                    <div
-                        class="file-drop-area border-2 border-dashed rounded transition-colors"
-                        :class="{
-                            'border-gray-300 dark:border-gray-600': !task.isDragOver && !task.file && !task.validationError,
-                            'border-primary bg-blue-50 dark:bg-blue-900/20': task.isDragOver,
-                            'border-solid border-success bg-green-50 dark:bg-green-900/20': !!task.file,
-                            'border-red-400 dark:border-red-500': task.validationError && !task.file
-                        }"
-                        @click.stop="triggerFileInput"
-                        @dragenter.prevent="task.isDragOver = true"
-                        @dragover.prevent="task.isDragOver = true"
-                        @dragleave.prevent="task.isDragOver = false"
-                        @drop.prevent="onFileDrop">
-                        <div v-if="!task.file" class="text-center py-2">
-                            <Heroicon name="CloudArrowUpIcon" class="w-8 h-8 mx-auto text-gray-400" />
-                            <p class="m-0 text-sm text-gray-500 dark:text-gray-400">{{ t('taskCardFileDrop') }}</p>
+            <div class="flex flex-col gap-3">
+                <!-- Row 1: File Upload + Status/Logs -->
+                <div class="flex flex-col md:flex-row gap-3">
+                    <!-- File Upload Area -->
+                    <div class="w-full md:w-4/12">
+                        <input type="file" class="hidden" :id="'fileInput-' + task.uiId" @change="onFileSelect">
+                        <div
+                            class="file-drop-area border-2 border-dashed rounded transition-colors"
+                            :class="{
+                                'border-gray-300 dark:border-gray-600': !task.isDragOver && !task.file && !task.validationError,
+                                'border-primary bg-blue-50 dark:bg-blue-900/20': task.isDragOver,
+                                'border-solid border-success bg-green-50 dark:bg-green-900/20': !!task.file,
+                                'border-red-400 dark:border-red-500': task.validationError && !task.file
+                            }"
+                            @click.stop="triggerFileInput"
+                            @dragenter.prevent="task.isDragOver = true"
+                            @dragover.prevent="task.isDragOver = true"
+                            @dragleave.prevent="task.isDragOver = false"
+                            @drop.prevent="onFileDrop">
+                            <div v-if="!task.file" class="text-center py-2">
+                                <Heroicon name="CloudArrowUpIcon" class="w-8 h-8 mx-auto text-gray-400" />
+                                <p class="m-0 text-sm text-gray-500 dark:text-gray-400">{{ t('taskCardFileDrop') }}</p>
+                            </div>
+                            <div v-else class="text-center py-2">
+                                <Heroicon name="CheckCircleIcon" class="w-8 h-8 mx-auto text-success" solid />
+                                <p class="m-0 mt-1 text-sm font-bold text-success">{{ t('taskCardFileSelected') }}</p>
+                            </div>
                         </div>
-                        <div v-else class="text-center py-2">
-                            <Heroicon name="CheckCircleIcon" class="w-8 h-8 mx-auto text-success" solid />
-                            <p class="m-0 mt-1 text-sm font-bold text-success">{{ t('taskCardFileSelected') }}</p>
+                        <div class="mt-1 text-sm" v-if="task.file || task.fileName">
+                            <span class="font-bold text-gray-700 dark:text-gray-300">{{ t('taskCardFilenameLabel') }} </span>
+                            <span class="text-success">{{ task.fileName || task.file.name }}</span>
                         </div>
                     </div>
-                    <div class="mt-1 text-sm" v-if="task.file || task.fileName">
-                        <span class="font-bold text-gray-700 dark:text-gray-300">{{ t('taskCardFilenameLabel') }} </span>
-                        <span class="text-success">{{ task.fileName || task.file.name }}</span>
+
+                    <!-- Logs + Status Area -->
+                    <div class="w-full md:w-8/12">
+                        <div class="log-area-wrapper">
+                            <div class="log-area text-xs" v-html="task.logs" :id="'log-' + task.uiId"></div>
+                            <button
+                                type="button"
+                                class="btn btn-sm btn-outline-secondary copy-log-btn"
+                                :title="t('copyLogsTooltip')"
+                                @click.stop="onCopyLog">
+                                <Heroicon name="ClipboardDocumentIcon" class="w-3 h-3" />
+                            </button>
+                        </div>
+                        <div class="mt-1 flex items-center gap-2">
+                            <span class="text-xs flex-1 truncate" :class="task.statusClass">
+                                <template v-if="task.queuePosition && !task.isTranslating && !task.isFinished">
+                                    {{ t('taskCardQueuePosition', { n: task.queuePosition, total: task.queueTotal }) }}
+                                </template>
+                                <template v-else>
+                                    {{ task.statusMessage || t('taskCardStatusWaiting') }}
+                                </template>
+                            </span>
+                            <div v-if="task.isProcessing" class="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+                            <span v-if="task.isProcessing" class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ task.progressPercent || 0 }}%</span>
+                        </div>
                     </div>
                 </div>
-                <div class="w-full md:w-7/12">
-                    <div class="log-area-wrapper">
-                        <div class="log-area text-xs" v-html="task.logs" :id="'log-' + task.uiId"></div>
-                        <button
-                            type="button"
-                            class="btn btn-sm btn-outline-secondary copy-log-btn"
-                            :title="t('copyLogsTooltip')"
-                            @click.stop="onCopyLog">
-                            <Heroicon name="ClipboardDocumentIcon" class="w-3 h-3" />
-                        </button>
-                    </div>
-                    <div class="mt-1 flex items-center gap-2">
-                        <span class="text-xs flex-1 truncate" :class="task.statusClass">
-                            <template v-if="task.queuePosition && !task.isTranslating && !task.isFinished">
-                                {{ t('taskCardQueuePosition', { n: task.queuePosition, total: task.queueTotal }) }}
-                            </template>
-                            <template v-else>
-                                {{ task.statusMessage || t('taskCardStatusWaiting') }}
-                            </template>
-                        </span>
-                        <div v-if="task.isProcessing" class="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
-                        <span v-if="task.isProcessing" class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ task.progressPercent || 0 }}%</span>
+
+                <!-- Row 2: Statistics (shown during translation and when finished) -->
+                <div v-if="shouldShowStatistics" class="stats-section">
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-label">Input</span>
+                            <span class="stat-value">{{ formatTokens(currentStats.total.input_tokens) }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Cache</span>
+                            <span class="stat-value text-blue-500">{{ formatTokens(currentStats.total.cached_tokens) }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Output</span>
+                            <span class="stat-value">{{ formatTokens(currentStats.total.output_tokens) }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Reason</span>
+                            <span class="stat-value text-purple-500">{{ formatTokens(currentStats.total.reasoning_tokens) }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Total</span>
+                            <span class="stat-value font-semibold">{{ formatTokens(currentStats.total.total_tokens) }}</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Error</span>
+                            <span class="stat-value" :class="getErrorRateClass(currentStats.total.unresolved_error_rate)">
+                                {{ formatErrorRate(currentStats.total.unresolved_error_rate) }}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Footer: Actions -->
         <div class="px-3 py-2 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/30">
             <div class="flex gap-1.5" v-if="task.downloads">
                 <button
@@ -141,6 +184,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { getFileIcon, getDownloadIcon } from '../../utils/helpers';
 import Tooltip from '../ui/Tooltip.vue';
 import Dropdown from '../ui/Dropdown.vue';
@@ -174,4 +218,104 @@ const onPrintPdf = () => emit('printPdf', props.task.downloads.html);
 const onToggleTaskState = () => emit('toggleTaskState', props.task);
 
 const getWorkflowIcon = (key) => getFileIcon(key);
+
+// Computed: whether to show statistics section
+const shouldShowStatistics = computed(() => {
+    // Show during translation or when finished with statistics
+    const stats = props.task.statistics;
+    if (!stats || !stats.total) return false;
+    // Show if translating or finished with non-zero tokens
+    return props.task.isTranslating || props.task.isFinished;
+});
+
+// Computed: current statistics to display
+const currentStats = computed(() => {
+    return props.task.statistics || {
+        total: {
+            input_tokens: 0,
+            cached_tokens: 0,
+            output_tokens: 0,
+            reasoning_tokens: 0,
+            total_tokens: 0,
+            unresolved_error_rate: 0
+        }
+    };
+});
+
+// Format tokens to K format
+const formatTokens = (tokens) => {
+    if (!tokens || tokens === 0) return '0';
+    if (tokens >= 1000) {
+        return (tokens / 1000).toFixed(1) + 'K';
+    }
+    return tokens.toString();
+};
+
+// Format error rate as percentage
+const formatErrorRate = (rate) => {
+    if (!rate || rate === 0) return '0%';
+    return (rate * 100).toFixed(1) + '%';
+};
+
+// Get error rate class based on value
+const getErrorRateClass = (rate) => {
+    if (!rate || rate === 0) return 'text-green-500';
+    if (rate < 0.05) return 'text-yellow-500';
+    return 'text-red-500';
+};
 </script>
+
+<style scoped>
+.stats-section {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+
+[data-theme="dark"] .stats-section {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    border-color: #475569;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+}
+
+@media (max-width: 640px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.stat-label {
+    font-size: 10px;
+    color: #64748b;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+[data-theme="dark"] .stat-label {
+    color: #94a3b8;
+}
+
+.stat-value {
+    font-size: 12px;
+    color: #334155;
+    font-weight: 600;
+}
+
+[data-theme="dark"] .stat-value {
+    color: #e2e8f0;
+}
+</style>

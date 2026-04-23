@@ -352,6 +352,7 @@ class Agent:
         self.unresolved_error_lock = Lock()
         self.unresolved_error_count = 0
         self.token_counter = TokenCounter(logger=self.logger)
+        self._request_count = 0  # 记录请求数量
         self.retry = config.retry
         self.system_proxy_enable = config.system_proxy_enable
         self.progress_callback = config.progress_callback  # 进度回调
@@ -846,6 +847,7 @@ class Agent:
 
         self.unresolved_error_count = 0
         self.token_counter.reset()
+        self._request_count = len(prompts)  # 记录请求数量
 
         count = 0
         semaphore = asyncio.Semaphore(max_concurrent)
@@ -1278,6 +1280,7 @@ class Agent:
 
         self.unresolved_error_count = 0
         self.token_counter.reset()
+        self._request_count = len(prompts)  # 记录请求数量
 
         counter = PromptsCounter(len(prompts), self.logger)
 
@@ -1323,3 +1326,25 @@ class Agent:
         )
 
         return output_list
+
+    def get_full_stats(self) -> dict:
+        """
+        获取完整统计信息，包括token统计、请求数、未解决错误数和错误率。
+
+        Returns:
+            dict: 包含完整统计信息的字典
+        """
+        token_stats = self.token_counter.get_stats()
+        request_count = getattr(self, '_request_count', 0)
+        unresolved = self.unresolved_error_count
+        error_rate = unresolved / request_count if request_count > 0 else 0.0
+        return {
+            "input_tokens": token_stats["input_tokens"],
+            "cached_tokens": token_stats["cached_tokens"],
+            "output_tokens": token_stats["output_tokens"],
+            "reasoning_tokens": token_stats["reasoning_tokens"],
+            "total_tokens": token_stats["total_tokens"],
+            "request_count": request_count,
+            "unresolved_errors": unresolved,
+            "unresolved_error_rate": error_rate
+        }

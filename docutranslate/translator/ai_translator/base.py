@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import TypeVar, Dict
+from typing import TypeVar, Dict, Any, Optional
 
 from docutranslate.agents.agent import AgentConfig
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig, GlossaryAgent
@@ -93,6 +93,85 @@ class AiTranslator(Translator[T]):
                     progress_callback=glossary_progress_callback,
                 )
                 self.glossary_agent = GlossaryAgent(glossary_agent_config)
+
+    def get_statistics(self) -> Dict[str, Any]:
+        """
+        收集所有agent的统计信息，包括术语表生成和翻译两个阶段的统计。
+
+        Returns:
+            Dict[str, Any]: 包含glossary、translation和total三个部分的统计信息
+        """
+        glossary_stats: Optional[Dict[str, Any]] = None
+        translation_stats: Optional[Dict[str, Any]] = None
+
+        if self.glossary_agent:
+            glossary_stats = self.glossary_agent.get_full_stats()
+
+        if hasattr(self, 'translate_agent') and self.translate_agent:
+            translation_stats = self.translate_agent.get_full_stats()
+
+        # 计算汇总统计
+        total_stats = self._calculate_total_stats(glossary_stats, translation_stats)
+
+        return {
+            "glossary": glossary_stats,
+            "translation": translation_stats,
+            "total": total_stats
+        }
+
+    def _calculate_total_stats(
+        self,
+        glossary_stats: Optional[Dict[str, Any]],
+        translation_stats: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        """
+        计算汇总统计信息。
+
+        Args:
+            glossary_stats: 术语表生成阶段的统计
+            translation_stats: 翻译阶段的统计
+
+        Returns:
+            Dict[str, Any]: 汇总后的统计信息
+        """
+        total_input = 0
+        total_cached = 0
+        total_output = 0
+        total_reasoning = 0
+        total_tokens = 0
+        total_requests = 0
+        total_unresolved = 0
+
+        if glossary_stats:
+            total_input += glossary_stats.get("input_tokens", 0)
+            total_cached += glossary_stats.get("cached_tokens", 0)
+            total_output += glossary_stats.get("output_tokens", 0)
+            total_reasoning += glossary_stats.get("reasoning_tokens", 0)
+            total_tokens += glossary_stats.get("total_tokens", 0)
+            total_requests += glossary_stats.get("request_count", 0)
+            total_unresolved += glossary_stats.get("unresolved_errors", 0)
+
+        if translation_stats:
+            total_input += translation_stats.get("input_tokens", 0)
+            total_cached += translation_stats.get("cached_tokens", 0)
+            total_output += translation_stats.get("output_tokens", 0)
+            total_reasoning += translation_stats.get("reasoning_tokens", 0)
+            total_tokens += translation_stats.get("total_tokens", 0)
+            total_requests += translation_stats.get("request_count", 0)
+            total_unresolved += translation_stats.get("unresolved_errors", 0)
+
+        total_error_rate = total_unresolved / total_requests if total_requests > 0 else 0.0
+
+        return {
+            "input_tokens": total_input,
+            "cached_tokens": total_cached,
+            "output_tokens": total_output,
+            "reasoning_tokens": total_reasoning,
+            "total_tokens": total_tokens,
+            "request_count": total_requests,
+            "unresolved_errors": total_unresolved,
+            "unresolved_error_rate": total_error_rate
+        }
 
     @abstractmethod
     def translate(self, document: T) -> Document:

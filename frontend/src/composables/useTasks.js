@@ -24,7 +24,7 @@ export function useTasks(settings, glossary, i18n) {
             uiId, backendId, file: null, fileName: '', logs: '', statusMessage: '',
             statusClass: 'text-muted', isTranslating: false, isFinished: false, isProcessing: false,
             validationError: false, downloads: null, attachment: null, initializing: false, isDragOver: false,
-            progressPercent: 0, detectedWorkflow: null
+            progressPercent: 0, detectedWorkflow: null, statistics: null
         });
         tasks.value.unshift(task);
         if (backendId) {
@@ -398,6 +398,11 @@ export function useTasks(settings, glossary, i18n) {
 
                 if (d.original_filename && !task.fileName) {
                     task.fileName = d.original_filename;
+                }
+
+                // Store statistics if available
+                if (d.statistics) {
+                    task.statistics = d.statistics;
                 }
 
                 if (!d.is_processing) {

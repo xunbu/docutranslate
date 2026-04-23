@@ -69,3 +69,12 @@ class Workflow(ABC, Generic[T_Config, T_original, T_Translated]):
     def get_attachment(self):
         print(f"attachment:{self.attachment.attachment_dict}")
         return self.attachment
+
+    def get_statistics(self) -> dict:
+        """
+        获取翻译任务的统计信息。
+
+        Returns:
+            dict: 统计信息字典，默认返回空字典，子类可重写此方法
+        """
+        return {}

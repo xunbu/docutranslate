@@ -209,6 +209,7 @@ def _create_default_task_state() -> Dict[str, Any]:
         "temp_dir": None,
         "downloadable_files": {},
         "attachment_files": {},
+        "statistics": None,  # 翻译完成后填充
     }
 
 
@@ -524,6 +525,9 @@ class TranslationService:
                 payload, task_logger, progress_tracker, build_glossary_agent_config, md2docx_engine
             )
 
+            # 保存workflow引用以便在polling时获取实时统计
+            task_state["workflow_instance"] = workflow
+
             file_stem = task_state["original_filename_stem"]
             file_suffix = Path(original_filename).suffix
             workflow.read_bytes(content=file_contents, stem=file_stem, suffix=file_suffix)
@@ -597,6 +601,11 @@ class TranslationService:
 
             end_time = time.time()
             duration = end_time - task_state["task_start_time"]
+
+            # 收集统计信息
+            statistics = workflow.get_statistics()
+            task_logger.info(f"收集统计信息: {statistics}")
+
             task_state.update(
                 {
                     "status_message": f"翻译成功！用时 {duration:.2f} 秒。",
@@ -606,6 +615,7 @@ class TranslationService:
                     "task_end_time": end_time,
                     "downloadable_files": downloadable_files,
                     "attachment_files": attachment_files,
+                    "statistics": statistics,
                 }
             )
             task_logger.info(f"翻译成功完成，用时 {duration:.2f} 秒。")

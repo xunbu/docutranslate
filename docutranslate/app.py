@@ -516,6 +516,21 @@ async def service_get_status(
         for identifier in task_state["attachment_files"].keys():
             attachments[identifier] = f"/service/attachment/{task_id}/{identifier}"
 
+    # 获取统计信息
+    # 优先使用已保存的统计数据（翻译完成后）
+    # 如果正在翻译中，尝试从workflow实例获取实时统计
+    statistics = task_state.get("statistics")
+    if statistics is None:
+        # 尝试从workflow实例获取实时统计
+        workflow = task_state.get("workflow_instance")
+        if workflow and task_state.get("is_processing"):
+            try:
+                statistics = workflow.get_statistics()
+            except Exception:
+                statistics = _get_default_statistics()
+        else:
+            statistics = _get_default_statistics()
+
     return JSONResponse(
         content={
             "task_id": task_id,
@@ -530,8 +545,30 @@ async def service_get_status(
             "task_end_time": task_state["task_end_time"],
             "downloads": downloads,
             "attachment": attachments,
+            "statistics": statistics,
         }
     )
+
+
+def _get_default_statistics() -> dict:
+    """
+    返回默认统计结构（向后兼容）。
+    当任务尚未完成或统计信息不可用时使用。
+    """
+    return {
+        "glossary": None,
+        "translation": None,
+        "total": {
+            "input_tokens": 0,
+            "cached_tokens": 0,
+            "output_tokens": 0,
+            "reasoning_tokens": 0,
+            "total_tokens": 0,
+            "request_count": 0,
+            "unresolved_errors": 0,
+            "unresolved_error_rate": 0.0
+        }
+    }
 
 
 @service_router.get(

@@ -23,14 +23,38 @@ const encodingMap = {
     'windows-1252': 'windows-1252',
 };
 
+// 将 Uint8Array 转换为二进制字符串（jschardet 需要字符串输入）
+function uint8ArrayToBinaryString(uint8Array) {
+    const chunks = [];
+    const chunkSize = 8192; // 分块处理避免调用栈溢出
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, i + chunkSize);
+        chunks.push(String.fromCharCode.apply(null, Array.from(chunk)));
+    }
+    return chunks.join('');
+}
+
 // 将文件读取为 ArrayBuffer 并检测编码
 async function detectEncoding(file) {
     const buffer = await file.arrayBuffer();
     const uint8Array = new Uint8Array(buffer);
 
+    // 如果文件为空，直接返回 utf-8
+    if (uint8Array.length === 0) {
+        return { buffer, encoding: 'utf-8', confidence: 1 };
+    }
+
     try {
-        const result = jschardet.detect(uint8Array);
-        const detectedEncoding = (result.encoding || 'utf-8').toLowerCase();
+        // jschardet 需要 Buffer 或 string，在浏览器中将 Uint8Array 转换为二进制字符串
+        const binaryString = uint8ArrayToBinaryString(uint8Array);
+        const result = jschardet.detect(binaryString);
+
+        // 检查返回结果是否有效
+        if (!result || typeof result.encoding !== 'string') {
+            return { buffer, encoding: 'utf-8', confidence: 0 };
+        }
+
+        const detectedEncoding = result.encoding.toLowerCase();
         const confidence = result.confidence || 0;
 
         // 如果置信度太低，默认使用 utf-8
@@ -78,6 +102,11 @@ export function useGlossary() {
 
                 // 解码文件内容（TextDecoder 自动处理 BOM）
                 const text = decodeBuffer(buffer, encoding);
+
+                if (!text || !text.trim()) {
+                    console.warn(`File ${file.name} is empty or contains no text`);
+                    continue;
+                }
 
                 // 解析 CSV
                 const res = Papa.parse(text, {
