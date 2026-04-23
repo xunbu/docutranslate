@@ -98,8 +98,8 @@
                             <span class="stat-value font-semibold">{{ formatTokens(currentStats.total.total_tokens) }}</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">Error</span>
-                            <span class="stat-value" :class="getErrorRateClass(currentStats.total.unresolved_error_rate)">
+                            <span class="stat-label">Error Rate</span>
+                            <span class="stat-value stat-value-error" :class="getErrorRateClass(currentStats.total.unresolved_error_rate)">
                                 {{ formatErrorRate(currentStats.total.unresolved_error_rate) }}
                             </span>
                         </div>
@@ -221,11 +221,9 @@ const getWorkflowIcon = (key) => getFileIcon(key);
 
 // Computed: whether to show statistics section
 const shouldShowStatistics = computed(() => {
-    // Show during translation or when finished with statistics
+    // Always show statistics section once translation has started
     const stats = props.task.statistics;
-    if (!stats || !stats.total) return false;
-    // Show if translating or finished with non-zero tokens
-    return props.task.isTranslating || props.task.isFinished;
+    return stats && stats.total;
 });
 
 // Computed: current statistics to display
@@ -258,10 +256,12 @@ const formatErrorRate = (rate) => {
 };
 
 // Get error rate class based on value
+// Green: 0-5%, Orange: 5-30%, Red: 30-100%
 const getErrorRateClass = (rate) => {
-    if (!rate || rate === 0) return 'text-green-500';
-    if (rate < 0.05) return 'text-yellow-500';
-    return 'text-red-500';
+    if (!rate || rate === 0) return 'error-green';
+    if (rate < 0.05) return 'error-green';
+    if (rate < 0.30) return 'error-orange';
+    return 'error-red';
 };
 </script>
 
@@ -317,5 +317,16 @@ const getErrorRateClass = (rate) => {
 
 [data-theme="dark"] .stat-value {
     color: #e2e8f0;
+}
+
+/* Error rate colors - override default stat-value color */
+.stat-value-error.error-green {
+    color: #22c55e !important;
+}
+.stat-value-error.error-orange {
+    color: #f97316 !important;
+}
+.stat-value-error.error-red {
+    color: #ef4444 !important;
 }
 </style>

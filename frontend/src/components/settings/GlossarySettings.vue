@@ -30,7 +30,7 @@
                 <button
                     type="button"
                     class="px-3 py-1.5 text-sm border border-danger text-danger rounded hover:bg-danger hover:text-white transition-colors inline-flex items-center"
-                    @click="clearGlossary"
+                    @click="handleClearGlossary"
                 >
                     <Heroicon name="TrashIcon" class="w-4 h-4 mr-1" />
                     <span>{{ t('clearGlossaryBtn') }}</span>
@@ -290,12 +290,22 @@ const props = defineProps({
 // Inject from parent
 const form = inject('form');
 const defaultParams = inject('defaultParams');
+const glossaryData = inject('glossaryData');
 const glossaryCount = inject('glossaryCount');
 const saveSetting = inject('saveSetting');
 const handleGlossaryFiles = inject('handleGlossaryFiles');
 const clearGlossary = inject('clearGlossary');
 const openGlossaryModal = inject('openGlossaryModal');
 const downloadGlossaryTemplate = inject('downloadGlossaryTemplate');
+
+// Local clear function that also clears file input
+const handleClearGlossary = () => {
+    clearGlossary();
+    // Clear file input
+    if (glossaryInput.value) {
+        glossaryInput.value.value = '';
+    }
+};
 
 const glossaryInput = ref(null);
 const isOpen = ref(false);

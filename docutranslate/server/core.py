@@ -608,7 +608,7 @@ class TranslationService:
 
             task_state.update(
                 {
-                    "status_message": f"翻译成功！用时 {duration:.2f} 秒。",
+                    "status_message": f"翻译完成！用时 {duration:.2f} 秒。",
                     "download_ready": True,
                     "error_flag": False,
                     "progress_percent": 100,
@@ -618,7 +618,7 @@ class TranslationService:
                     "statistics": statistics,
                 }
             )
-            task_logger.info(f"翻译成功完成，用时 {duration:.2f} 秒。")
+            task_logger.info(f"翻译完成，用时 {duration:.2f} 秒。")
 
         except asyncio.CancelledError:
             end_time = time.time()
@@ -626,6 +626,13 @@ class TranslationService:
             task_logger.info(
                 f"翻译任务 '{original_filename}' 已被取消 (用时 {duration:.2f} 秒)."
             )
+            # 尝试获取已有的统计数据
+            statistics = {}
+            try:
+                if workflow:
+                    statistics = workflow.get_statistics()
+            except Exception:
+                pass
             task_state.update(
                 {
                     "status_message": f"翻译任务已取消 (用时 {duration:.2f} 秒).",
@@ -633,6 +640,7 @@ class TranslationService:
                     "download_ready": False,
                     "progress_percent": 100,
                     "task_end_time": end_time,
+                    "statistics": statistics,
                 }
             )
         except Exception as e:
@@ -640,6 +648,13 @@ class TranslationService:
             duration = end_time - task_state["task_start_time"]
             error_message = f"翻译失败: {e}"
             task_logger.error(error_message, exc_info=True)
+            # 尝试获取已有的统计数据
+            statistics = {}
+            try:
+                if workflow:
+                    statistics = workflow.get_statistics()
+            except Exception:
+                pass
             task_state.update(
                 {
                     "status_message": f"翻译过程中发生错误 (用时 {duration:.2f} 秒): {mask_secrets(str(e))}",
@@ -647,6 +662,7 @@ class TranslationService:
                     "download_ready": False,
                     "progress_percent": 100,
                     "task_end_time": end_time,
+                    "statistics": statistics,
                 }
             )
         finally:
