@@ -1,0 +1,39 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+.venv
+__pycache__
+*.py[cod]
+*.so
+*.egg-info
+*.egg
+dist
+build
+
+# Frontend
+frontend
+
+# IDE
+.idea
+.vscode
+
+# Testing
+.pytest_cache
+.coverage
+htmlcov
+tests
+
+# Docs & artifacts
+*.md
+images
+*.spec
+DocuTranslate.*
+
+# Misc
+.claude
+.github
+check
+更新日志.txt
