@@ -161,31 +161,61 @@ export function usePreview(i18n) {
     };
 
     const printPdf = (url) => {
-        const msg = t('pdf_preparing') || "正在准备打印，请稍候...";
+        // 优先使用预览 iframe（如果已有内容且已渲染）
+        // 否则使用独立的打印 iframe（视觉隐藏但保持可见，以便 mermaid 渲染）
+        const translatedFrame = document.querySelector('#translatedPreviewContainer iframe');
+        let printFrame = document.getElementById('printFrame');
 
-        const toastContainer = document.createElement('div');
-        toastContainer.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[1090]';
-        toastContainer.innerHTML = `
-            <div class="bg-primary text-white px-4 py-3 rounded shadow-lg flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                </svg>
-                <span>${msg}</span>
-            </div>
-        `;
-        document.body.appendChild(toastContainer);
-        setTimeout(() => toastContainer.remove(), 3000);
+        // 检查预览 iframe 是否已有渲染好的内容
+        const hasRenderedContent = (frame) => {
+            try {
+                const doc = frame.contentDocument || frame.contentWindow.document;
+                if (!doc || !doc.body) return false;
+                // 检查是否有 mermaid 图表且已渲染（svg 元素存在）
+                const mermaidDivs = doc.querySelectorAll('.mermaid');
+                if (mermaidDivs.length > 0) {
+                    // 有 mermaid，检查是否已渲染
+                    return doc.querySelectorAll('svg').length > 0;
+                }
+                return doc.body.innerHTML.trim().length > 0;
+            } catch (e) {
+                return false;
+            }
+        };
 
-        const pf = document.getElementById('printFrame');
-        if (!pf) return;
+        // 打印指定 iframe
+        const doPrint = (frame) => {
+            frame.contentWindow.focus();
+            frame.contentWindow.print();
+        };
+
+        // 如果预览 iframe 有渲染好的内容，直接使用
+        if (translatedFrame && hasRenderedContent(translatedFrame)) {
+            doPrint(translatedFrame);
+            return;
+        }
+
+        // 否则使用独立的打印 iframe
+        if (!printFrame) {
+            printFrame = document.createElement('iframe');
+            printFrame.id = 'printFrame';
+            // 使用 position 移出视口，而不是 display: none
+            // 这样 iframe 仍然"可见"，mermaid 可以正常渲染
+            printFrame.style.cssText = 'position: fixed; left: -9999px; top: 0; width: 100%; height: 100%;';
+            document.body.appendChild(printFrame);
+        }
+
+        // 加载内容到打印 iframe
         fetch(url).then(r => r.text()).then(h => {
-            pf.srcdoc = h;
-            pf.onload = () => {
+            printFrame.srcdoc = h;
+            printFrame.onload = () => {
+                // 等待 mermaid 渲染完成
                 setTimeout(() => {
-                    pf.contentWindow.focus();
-                    pf.contentWindow.print();
-                }, 500);
+                    doPrint(printFrame);
+                }, 1000);
             };
+        }).catch(e => {
+            console.error('Failed to load content for printing:', e);
         });
     };
 

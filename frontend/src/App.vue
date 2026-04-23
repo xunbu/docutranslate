@@ -49,9 +49,7 @@
     <!-- Preview Offcanvas -->
     <PreviewOffcanvas
         ref="previewOffcanvasRef"
-        :t="t"
-        @printPdf="printPdf" />
-    <iframe id="printFrame" ref="printFrame" style="display: none;"></iframe>
+        :t="t" />
 
     <!-- Bottom Controls -->
     <BottomControls
@@ -178,7 +176,6 @@ const version = ref("");
 const enginList = ref([]);
 const showMineruToken = ref(false);
 const showIdentityOption = ref(true);
-const printFrame = ref(null);
 
 // ===== Computed =====
 

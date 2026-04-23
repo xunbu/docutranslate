@@ -62,7 +62,6 @@
                 </div>
             </div>
         </div>
-        <iframe id="printFrame" style="display: none;"></iframe>
     </div>
 </template>
 
@@ -74,8 +73,6 @@ import Heroicon from '../ui/Heroicon.vue';
 const props = defineProps({
     t: Function,
 });
-
-const emit = defineEmits(['printPdf']);
 
 // Inject from parent
 const previewMode = inject('previewMode');
@@ -133,7 +130,6 @@ const loadContent = (task) => {
 const handlePrintPdf = (url) => {
     showDownloadMenu.value = false;
     printPdf(url);
-    emit('printPdf', url);
 };
 
 // Watch for open
