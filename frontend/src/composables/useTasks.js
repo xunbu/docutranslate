@@ -300,6 +300,11 @@ export function useTasks(settings, glossary, i18n) {
                 setTimeout(() => { task.validationError = false; }, 3000);
                 return;
             }
+            // Release old task resources before starting new translation
+            if (task.backendId) {
+                try { await fetch(`/service/release/${task.backendId}`, {method: 'POST'}); } catch (e) {}
+                task.backendId = null;
+            }
             task.isFinished = false;
             task.logs = '';
             task.downloads = null;
