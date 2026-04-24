@@ -468,6 +468,29 @@ async def service_release_task(
                                 "task_end_time": 0,
                                 "downloads": {},
                                 "attachment": {},
+                                "statistics": {
+                                    "glossary": None,
+                                    "translation": {
+                                        "input_tokens": 1500,
+                                        "cached_tokens": 0,
+                                        "output_tokens": 2000,
+                                        "reasoning_tokens": 500,
+                                        "total_tokens": 3500,
+                                        "request_count": 3,
+                                        "unresolved_errors": 0,
+                                        "unresolved_error_rate": 0.0
+                                    },
+                                    "total": {
+                                        "input_tokens": 1500,
+                                        "cached_tokens": 0,
+                                        "output_tokens": 2000,
+                                        "reasoning_tokens": 500,
+                                        "total_tokens": 3500,
+                                        "request_count": 3,
+                                        "unresolved_errors": 0,
+                                        "unresolved_error_rate": 0.0
+                                    }
+                                },
                             },
                         },
                         "completed": {
@@ -488,6 +511,38 @@ async def service_release_task(
                                     "markdown": "/service/download/b2865b93/markdown",
                                 },
                                 "attachment": {},
+                                "statistics": {
+                                    "glossary": {
+                                        "input_tokens": 100,
+                                        "cached_tokens": 0,
+                                        "output_tokens": 50,
+                                        "reasoning_tokens": 0,
+                                        "total_tokens": 150,
+                                        "request_count": 1,
+                                        "unresolved_errors": 0,
+                                        "unresolved_error_rate": 0.0
+                                    },
+                                    "translation": {
+                                        "input_tokens": 5000,
+                                        "cached_tokens": 200,
+                                        "output_tokens": 6000,
+                                        "reasoning_tokens": 1500,
+                                        "total_tokens": 11100,
+                                        "request_count": 10,
+                                        "unresolved_errors": 0,
+                                        "unresolved_error_rate": 0.0
+                                    },
+                                    "total": {
+                                        "input_tokens": 5100,
+                                        "cached_tokens": 200,
+                                        "output_tokens": 6050,
+                                        "reasoning_tokens": 1500,
+                                        "total_tokens": 11250,
+                                        "request_count": 11,
+                                        "unresolved_errors": 0,
+                                        "unresolved_error_rate": 0.0
+                                    }
+                                },
                             },
                         },
                     }
