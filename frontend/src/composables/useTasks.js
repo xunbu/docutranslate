@@ -308,7 +308,7 @@ export function useTasks(settings, glossary, i18n) {
             task.isFinished = false;
             task.logs = '';
             task.downloads = null;
-            toggleTaskState(task, errors);
+            await toggleTaskState(task, errors);
             return;
         }
 
