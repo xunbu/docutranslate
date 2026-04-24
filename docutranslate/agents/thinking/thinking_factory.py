@@ -22,7 +22,7 @@ thinking_mode: dict[ProviderType, ThinkingConfig] = {
     ),
     "google": ("reasoning_effort", "medium", "none"),
     "siliconflow": ("enable_thinking", True, False),
-    "deepseek": None,  # 不传任何 thinking 参数，使用模型默认行为
+    "deepseek": ("thinking", {"type": "enabled"}, {"type": "disabled"}),
     "default": ("reasoning_effort", "medium", "none"),
 }
 
