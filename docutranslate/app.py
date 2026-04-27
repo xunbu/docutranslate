@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import socket
+import sys
 import uuid
 from contextlib import asynccontextmanager, closing
 from pathlib import Path
@@ -1227,4 +1228,23 @@ def run_app(host=None, port: int | None = None, enable_CORS=False,
 
 
 if __name__ == "__main__":
-    run_app(with_mcp=True)
+    if getattr(sys, 'frozen', False):
+        import threading
+        import time
+        import webbrowser
+
+        initial_port = int(os.environ.get("DOCUTRANSLATE_PORT", 8010))
+        port_to_use = find_free_port(initial_port)
+
+        def _open_browser():
+            while True:
+                with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
+                    if sock.connect_ex(("127.0.0.1", port_to_use)) == 0:
+                        webbrowser.open(f"http://127.0.0.1:{port_to_use}")
+                        break
+                time.sleep(0.5)
+
+        threading.Thread(target=_open_browser, daemon=True).start()
+        run_app(port=port_to_use, with_mcp=True)
+    else:
+        run_app(with_mcp=True)
