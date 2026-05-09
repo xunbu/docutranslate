@@ -49,7 +49,6 @@ docutranslate = "docutranslate.cli:main"
 [build-system]
 requires = ["setuptools>=80.9.0"]       # 或者你需要的 setuptools 版本
 build-backend = "setuptools.build_meta"
-backend-path = ["."]
 [tool.setuptools]
 #packages = ["docutranslate"]
 [tool.setuptools.packages.find]
