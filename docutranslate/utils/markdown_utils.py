@@ -272,7 +272,7 @@ def format_markdown_latex(markdown_text: str) -> str:
     这个函数会确保每个 $$...$$ 公式块前后都有适当的空行，
     以便markdown解析器能够正确地识别和渲染这些块级公式。
 
-    同时，专门处理HTML表格内部的公式，将 $...$ 转换为 \(...\)，
+    同时，专门处理HTML表格内部的公式，将 $...$ 转换为 \\(...\\)，
     这样markdown解析器就能正确地解析它们了。
 
     Args:
@@ -298,7 +298,7 @@ def format_markdown_latex(markdown_text: str) -> str:
 
 def process_table_formulas(match):
     """
-    处理HTML表格内部的公式，将 $...$ 转换为 \(...\)。
+    处理HTML表格内部的公式，将 $...$ 转换为 \\(...\\)。
     """
     table_html = match.group(0)
     # 转换 $...$ 为 \(...\)
