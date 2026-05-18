@@ -65,6 +65,8 @@ button:focus {
 .text-primary { color: var(--bs-primary) !important; }
 .text-warning { color: var(--bs-warning) !important; }
 [data-theme="dark"] .text-warning { color: #fcd34d !important; }
+/* 按钮hover时文字变白的样式 */
+.hover\:text-white:hover { color: white !important; }
 .fw-bold { font-weight: 700 !important; }
 .fw-medium { font-weight: 500 !important; }
 .w-100 { width: 100% !important; }
