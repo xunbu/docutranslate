@@ -208,14 +208,16 @@ def unembed_base64_images_to_zip(markdown: str, markdown_name: str, image_folder
         image_folder = os.path.join(temp_dir, image_folder_name)
         os.makedirs(image_folder, exist_ok=True)
 
-        pattern = r"!\[(.*?)\]\(data:(.*?);.*base64,(.*?)\)"
+        # 修改正则：使用 [\s\S] 来匹配包括换行符在内的所有字符
+        # base64数据可能包含换行符，需要正确匹配
+        pattern = r"!\[([^\]]*)\]\(data:([^;]+);base64,([\s\S]*?)\)"
 
         def unembed_base64_images(match: re.Match) -> str:
             alt_text = match.group(1)
             mime_type = match.group(2)
             b64data_raw = match.group(3)
 
-            # 【修改点2】强制清洗数据：移除所有非 Base64 合法字符（如中文、空格、换行符等）
+            # 强制清洗数据：移除所有非 Base64 合法字符（如中文、空格、换行符等）
             # Base64 字符集只包含 A-Z, a-z, 0-9, +, /, =
             b64data_clean = re.sub(r'[^A-Za-z0-9+/=]', '', b64data_raw)
 
@@ -236,7 +238,6 @@ def unembed_base64_images_to_zip(markdown: str, markdown_name: str, image_folder
                     extension = '.bin'
 
             try:
-                # 【修改点3】添加异常捕获
                 image_bytes = base64.b64decode(b64data_clean)
                 image_id = hashlib.md5(image_bytes).hexdigest()[:8]
                 image_name = f"{image_id}{extension}"

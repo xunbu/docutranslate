@@ -14,6 +14,7 @@
                     @change="saveSetting('translator_to_lang', form.to_lang)">
                 <option value="Simplified Chinese">中文(简体中文)</option>
                 <option value="English">英文(English)</option>
+                <option value="Traditional Chinese">中文(繁體中文)</option>
                 <option value="Spanish">西班牙文(Español)</option>
                 <option value="French">法文(Français)</option>
                 <option value="German">德文(Deutsch)</option>
