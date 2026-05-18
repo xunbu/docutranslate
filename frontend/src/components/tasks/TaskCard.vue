@@ -118,7 +118,7 @@
                     <Heroicon name="EyeIcon" class="w-4 h-4" />
                     <span>{{ t('taskCardPreviewBtn') }}</span>
                 </button>
-                <Dropdown v-if="Object.keys(task.downloads).length > 0">
+                <Dropdown v-if="task.downloads && Object.keys(task.downloads).length > 0">
                     <template #trigger>
                         <button class="px-2.5 py-1 text-sm bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors flex items-center gap-1">
                             <Heroicon name="ArrowDownTrayIcon" class="w-4 h-4" />

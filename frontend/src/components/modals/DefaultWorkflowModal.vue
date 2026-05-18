@@ -208,7 +208,7 @@ const resetDefaultWorkflows = () => {
 // Initialize ALL_EXTENSIONS from saved data
 const initFromSaved = () => {
     const allExts = new Set([...DEFAULT_EXTENSIONS]);
-    Object.keys(default_workflows).forEach(ext => allExts.add(ext));
+    if (default_workflows) Object.keys(default_workflows).forEach(ext => allExts.add(ext));
     ALL_EXTENSIONS.value = [...allExts];
 };
 

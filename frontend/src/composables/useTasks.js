@@ -2,7 +2,7 @@ import { ref, reactive, computed, nextTick } from 'vue';
 import { emptyToNull } from '../utils/helpers.js';
 
 export function useTasks(settings, glossary, i18n) {
-    const { form, workflowParams, default_workflows, saveSetting, saveAllSettings, updatePlatformParams, STORAGE } = settings;
+    const { form, workflowParams, default_workflows, saveSetting, saveAllSettings, updatePlatformParams, STORAGE, errors } = settings;
     const { glossaryData } = glossary;
     const { t } = i18n;
 
@@ -43,7 +43,7 @@ export function useTasks(settings, glossary, i18n) {
     const removeTask = async (task) => {
         if (task.isTranslating) {
             if (!confirm(t('confirmRemoveTranslatingTask'))) return;
-            try { await toggleTaskState(task); } catch (e) {}
+            try { await toggleTaskState(task, errors); } catch (e) {}
         }
         if (task.backendId) try {
             await fetch(`/service/release/${task.backendId}`, {method: 'POST'});
@@ -124,7 +124,7 @@ export function useTasks(settings, glossary, i18n) {
             const task = pendingQueue.shift();
             if (task.file && !task.isTranslating && !task.isFinished) {
                 runningCount.value++;
-                toggleTaskState(task).finally(() => { startNextPendingTask(); });
+                toggleTaskState(task, errors).finally(() => { startNextPendingTask(); });
             }
         }
     };
@@ -156,7 +156,7 @@ export function useTasks(settings, glossary, i18n) {
             top_p: Number(form.top_p),
             retry: Number(form.retry),
             custom_prompt: emptyToNull(form.custom_prompt),
-            glossary_dict: Object.keys(glossaryData.value).length ? glossaryData.value : null,
+            glossary_dict: glossaryData.value && Object.keys(glossaryData.value).length ? glossaryData.value : null,
             system_proxy_enable: form.system_proxy_enable,
             force_json: form.force_json,
             glossary_generate_enable: form.glossary_generate_enable,
@@ -239,26 +239,27 @@ export function useTasks(settings, glossary, i18n) {
 
     const validateForm = (errors) => {
         let isValid = true;
-        Object.keys(errors).forEach(k => errors[k] = false);
+        if (errors) Object.keys(errors).forEach(k => errors[k] = false);
 
         if (!form.skip_translate) {
-            if (!form.model_id) { errors.model_id = true; isValid = false; }
-            if (form.platform === 'custom' && !form.base_url) { errors.base_url = true; isValid = false; }
-            if (form.to_lang === 'custom' && !form.custom_to_lang) { errors.custom_to_lang = true; isValid = false; }
+            if (!form.model_id) { if (errors) errors.model_id = true; isValid = false; }
+            if (form.platform === 'custom' && !form.base_url) { if (errors) errors.base_url = true; isValid = false; }
+            if (form.to_lang === 'custom' && !form.custom_to_lang) { if (errors) errors.custom_to_lang = true; isValid = false; }
         }
 
         if (form.workflow_type === 'markdown_based') {
-            if (form.convert_engine === 'mineru' && !form.mineru_token) { errors.mineru_token = true; isValid = false; }
-            if (form.convert_engine === 'mineru_deploy' && !form.mineru_deploy_base_url) { errors.mineru_deploy_base_url = true; isValid = false; }
+            if (form.convert_engine === 'mineru' && !form.mineru_token) { if (errors) errors.mineru_token = true; isValid = false; }
+            if (form.convert_engine === 'mineru_deploy' && !form.mineru_deploy_base_url) { if (errors) errors.mineru_deploy_base_url = true; isValid = false; }
         } else if (form.workflow_type === 'json') {
             if (!workflowParams.json.json_paths || !workflowParams.json.json_paths.trim()) {
-                errors.json_paths = true; isValid = false;
+                if (errors) errors.json_paths = true; isValid = false;
             }
         }
 
         if (!isValid) {
             nextTick(() => {
-                const errorEl = document.querySelector('.is-invalid');
+                // 查找带有红色边框的错误元素（border-red-500 或 border-red-400）
+                const errorEl = document.querySelector('.border-red-500, .border-red-400');
                 if (errorEl) {
                     errorEl.scrollIntoView({behavior: 'smooth', block: 'center'});
                     errorEl.focus();

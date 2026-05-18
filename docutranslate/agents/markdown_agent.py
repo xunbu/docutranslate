@@ -17,8 +17,8 @@ def get_original_markdown(prompt: str):
 
 def generate_prompt(markdown_text: str, to_lang: str):
     return f"""
-Treat the text input as markdown text and translate it into {to_lang},output translation ONLY. 
-- NO explanations. NO notes. 
+Treat the text input as markdown text and translate it into {to_lang},output translation ONLY.
+- NO explanations. NO notes.
 - For special tags or other non-translatable elements (like codes, brand names, specific jargon), keep them in their original form.
 - All formulas, regardless of length, must be represented as valid, parsable LaTeX. They must be correctly enclosed by `$`, `\\(\\)`, or `$$`. If a formula is not formatted correctly, you must fix it.
 - Remove or correct any obviously abnormal characters, but without altering the original meaning.
