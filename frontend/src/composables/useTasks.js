@@ -1,6 +1,38 @@
 import { ref, reactive, computed, nextTick } from 'vue';
 import { emptyToNull } from '../utils/helpers.js';
 
+// 格式化错误信息，处理 FastAPI 422 验证错误等复杂格式
+const formatError = (data) => {
+    if (!data) return 'Unknown error';
+
+    // 如果 detail 是数组（FastAPI 验证错误格式）
+    if (Array.isArray(data.detail)) {
+        const errors = data.detail.map(err => {
+            const field = err.loc ? err.loc.join('.') : 'unknown';
+            const msg = err.msg || 'Validation error';
+            return `${field}: ${msg}`;
+        });
+        return errors.join('; ');
+    }
+
+    // 如果 detail 是字符串
+    if (typeof data.detail === 'string') {
+        return data.detail;
+    }
+
+    // 如果有 message
+    if (data.message) {
+        return data.message;
+    }
+
+    // 其他情况尝试转为字符串
+    try {
+        return JSON.stringify(data);
+    } catch {
+        return String(data);
+    }
+};
+
 export function useTasks(settings, glossary, i18n) {
     const { form, workflowParams, default_workflows, saveSetting, saveAllSettings, updatePlatformParams, STORAGE, errors } = settings;
     const { glossaryData } = glossary;
@@ -349,7 +381,7 @@ export function useTasks(settings, glossary, i18n) {
                 pollStatus(task);
                 task.statusMessage = data.message;
             } else {
-                throw new Error(data.message || data.detail || 'Error');
+                throw new Error(formatError(data));
             }
         } catch (e) {
             task.statusMessage = e.message;
