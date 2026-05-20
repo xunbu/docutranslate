@@ -12,6 +12,8 @@ import uuid
 import zipfile
 from pathlib import Path
 
+import charset_normalizer
+
 
 class MaskDict:
     def __init__(self):
@@ -152,8 +154,25 @@ def embed_inline_image_from_zip(zip_bytes: bytes, filename_in_zip: str | None = 
         print(f"正在读取文件 '{target_md_filename}'...")
         md_content_bytes = archive.read(target_md_filename)
         print(f"文件 '{target_md_filename}' 已读取。")
-        md_content_text = md_content_bytes.decode(encoding)
-        print(f"文件内容已使用 '{encoding}' 编码成功解码。")
+
+        # 自动检测编码，如果不是 UTF-8 则转换为 UTF-8
+        result = charset_normalizer.from_bytes(md_content_bytes).best()
+        if result is None:
+            # 无法检测编码，尝试使用指定的编码
+            try:
+                md_content_text = md_content_bytes.decode(encoding)
+            except UnicodeDecodeError:
+                # 如果指定编码也失败，使用 errors='replace'
+                md_content_text = md_content_bytes.decode(encoding, errors='replace')
+            print(f"无法检测编码，使用 '{encoding}' 编码解码。")
+        else:
+            detected_encoding = result.encoding
+            try:
+                md_content_text = md_content_bytes.decode(detected_encoding)
+                print(f"文件内容已使用检测到的 '{detected_encoding}' 编码成功解码。")
+            except UnicodeDecodeError:
+                md_content_text = md_content_bytes.decode(detected_encoding, errors='replace')
+                print(f"使用检测到的 '{detected_encoding}' 编码解码时部分字符被替换。")
 
         print("开始处理Markdown中的图片...")
         # 获取Markdown文件在ZIP包内的基本目录
