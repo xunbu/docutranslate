@@ -23,7 +23,11 @@ from pydantic import (
 
 from docutranslate.agents.agent import ThinkingMode
 from docutranslate.agents.thinking.thinking_factory import ProviderType
-from docutranslate.translator import default_params
+from docutranslate.config import (
+    # BaseWorkflowParams defaults
+    CHUNK_SIZE, CONCURRENT, TEMPERATURE, TOP_P, TIMEOUT,
+    THINKING, RETRY, SYSTEM_PROXY_ENABLE,
+)
 
 # --- 公共类型定义 ---
 WorkflowType = Literal[
@@ -66,14 +70,14 @@ class GlossaryAgentConfigPayload(BaseModel):
     )
     concurrent: int = Field(default=30, description="Agent的最大并发请求数。")
     timeout: int = Field(
-        default=default_params["timeout"], description="等待API回复的时间（秒）。"
+        default=TIMEOUT, description="等待API回复的时间（秒）。"
     )
     thinking: ThinkingMode = Field(default="default", description="Agent的思考模式。")
     retry: int = Field(
-        default=default_params["retry"], description="分块失败后的最大重试次数。"
+        default=RETRY, description="分块失败后的最大重试次数。"
     )
     system_proxy_enable: bool = Field(
-        default=default_params["system_proxy_enable"],
+        default=SYSTEM_PROXY_ENABLE,
         description="是否使用系统代理",
         examples=[True, False],
     )
@@ -134,31 +138,31 @@ class BaseWorkflowParams(BaseModel):
         default="中文", description="目标翻译语言。", examples=["简体中文", "English"]
     )
     chunk_size: int = Field(
-        default=default_params["chunk_size"], description="文本分割的块大小（字符）。"
+        default=CHUNK_SIZE, description="文本分割的块大小（字符）。"
     )
     concurrent: int = Field(
-        default=default_params["concurrent"], description="并发请求数。"
+        default=CONCURRENT, description="并发请求数。"
     )
     temperature: float = Field(
-        default=default_params["temperature"], description="LLM温度参数。"
+        default=TEMPERATURE, description="LLM温度参数。"
     )
     top_p: float = Field(
-        default=default_params["top_p"], description="LLM核采样参数。"
+        default=TOP_P, description="LLM核采样参数。"
     )
     timeout: int = Field(
-        default=default_params["timeout"], description="等待API回复的时间（秒）。"
+        default=TIMEOUT, description="等待API回复的时间（秒）。"
     )
     thinking: ThinkingMode = Field(
-        default=default_params["thinking"],
+        default=THINKING,
         description="Agent的思考模式。",
         examples=["default", "enable", "disable"],
     )
     retry: int = Field(
-        default=default_params["retry"],
+        default=RETRY,
         description="某个分块翻译失败后的最大重试次数。",
     )
     system_proxy_enable: bool = Field(
-        default=default_params["system_proxy_enable"],
+        default=SYSTEM_PROXY_ENABLE,
         description="是否使用系统代理",
         examples=[True, False],
     )

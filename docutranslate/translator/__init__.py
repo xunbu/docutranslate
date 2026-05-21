@@ -1,11 +1,3 @@
-default_params = {
-    "thinking": "disable",
-    "chunk_size": 4000,
-    "concurrent": 30,
-    "temperature": 0.7,
-    "top_p": 0.9,
-    "timeout": 1200,
-    "retry": 2,
-    "system_proxy_enable": False,
-    "extra_body": ""
-}
+from docutranslate.config import default_params
+
+__all__ = ["default_params"]

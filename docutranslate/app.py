@@ -57,6 +57,7 @@ from docutranslate.server import (
     get_translation_service,
     MEDIA_TYPES,
 )
+from docutranslate.config import PORT
 from docutranslate.translator import default_params
 from docutranslate.utils.resource_utils import resource_path
 from docutranslate.utils.utils import mask_secrets
@@ -1191,7 +1192,7 @@ def find_free_port(start_port):
 def run_app(host=None, port: int | None = None, enable_CORS=False,
             allow_origin_regex=r"^(https?://.*|null|file://.*)$",
             with_mcp: bool = False):
-    initial_port = port or int(os.environ.get("DOCUTRANSLATE_PORT", 8010))
+    initial_port = port or PORT
     try:
         port_to_use = find_free_port(initial_port)
         if port_to_use != initial_port:

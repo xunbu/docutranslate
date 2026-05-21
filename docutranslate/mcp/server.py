@@ -13,31 +13,10 @@ to ensure consistent task management between the Web backend and MCP server.
 import asyncio
 import base64
 import os
-from pathlib import Path
 from typing import Any, Dict, Optional, List
 
-
-def _load_dotenv():
-    """Load environment variables from .env file if python-dotenv is available"""
-    try:
-        from dotenv import load_dotenv
-        # Try to load .env from current directory first, then parent directories
-        env_path = None
-        current_dir = Path.cwd()
-        for dir_path in [current_dir] + list(current_dir.parents):
-            candidate = dir_path / ".env"
-            if candidate.exists():
-                env_path = candidate
-                break
-        if env_path:
-            load_dotenv(env_path)
-    except ImportError:
-        # python-dotenv not installed, silently skip
-        pass
-
-
-# Load .env file on module import
-_load_dotenv()
+# Import config to load .env and make config values available
+from docutranslate.config import PORT
 
 # Shared server layer imports
 from docutranslate.server import (
@@ -142,13 +121,43 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
 
         # Client configuration - load from environment variables first
         client_config = {
+            # Basic LLM settings
             "api_key": os.environ.get("DOCUTRANSLATE_API_KEY", ""),
             "base_url": os.environ.get("DOCUTRANSLATE_BASE_URL", ""),
             "model_id": os.environ.get("DOCUTRANSLATE_MODEL_ID", ""),
+            "provider": os.environ.get("DOCUTRANSLATE_PROVIDER", ""),
             "to_lang": os.environ.get("DOCUTRANSLATE_TO_LANG", "中文"),
+            "thinking": os.environ.get("DOCUTRANSLATE_THINKING", ""),
+            "chunk_size": int(os.environ.get("DOCUTRANSLATE_CHUNK_SIZE", "0")) or None,
             "concurrent": int(os.environ.get("DOCUTRANSLATE_CONCURRENT", "10")),
+            "temperature": float(os.environ.get("DOCUTRANSLATE_TEMPERATURE", "0")) or None,
+            "top_p": float(os.environ.get("DOCUTRANSLATE_TOP_P", "0")) or None,
+            "retry": int(os.environ.get("DOCUTRANSLATE_RETRY", "0")) or None,
+            "timeout": int(os.environ.get("DOCUTRANSLATE_TIMEOUT", "0")) or None,
+            "system_proxy_enable": os.environ.get("DOCUTRANSLATE_SYSTEM_PROXY_ENABLE", "").lower() in ("true", "1", "yes"),
+            "force_json": os.environ.get("DOCUTRANSLATE_FORCE_JSON", "").lower() in ("true", "1", "yes") or None,
+            "rpm": int(os.environ.get("DOCUTRANSLATE_RPM", "0")) or None,
+            "tpm": int(os.environ.get("DOCUTRANSLATE_TPM", "0")) or None,
+            "custom_prompt": os.environ.get("DOCUTRANSLATE_CUSTOM_PROMPT", ""),
+            # Convert engine settings
             "convert_engine": os.environ.get("DOCUTRANSLATE_CONVERT_ENGINE", ""),
+            "md2docx_engine": os.environ.get("DOCUTRANSLATE_MD2DOCX_ENGINE", ""),
+            # MinerU settings
             "mineru_token": os.environ.get("DOCUTRANSLATE_MINERU_TOKEN", ""),
+            "model_version": os.environ.get("DOCUTRANSLATE_MODEL_VERSION", ""),
+            "formula_ocr": os.environ.get("DOCUTRANSLATE_FORMULA_OCR", "").lower() in ("true", "1", "yes") or None,
+            "code_ocr": os.environ.get("DOCUTRANSLATE_CODE_OCR", "").lower() in ("true", "1", "yes") or None,
+            "mineru_language": os.environ.get("DOCUTRANSLATE_MINERU_LANGUAGE", ""),
+            # MinerU Deploy settings
+            "mineru_deploy_base_url": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_BASE_URL", ""),
+            "mineru_deploy_backend": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_BACKEND", ""),
+            "mineru_deploy_parse_method": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_PARSE_METHOD", ""),
+            "mineru_deploy_formula_enable": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_FORMULA_ENABLE", "").lower() in ("true", "1", "yes") or None,
+            "mineru_deploy_table_enable": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_TABLE_ENABLE", "").lower() in ("true", "1", "yes") or None,
+            "mineru_deploy_start_page_id": int(os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_START_PAGE_ID", "0")) or None,
+            "mineru_deploy_end_page_id": int(os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_END_PAGE_ID", "0")) or None,
+            "mineru_deploy_lang_list": None,  # List type, not supported via env
+            "mineru_deploy_server_url": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_SERVER_URL", ""),
         }
 
         # Create FastMCP instance
@@ -184,13 +193,43 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
 
         @mcp.tool()
         async def configure_client(
+                # Basic LLM settings
                 api_key: Optional[str] = None,
                 base_url: Optional[str] = None,
                 model_id: Optional[str] = None,
+                provider: Optional[str] = None,
                 to_lang: Optional[str] = None,
+                thinking: Optional[str] = None,
+                chunk_size: Optional[int] = None,
                 concurrent: Optional[int] = None,
+                temperature: Optional[float] = None,
+                top_p: Optional[float] = None,
+                retry: Optional[int] = None,
+                timeout: Optional[int] = None,
+                system_proxy_enable: Optional[bool] = None,
+                force_json: Optional[bool] = None,
+                rpm: Optional[int] = None,
+                tpm: Optional[int] = None,
+                custom_prompt: Optional[str] = None,
+                # Convert engine settings
                 convert_engine: Optional[str] = None,
+                md2docx_engine: Optional[str] = None,
+                # MinerU settings
                 mineru_token: Optional[str] = None,
+                model_version: Optional[str] = None,
+                formula_ocr: Optional[bool] = None,
+                code_ocr: Optional[bool] = None,
+                mineru_language: Optional[str] = None,
+                # MinerU Deploy settings
+                mineru_deploy_base_url: Optional[str] = None,
+                mineru_deploy_backend: Optional[str] = None,
+                mineru_deploy_parse_method: Optional[str] = None,
+                mineru_deploy_formula_enable: Optional[bool] = None,
+                mineru_deploy_table_enable: Optional[bool] = None,
+                mineru_deploy_start_page_id: Optional[int] = None,
+                mineru_deploy_end_page_id: Optional[int] = None,
+                mineru_deploy_lang_list: Optional[List[str]] = None,
+                mineru_deploy_server_url: Optional[str] = None,
         ) -> str:
             """Configure the DocuTranslate client LLM settings.
             If already configured via environment variables, this tool can override them.
@@ -199,25 +238,107 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 api_key: AI platform API key
                 base_url: AI platform base URL
                 model_id: Model ID to use
+                provider: LLM provider identifier
                 to_lang: Target language (default: 中文)
+                thinking: Thinking mode (default, enable, disable)
+                chunk_size: Text chunk size for translation
                 concurrent: Number of concurrent requests (default: 10)
-                convert_engine: PDF conversion engine
-                mineru_token: MinerU API token
+                temperature: LLM temperature parameter
+                top_p: LLM top_p parameter
+                retry: Number of retries for failed chunks
+                timeout: Request timeout in seconds
+                system_proxy_enable: Enable system proxy
+                force_json: Force JSON output
+                rpm: RPM limit (Requests Per Minute)
+                tpm: TPM limit (Tokens Per Minute)
+                custom_prompt: Custom system prompt
+                convert_engine: PDF conversion engine (identity, mineru, docling, mineru_deploy)
+                md2docx_engine: Markdown to docx engine (python, pandoc, auto)
+                mineru_token: MinerU Cloud API Token
+                model_version: MinerU Cloud model version (pipeline, vlm)
+                formula_ocr: Enable formula OCR
+                code_ocr: Enable code block OCR
+                mineru_language: MinerU Cloud language option
+                mineru_deploy_base_url: MinerU local deployment base URL
+                mineru_deploy_backend: MinerU local backend type
+                mineru_deploy_parse_method: MinerU parse method (auto, txt, ocr)
+                mineru_deploy_formula_enable: Enable formula parsing
+                mineru_deploy_table_enable: Enable table parsing
+                mineru_deploy_start_page_id: Start page ID
+                mineru_deploy_end_page_id: End page ID
+                mineru_deploy_lang_list: Language list
+                mineru_deploy_server_url: MinerU Server URL
             """
+            # Basic LLM settings
             if api_key is not None:
                 client_config["api_key"] = api_key
             if base_url is not None:
                 client_config["base_url"] = base_url
             if model_id is not None:
                 client_config["model_id"] = model_id
+            if provider is not None:
+                client_config["provider"] = provider
             if to_lang is not None:
                 client_config["to_lang"] = to_lang
+            if thinking is not None:
+                client_config["thinking"] = thinking
+            if chunk_size is not None:
+                client_config["chunk_size"] = chunk_size
             if concurrent is not None:
                 client_config["concurrent"] = concurrent
+            if temperature is not None:
+                client_config["temperature"] = temperature
+            if top_p is not None:
+                client_config["top_p"] = top_p
+            if retry is not None:
+                client_config["retry"] = retry
+            if timeout is not None:
+                client_config["timeout"] = timeout
+            if system_proxy_enable is not None:
+                client_config["system_proxy_enable"] = system_proxy_enable
+            if force_json is not None:
+                client_config["force_json"] = force_json
+            if rpm is not None:
+                client_config["rpm"] = rpm
+            if tpm is not None:
+                client_config["tpm"] = tpm
+            if custom_prompt is not None:
+                client_config["custom_prompt"] = custom_prompt
+            # Convert engine settings
             if convert_engine is not None:
                 client_config["convert_engine"] = convert_engine
+            if md2docx_engine is not None:
+                client_config["md2docx_engine"] = md2docx_engine
+            # MinerU settings
             if mineru_token is not None:
                 client_config["mineru_token"] = mineru_token
+            if model_version is not None:
+                client_config["model_version"] = model_version
+            if formula_ocr is not None:
+                client_config["formula_ocr"] = formula_ocr
+            if code_ocr is not None:
+                client_config["code_ocr"] = code_ocr
+            if mineru_language is not None:
+                client_config["mineru_language"] = mineru_language
+            # MinerU Deploy settings
+            if mineru_deploy_base_url is not None:
+                client_config["mineru_deploy_base_url"] = mineru_deploy_base_url
+            if mineru_deploy_backend is not None:
+                client_config["mineru_deploy_backend"] = mineru_deploy_backend
+            if mineru_deploy_parse_method is not None:
+                client_config["mineru_deploy_parse_method"] = mineru_deploy_parse_method
+            if mineru_deploy_formula_enable is not None:
+                client_config["mineru_deploy_formula_enable"] = mineru_deploy_formula_enable
+            if mineru_deploy_table_enable is not None:
+                client_config["mineru_deploy_table_enable"] = mineru_deploy_table_enable
+            if mineru_deploy_start_page_id is not None:
+                client_config["mineru_deploy_start_page_id"] = mineru_deploy_start_page_id
+            if mineru_deploy_end_page_id is not None:
+                client_config["mineru_deploy_end_page_id"] = mineru_deploy_end_page_id
+            if mineru_deploy_lang_list is not None:
+                client_config["mineru_deploy_lang_list"] = mineru_deploy_lang_list
+            if mineru_deploy_server_url is not None:
+                client_config["mineru_deploy_server_url"] = mineru_deploy_server_url
 
             # Check if we have the required config
             has_required = bool(
@@ -246,12 +367,36 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             """Get current client configuration (without sensitive data like API keys)."""
             # Mask sensitive data
             masked_config = client_config.copy()
+            # Mask API key
             if masked_config.get("api_key"):
                 key = masked_config["api_key"]
                 masked_config["api_key"] = key[:4] + "..." + key[-4:] if len(key) > 8 else "****"
+            # Mask mineru_token
             if masked_config.get("mineru_token"):
                 token = masked_config["mineru_token"]
                 masked_config["mineru_token"] = token[:4] + "..." + token[-4:] if len(token) > 8 else "****"
+            # Mask base_url (partial)
+            if masked_config.get("base_url"):
+                url = masked_config["base_url"]
+                # Only show protocol and domain, hide path
+                from urllib.parse import urlparse
+                parsed = urlparse(url)
+                if parsed.netloc:
+                    masked_config["base_url"] = f"{parsed.scheme}://{parsed.netloc}/..."
+            # Mask mineru_deploy_base_url
+            if masked_config.get("mineru_deploy_base_url"):
+                url = masked_config["mineru_deploy_base_url"]
+                from urllib.parse import urlparse
+                parsed = urlparse(url)
+                if parsed.netloc:
+                    masked_config["mineru_deploy_base_url"] = f"{parsed.scheme}://{parsed.netloc}/..."
+            # Mask mineru_deploy_server_url
+            if masked_config.get("mineru_deploy_server_url"):
+                url = masked_config["mineru_deploy_server_url"]
+                from urllib.parse import urlparse
+                parsed = urlparse(url)
+                if parsed.netloc:
+                    masked_config["mineru_deploy_server_url"] = f"{parsed.scheme}://{parsed.netloc}/..."
             return f"Current Client Configuration:\n{_format_json(masked_config)}"
 
         @mcp.tool()
@@ -454,70 +599,96 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             if use_model_id:
                 payload_dict["model_id"] = use_model_id
 
-            # Add LLM advanced parameters if provided
-            if chunk_size is not None:
-                payload_dict["chunk_size"] = chunk_size
+            # Add LLM advanced parameters if provided or from client_config
+            use_chunk_size = chunk_size if chunk_size is not None else client_config.get("chunk_size")
+            if use_chunk_size is not None:
+                payload_dict["chunk_size"] = use_chunk_size
             use_concurrent = concurrent if concurrent is not None else client_config["concurrent"]
             if use_concurrent is not None:
                 payload_dict["concurrent"] = use_concurrent
-            if temperature is not None:
-                payload_dict["temperature"] = temperature
-            if top_p is not None:
-                payload_dict["top_p"] = top_p
-            if timeout is not None:
-                payload_dict["timeout"] = timeout
-            if thinking is not None:
-                payload_dict["thinking"] = thinking
-            if retry is not None:
-                payload_dict["retry"] = retry
-            if system_proxy_enable is not None:
-                payload_dict["system_proxy_enable"] = system_proxy_enable
-            if custom_prompt:
-                payload_dict["custom_prompt"] = custom_prompt
-            if force_json is not None:
-                payload_dict["force_json"] = force_json
-            if rpm is not None:
-                payload_dict["rpm"] = rpm
-            if tpm is not None:
-                payload_dict["tpm"] = tpm
-            if provider:
-                payload_dict["provider"] = provider
+            use_temperature = temperature if temperature is not None else client_config.get("temperature")
+            if use_temperature is not None:
+                payload_dict["temperature"] = use_temperature
+            use_top_p = top_p if top_p is not None else client_config.get("top_p")
+            if use_top_p is not None:
+                payload_dict["top_p"] = use_top_p
+            use_timeout = timeout if timeout is not None else client_config.get("timeout")
+            if use_timeout is not None:
+                payload_dict["timeout"] = use_timeout
+            use_thinking = thinking if thinking is not None else client_config.get("thinking")
+            if use_thinking:
+                payload_dict["thinking"] = use_thinking
+            use_retry = retry if retry is not None else client_config.get("retry")
+            if use_retry is not None:
+                payload_dict["retry"] = use_retry
+            use_system_proxy_enable = system_proxy_enable if system_proxy_enable is not None else client_config.get("system_proxy_enable")
+            if use_system_proxy_enable is not None:
+                payload_dict["system_proxy_enable"] = use_system_proxy_enable
+            use_custom_prompt = custom_prompt or client_config.get("custom_prompt") or ""
+            if use_custom_prompt:
+                payload_dict["custom_prompt"] = use_custom_prompt
+            use_force_json = force_json if force_json is not None else client_config.get("force_json")
+            if use_force_json is not None:
+                payload_dict["force_json"] = use_force_json
+            use_rpm = rpm if rpm is not None else client_config.get("rpm")
+            if use_rpm is not None:
+                payload_dict["rpm"] = use_rpm
+            use_tpm = tpm if tpm is not None else client_config.get("tpm")
+            if use_tpm is not None:
+                payload_dict["tpm"] = use_tpm
+            use_provider = provider or client_config.get("provider")
+            if use_provider:
+                payload_dict["provider"] = use_provider
 
-            # Add Markdown workflow parameters if provided
-            use_convert_engine = convert_engine or client_config["convert_engine"]
+            # Add Markdown workflow parameters if provided or from client_config
+            use_convert_engine = convert_engine or client_config.get("convert_engine")
             if use_convert_engine:
                 payload_dict["convert_engine"] = use_convert_engine
-            if md2docx_engine:
-                payload_dict["md2docx_engine"] = md2docx_engine
-            use_mineru_token = mineru_token or client_config["mineru_token"]
+            use_md2docx_engine = md2docx_engine or client_config.get("md2docx_engine")
+            if use_md2docx_engine:
+                payload_dict["md2docx_engine"] = use_md2docx_engine
+            use_mineru_token = mineru_token or client_config.get("mineru_token")
             if use_mineru_token:
                 payload_dict["mineru_token"] = use_mineru_token
-            if model_version:
-                payload_dict["model_version"] = model_version
-            if formula_ocr is not None:
-                payload_dict["formula_ocr"] = formula_ocr
-            if code_ocr is not None:
-                payload_dict["code_ocr"] = code_ocr
-            if mineru_language:
-                payload_dict["mineru_language"] = mineru_language
-            if mineru_deploy_base_url:
-                payload_dict["mineru_deploy_base_url"] = mineru_deploy_base_url
-            if mineru_deploy_backend:
-                payload_dict["mineru_deploy_backend"] = mineru_deploy_backend
-            if mineru_deploy_parse_method:
-                payload_dict["mineru_deploy_parse_method"] = mineru_deploy_parse_method
-            if mineru_deploy_table_enable is not None:
-                payload_dict["mineru_deploy_table_enable"] = mineru_deploy_table_enable
-            if mineru_deploy_formula_enable is not None:
-                payload_dict["mineru_deploy_formula_enable"] = mineru_deploy_formula_enable
-            if mineru_deploy_start_page_id is not None:
-                payload_dict["mineru_deploy_start_page_id"] = mineru_deploy_start_page_id
-            if mineru_deploy_end_page_id is not None:
-                payload_dict["mineru_deploy_end_page_id"] = mineru_deploy_end_page_id
-            if mineru_deploy_lang_list:
-                payload_dict["mineru_deploy_lang_list"] = mineru_deploy_lang_list
-            if mineru_deploy_server_url:
-                payload_dict["mineru_deploy_server_url"] = mineru_deploy_server_url
+            use_model_version = model_version or client_config.get("model_version")
+            if use_model_version:
+                payload_dict["model_version"] = use_model_version
+            use_formula_ocr = formula_ocr if formula_ocr is not None else client_config.get("formula_ocr")
+            if use_formula_ocr is not None:
+                payload_dict["formula_ocr"] = use_formula_ocr
+            use_code_ocr = code_ocr if code_ocr is not None else client_config.get("code_ocr")
+            if use_code_ocr is not None:
+                payload_dict["code_ocr"] = use_code_ocr
+            use_mineru_language = mineru_language or client_config.get("mineru_language")
+            if use_mineru_language:
+                payload_dict["mineru_language"] = use_mineru_language
+            use_mineru_deploy_base_url = mineru_deploy_base_url or client_config.get("mineru_deploy_base_url")
+            if use_mineru_deploy_base_url:
+                payload_dict["mineru_deploy_base_url"] = use_mineru_deploy_base_url
+            use_mineru_deploy_backend = mineru_deploy_backend or client_config.get("mineru_deploy_backend")
+            if use_mineru_deploy_backend:
+                payload_dict["mineru_deploy_backend"] = use_mineru_deploy_backend
+            use_mineru_deploy_parse_method = mineru_deploy_parse_method or client_config.get("mineru_deploy_parse_method")
+            if use_mineru_deploy_parse_method:
+                payload_dict["mineru_deploy_parse_method"] = use_mineru_deploy_parse_method
+            use_mineru_deploy_table_enable = mineru_deploy_table_enable if mineru_deploy_table_enable is not None else client_config.get("mineru_deploy_table_enable")
+            if use_mineru_deploy_table_enable is not None:
+                payload_dict["mineru_deploy_table_enable"] = use_mineru_deploy_table_enable
+            use_mineru_deploy_formula_enable = mineru_deploy_formula_enable if mineru_deploy_formula_enable is not None else client_config.get("mineru_deploy_formula_enable")
+            if use_mineru_deploy_formula_enable is not None:
+                payload_dict["mineru_deploy_formula_enable"] = use_mineru_deploy_formula_enable
+            use_mineru_deploy_start_page_id = mineru_deploy_start_page_id if mineru_deploy_start_page_id is not None else client_config.get("mineru_deploy_start_page_id")
+            if use_mineru_deploy_start_page_id is not None:
+                payload_dict["mineru_deploy_start_page_id"] = use_mineru_deploy_start_page_id
+            use_mineru_deploy_end_page_id = mineru_deploy_end_page_id if mineru_deploy_end_page_id is not None else client_config.get("mineru_deploy_end_page_id")
+            if use_mineru_deploy_end_page_id is not None:
+                payload_dict["mineru_deploy_end_page_id"] = use_mineru_deploy_end_page_id
+            use_mineru_deploy_lang_list = mineru_deploy_lang_list if mineru_deploy_lang_list is not None else client_config.get("mineru_deploy_lang_list")
+            if use_mineru_deploy_lang_list:
+                payload_dict["mineru_deploy_lang_list"] = use_mineru_deploy_lang_list
+            use_mineru_deploy_server_url = mineru_deploy_server_url or client_config.get("mineru_deploy_server_url") or ""
+            if use_mineru_deploy_server_url:
+                payload_dict["mineru_deploy_server_url"] = use_mineru_deploy_server_url
 
             # Add other workflow parameters if provided
             if insert_mode:
