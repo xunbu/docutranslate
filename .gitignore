@@ -24,3 +24,5 @@ docutranslate/output/
 .claude/
 # Vite cache
 .vite
+# Environment variables
+.env
