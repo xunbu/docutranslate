@@ -66,7 +66,7 @@
             <!-- Status Flags -->
             <div v-if="webSkipValidation" class="status-flags mt-2">
                 <span :title="t('webSkipValidation')" class="status-flag">
-                    <Heroicon name="Cog6ToothIcon" class="w-4 h-4" />
+                    <Heroicon name="CheckBadgeIcon" class="w-4 h-4" />
                 </span>
             </div>
         </div>

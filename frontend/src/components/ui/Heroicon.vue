@@ -51,7 +51,8 @@ import {
     CheckIcon as CheckIconSolid,
     XMarkIcon as XMarkIconSolid,
     ExclamationCircleIcon as ExclamationCircleIconSolid,
-    CheckCircleIcon as CheckCircleIconSolid
+    CheckCircleIcon as CheckCircleIconSolid,
+    CheckBadgeIcon as CheckBadgeIconSolid
 } from '@heroicons/vue/24/solid';
 
 const props = defineProps({
@@ -110,7 +111,8 @@ const iconComponents = {
     'TrashIcon': { outline: TrashIcon, solid: TrashIcon },
     'CloudArrowUpIcon': { outline: CloudArrowUpIcon, solid: CloudArrowUpIcon },
     'CommandLineIcon': { outline: CommandLineIcon, solid: CommandLineIcon },
-    'SparklesIcon': { outline: SparklesIcon, solid: SparklesIcon }
+    'SparklesIcon': { outline: SparklesIcon, solid: SparklesIcon },
+    'CheckBadgeIcon': { outline: CheckBadgeIconSolid, solid: CheckBadgeIconSolid }
 };
 
 const iconComponent = computed(() => {
