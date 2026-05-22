@@ -27,6 +27,10 @@ from docutranslate.config import (
     # BaseWorkflowParams defaults
     CHUNK_SIZE, CONCURRENT, TEMPERATURE, TOP_P, TIMEOUT,
     THINKING, RETRY, SYSTEM_PROXY_ENABLE,
+    # Env defaults for empty fields
+    API_KEY, BASE_URL, MODEL_ID, TO_LANG, PROVIDER,
+    # MarkdownWorkflowParams defaults
+    MINERU_TOKEN, MINERU_DEPLOY_BASE_URL,
 )
 
 # --- 公共类型定义 ---
@@ -209,9 +213,22 @@ class BaseWorkflowParams(BaseModel):
 
         if isinstance(values, dict):
             if not values.get("skip_translate"):
-                # 如果是空字符串 "" (即默认值)，not "" 为 True，会触发错误，符合预期
+                # 使用 .env 默认值填充空字段
                 if not (values.get("base_url") or values.get("baseurl")):
-                    # Auto 模式在校验前不强制要求 base_url
+                    if BASE_URL:
+                        values["base_url"] = BASE_URL
+                if not values.get("model_id"):
+                    if MODEL_ID:
+                        values["model_id"] = MODEL_ID
+                if not values.get("api_key") and API_KEY:
+                    values["api_key"] = API_KEY
+                if not values.get("to_lang") and TO_LANG:
+                    values["to_lang"] = TO_LANG
+                if not values.get("provider") and PROVIDER:
+                    values["provider"] = PROVIDER
+
+                # 验证：如果填充后仍为空，则报错（Auto 模式除外）
+                if not (values.get("base_url") or values.get("baseurl")):
                     if values.get("workflow_type") != "auto":
                         raise ValueError(
                             "当 `skip_translate` 为 `False` 时, `base_url` 或 `baseurl` 字段是必须的。"
@@ -364,17 +381,20 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
 
     @model_validator(mode="after")
     def check_engine_params(self):
-        if self.convert_engine == "mineru" and not self.mineru_token:
-            raise ValueError(
-                "当 `convert_engine` 为 'mineru' 时，`mineru_token` 字段是必须的。"
-            )
-        if (
-            self.convert_engine == "mineru_deploy"
-            and not self.mineru_deploy_base_url
-        ):
-            raise ValueError(
-                "当 `convert_engine` 为 'mineru_deploy' 时，`mineru_deploy_base_url` 字段是必须的。"
-            )
+        if self.convert_engine == "mineru":
+            if not self.mineru_token and MINERU_TOKEN:
+                self.mineru_token = MINERU_TOKEN
+            if not self.mineru_token:
+                raise ValueError(
+                    "当 `convert_engine` 为 'mineru' 时，`mineru_token` 字段是必须的。"
+                )
+        if self.convert_engine == "mineru_deploy":
+            if not self.mineru_deploy_base_url and MINERU_DEPLOY_BASE_URL:
+                self.mineru_deploy_base_url = MINERU_DEPLOY_BASE_URL
+            if not self.mineru_deploy_base_url:
+                raise ValueError(
+                    "当 `convert_engine` 为 'mineru_deploy' 时，`mineru_deploy_base_url` 字段是必须的。"
+                )
         return self
 
 

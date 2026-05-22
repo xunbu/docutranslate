@@ -138,6 +138,9 @@ export function useSettings() {
 
     const queue_concurrent = ref(3);
 
+    // 是否跳过前端空值检查（从后端获取）
+    const webSkipValidation = ref(false);
+
     // Nested Params for specific workflows
     const workflowParams = reactive({
         txt: {insert_mode: 'replace', separator: '\\n', segment_mode: 'line'},
@@ -455,6 +458,7 @@ export function useSettings() {
         defaultParams,
         default_workflows,
         queue_concurrent,
+        webSkipValidation,
 
         // Methods
         clearError,

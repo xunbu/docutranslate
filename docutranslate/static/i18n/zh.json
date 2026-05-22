@@ -211,5 +211,6 @@
   "addExtensionBtn": "添加后缀",
   "addExtensionPlaceholder": "输入后缀，如 pdf",
   "extensionExistsError": "该后缀已存在",
-  "dragHere": "拖拽到此处"
+  "dragHere": "拖拽到此处",
+  "webSkipValidation": "跳过空值检查"
 }

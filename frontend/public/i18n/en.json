@@ -211,5 +211,6 @@
   "addExtensionBtn": "Add Extension",
   "addExtensionPlaceholder": "Enter extension, e.g. pdf",
   "extensionExistsError": "Extension already exists",
-  "dragHere": "Drag here"
+  "dragHere": "Drag here",
+  "webSkipValidation": "Skip empty validation"
 }

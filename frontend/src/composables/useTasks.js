@@ -34,7 +34,7 @@ const formatError = (data) => {
 };
 
 export function useTasks(settings, glossary, i18n) {
-    const { form, workflowParams, default_workflows, saveSetting, saveAllSettings, updatePlatformParams, STORAGE, errors } = settings;
+    const { form, workflowParams, default_workflows, saveSetting, saveAllSettings, updatePlatformParams, STORAGE, errors, webSkipValidation } = settings;
     const { glossaryData } = glossary;
     const { t } = i18n;
 
@@ -273,6 +273,11 @@ export function useTasks(settings, glossary, i18n) {
         let isValid = true;
         if (errors) Object.keys(errors).forEach(k => errors[k] = false);
 
+        // 如果跳过前端空值检查，直接返回 true
+        if (webSkipValidation.value) {
+            return true;
+        }
+
         if (!form.skip_translate) {
             if (!form.model_id) { if (errors) errors.model_id = true; isValid = false; }
             if (form.platform === 'custom' && !form.base_url) { if (errors) errors.base_url = true; isValid = false; }
@@ -293,8 +298,21 @@ export function useTasks(settings, glossary, i18n) {
                 // 查找带有红色边框的错误元素（border-red-500 或 border-red-400）
                 const errorEl = document.querySelector('.border-red-500, .border-red-400');
                 if (errorEl) {
-                    errorEl.scrollIntoView({behavior: 'smooth', block: 'center'});
-                    errorEl.focus();
+                    // 找到错误元素所在的 Collapse 并展开
+                    const collapseEl = errorEl.closest('.collapse-panel');
+                    if (collapseEl) {
+                        const headerBtn = collapseEl.querySelector('.collapse-header');
+                        const contentEl = collapseEl.querySelector('.overflow-hidden');
+                        // 检查是否折叠状态（contentEl 的 v-show 为 false）
+                        if (contentEl && contentEl.style.display === 'none') {
+                            headerBtn?.click();
+                        }
+                    }
+                    // 等待展开动画完成后再滚动
+                    setTimeout(() => {
+                        errorEl.scrollIntoView({behavior: 'smooth', block: 'center'});
+                        errorEl.focus();
+                    }, 250);
                 }
             });
         }

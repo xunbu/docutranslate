@@ -63,6 +63,12 @@
             </p>
             <p class="mb-2">{{ t('qqGroup') }}</p>
             <p class="mb-0">version:<span>{{ version ? 'v' + version : '' }}</span></p>
+            <!-- Status Flags -->
+            <div v-if="webSkipValidation" class="status-flags mt-2">
+                <span :title="t('webSkipValidation')" class="status-flag">
+                    <Heroicon name="Cog6ToothIcon" class="w-4 h-4" />
+                </span>
+            </div>
         </div>
     </div>
 
@@ -124,6 +130,7 @@ const downloadGlossaryTemplate = inject('downloadGlossaryTemplate');
 const exportConfig = inject('exportConfig');
 const importConfig = inject('importConfig');
 const saveDefaultWorkflows = inject('saveDefaultWorkflows');
+const webSkipValidation = inject('webSkipValidation');
 
 const configFile = ref(null);
 const showTutorial = ref(false);
@@ -142,3 +149,25 @@ const openDefaultWorkflowModal = () => {
     defaultWorkflowModal.value?.show();
 };
 </script>
+
+<style scoped>
+.status-flags {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+}
+.status-flag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+    cursor: help;
+}
+.status-flag:hover {
+    background: rgba(59, 130, 246, 0.2);
+}
+</style>

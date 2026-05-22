@@ -86,7 +86,7 @@ const tasksComposable = useTasks(settings, glossary, i18n);
 const preview = usePreview(i18n);
 
 // Destructure from composables
-const { form, workflowParams, errors, defaultParams, default_workflows, queue_concurrent,
+const { form, workflowParams, errors, defaultParams, default_workflows, queue_concurrent, webSkipValidation,
         clearError, loadConfig, saveSetting, saveSettingArray, saveWorkflowParam,
         saveAllSettings, setupPlatformWatchers, exportConfig, importConfig,
         saveDefaultWorkflows } = settings;
@@ -131,6 +131,7 @@ provide('errors', errors);
 provide('defaultParams', defaultParams);
 provide('default_workflows', default_workflows);
 provide('queue_concurrent', queue_concurrent);
+provide('webSkipValidation', webSkipValidation);
 provide('glossaryData', glossaryData);
 provide('glossaryCount', glossaryCount);
 provide('tasks', tasks);
@@ -199,7 +200,9 @@ onMounted(async () => {
         const meta = await metaRes.json();
         version.value = meta.version;
         enginList.value = await enginRes.json();
-        Object.assign(defaultParams, await paramsRes.json());
+        const paramsData = await paramsRes.json();
+        Object.assign(defaultParams, paramsData);
+        webSkipValidation.value = paramsData.web_skip_validation ?? false;
     } catch (e) {
         console.error("Backend init failed", e);
     }

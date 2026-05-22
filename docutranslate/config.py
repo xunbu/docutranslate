@@ -115,6 +115,11 @@ EXTRA_BODY = _get_env_str("DOCUTRANSLATE_EXTRA_BODY", "")
 GLOSSARY_GENERATE_ENABLE = _get_env_bool("DOCUTRANSLATE_GLOSSARY_GENERATE_ENABLE", False)
 
 # ============================================================
+# 环境变量默认值模式（仅影响 Web 前端）
+# ============================================================
+WEB_SKIP_VALIDATION = _get_env_bool("DOCUTRANSLATE_WEB_SKIP_VALIDATION", False)
+
+# ============================================================
 # MarkdownWorkflowParams 默认值
 # ============================================================
 CONVERT_ENGINE = _get_env_str("DOCUTRANSLATE_CONVERT_ENGINE", "identity")
@@ -160,4 +165,5 @@ default_params = {
     "retry": RETRY,
     "system_proxy_enable": SYSTEM_PROXY_ENABLE,
     "extra_body": EXTRA_BODY,
+    "web_skip_validation": WEB_SKIP_VALIDATION,
 }
