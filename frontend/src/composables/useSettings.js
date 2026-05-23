@@ -242,6 +242,9 @@ export function useSettings() {
         });
         workflowParams.txt.segment_mode = storage.get('translator_txt_segment_mode', 'line');
         workflowParams.xlsx.translate_regions = storage.get('translator_xlsx_translate_regions', '');
+        // Load office_password for docx and xlsx
+        workflowParams.docx.office_password = storage.get('translator_docx_office_password', '');
+        workflowParams.xlsx.office_password = storage.get('translator_xlsx_office_password', '');
         workflowParams.json.json_paths = storage.get('translator_json_paths', '');
     };
 
