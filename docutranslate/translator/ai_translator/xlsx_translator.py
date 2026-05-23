@@ -21,7 +21,7 @@ class XlsxTranslatorConfig(AiTranslatorConfig):
     separator: str = "\n"
     # 指定翻译区域列表。
     translate_regions: Optional[List[str]] = None
-    password: Optional[str] = None
+    office_password: Optional[str] = None
 
 
 class XlsxTranslator(AiTranslator):
@@ -69,7 +69,7 @@ class XlsxTranslator(AiTranslator):
         self.insert_mode = config.insert_mode
         self.separator = config.separator
         self.translate_regions = config.translate_regions
-        self.password = config.password
+        self.office_password = config.office_password
 
         # 注册常用命名空间，防止ElementTree写回时产生 ns0, ns1 等前缀导致Excel报错
         self.NS_MAIN = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
@@ -102,10 +102,10 @@ class XlsxTranslator(AiTranslator):
         try:
             office_file = msoffcrypto.OfficeFile(file_stream)
             if office_file.is_encrypted():
-                if not self.password:
+                if not self.office_password:
                     raise ValueError("此XLSX文件已加密，但未提供密码。")
                 decrypted = BytesIO()
-                office_file.load_key(password=self.password)
+                office_file.load_key(password=self.office_password)
                 office_file.decrypt(decrypted)
                 return decrypted.getvalue()
             return content

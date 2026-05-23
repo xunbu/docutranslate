@@ -239,7 +239,7 @@ class Client:
             glossary_generate_enable: Optional[bool] = None,
             glossary_dict: Optional[Dict[str, str]] = None,
             glossary_agent_config: Optional[Union[GlossaryAgentConfigPayload, Dict[str, Any]]] = None,
-            password: Optional[str] = None,
+            office_password: Optional[str] = None,
             **kwargs
     ) -> TranslationResult:
         """
@@ -324,7 +324,7 @@ class Client:
             glossary_agent_config: Optional[Union[GlossaryAgentConfigPayload, Dict[str, Any]]] = None,
 
             # --- Docx/Xlsx 密码 ---
-            password: Optional[str] = None,
+            office_password: Optional[str] = None,
 
             **kwargs
     ) -> TranslationResult:
@@ -341,7 +341,7 @@ class Client:
         :param convert_engine: [PDF/OCR] 解析引擎 (mineru, docling)。
         :param mineru_token: [Mineru Cloud] API Token。
         :param mineru_deploy_base_url: [Mineru Local] 本地服务地址。
-        :param password: [Docx/Xlsx专用] 用于解密加密文件的密码。
+        :param office_password: [Docx/Xlsx专用] 用于解密加密文件的密码。
         """
 
         # 1. 获取所有参数

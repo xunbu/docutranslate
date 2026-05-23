@@ -69,8 +69,8 @@
                     <input :type="showDocxPassword ? 'text' : 'password'"
                            autocomplete="new-password"
                            class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-l bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
-                           v-model="workflowParams.docx.password"
-                           @input="saveWorkflowParam('password')"
+                           v-model="workflowParams.docx.office_password"
+                           @input="saveWorkflowParam('office_password')"
                            :placeholder="t('passwordPlaceholder')">
                     <button class="px-3 py-1.5 text-sm border border-l-0 border-gray-300 dark:border-gray-600 rounded-r bg-gray-50 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors"
                             type="button"
@@ -109,8 +109,8 @@
                     <input :type="showXlsxPassword ? 'text' : 'password'"
                            autocomplete="new-password"
                            class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-l bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
-                           v-model="workflowParams.xlsx.password"
-                           @input="saveWorkflowParam('password')"
+                           v-model="workflowParams.xlsx.office_password"
+                           @input="saveWorkflowParam('office_password')"
                            :placeholder="t('passwordPlaceholder')">
                     <button class="px-3 py-1.5 text-sm border border-l-0 border-gray-300 dark:border-gray-600 rounded-r bg-gray-50 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors"
                             type="button"

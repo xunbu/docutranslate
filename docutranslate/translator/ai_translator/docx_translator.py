@@ -74,7 +74,7 @@ def is_instr_text_run(run: Run) -> bool:
 class DocxTranslatorConfig(AiTranslatorConfig):
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
     separator: str = "\n"
-    password: Optional[str] = None
+    office_password: Optional[str] = None
 
 
 # ---------------- 主类 ----------------
@@ -126,7 +126,7 @@ class DocxTranslator(AiTranslator):
             self.translate_agent = SegmentsTranslateAgent(agent_config)
         self.insert_mode = config.insert_mode
         self.separator = config.separator
-        self.password = config.password
+        self.office_password = config.office_password
 
     def _decrypt_if_needed(self, content: bytes) -> bytes:
         """如果文件加密则解密，否则返回原内容"""
@@ -138,10 +138,10 @@ class DocxTranslator(AiTranslator):
         try:
             office_file = msoffcrypto.OfficeFile(file_stream)
             if office_file.is_encrypted():
-                if not self.password:
+                if not self.office_password:
                     raise ValueError("此DOCX文件已加密，但未提供密码。")
                 decrypted = BytesIO()
-                office_file.load_key(password=self.password)
+                office_file.load_key(password=self.office_password)
                 office_file.decrypt(decrypted)
                 return decrypted.getvalue()
             return content

@@ -144,8 +144,8 @@ export function useSettings() {
     // Nested Params for specific workflows
     const workflowParams = reactive({
         txt: {insert_mode: 'replace', separator: '\\n', segment_mode: 'line'},
-        xlsx: {insert_mode: 'replace', separator: '\\n', translate_regions: '', password: ''},
-        docx: {insert_mode: 'replace', separator: '', password: ''},
+        xlsx: {insert_mode: 'replace', separator: '\\n', translate_regions: '', office_password: ''},
+        docx: {insert_mode: 'replace', separator: '', office_password: ''},
         srt: {insert_mode: 'replace', separator: '\\n'},
         epub: {insert_mode: 'replace', separator: ''},
         html: {insert_mode: 'replace', separator: ''},
