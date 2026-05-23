@@ -406,7 +406,11 @@ export function useSettings() {
 
     // ===== Config Import/Export =====
     const exportConfig = () => {
-        const config = {form: form, workflowParams: workflowParams};
+        const config = {
+            form: form,
+            workflowParams: workflowParams,
+            default_workflows: default_workflows
+        };
         const blob = new Blob([JSON.stringify(config, null, 2)], {type: 'application/json'});
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -428,8 +432,10 @@ export function useSettings() {
                     _importingConfig = true;
                     if (data.form) Object.assign(form, data.form);
                     if (data.workflowParams) Object.assign(workflowParams, data.workflowParams);
+                    if (data.default_workflows) Object.assign(default_workflows, data.default_workflows);
                     _importingConfig = false;
                     saveAllSettings();
+                    saveDefaultWorkflows();
                     alert(t('configImportSuccess'));
                 } catch (err) {
                     _importingConfig = false;
