@@ -16,7 +16,23 @@ import os
 from typing import Any, Dict, Optional, List
 
 # Import config to load .env and make config values available
-from docutranslate.config import PORT
+from docutranslate.config import (
+    PORT,
+    # BaseWorkflowParams defaults
+    API_KEY, BASE_URL, MODEL_ID, TO_LANG, PROVIDER,
+    CHUNK_SIZE, CONCURRENT, TEMPERATURE, TOP_P, TIMEOUT,
+    THINKING, RETRY, SYSTEM_PROXY_ENABLE,
+    CUSTOM_PROMPT, FORCE_JSON, RPM, TPM,
+    EXTRA_BODY, GLOSSARY_GENERATE_ENABLE,
+    # MarkdownWorkflowParams defaults
+    CONVERT_ENGINE, MD2DOCX_ENGINE, MINERU_TOKEN, MODEL_VERSION,
+    FORMULA_OCR, CODE_OCR, MINERU_LANGUAGE,
+    MINERU_DEPLOY_BASE_URL, MINERU_DEPLOY_BACKEND, MINERU_DEPLOY_PARSE_METHOD,
+    MINERU_DEPLOY_TABLE_ENABLE, MINERU_DEPLOY_FORMULA_ENABLE,
+    MINERU_DEPLOY_START_PAGE_ID, MINERU_DEPLOY_END_PAGE_ID, MINERU_DEPLOY_SERVER_URL,
+    # TextWorkflowParams defaults
+    INSERT_MODE, SEPARATOR, SEGMENT_MODE,
+)
 
 # Shared server layer imports
 from docutranslate.server import (
@@ -119,45 +135,51 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
         # Use provided translation service or get the global one
         service = translation_service or get_translation_service()
 
-        # Client configuration - load from environment variables first
+        # Client configuration - load from config.py (which reads .env)
         client_config = {
             # Basic LLM settings
-            "api_key": os.environ.get("DOCUTRANSLATE_API_KEY", ""),
-            "base_url": os.environ.get("DOCUTRANSLATE_BASE_URL", ""),
-            "model_id": os.environ.get("DOCUTRANSLATE_MODEL_ID", ""),
-            "provider": os.environ.get("DOCUTRANSLATE_PROVIDER", ""),
-            "to_lang": os.environ.get("DOCUTRANSLATE_TO_LANG", "中文"),
-            "thinking": os.environ.get("DOCUTRANSLATE_THINKING", ""),
-            "chunk_size": int(os.environ.get("DOCUTRANSLATE_CHUNK_SIZE", "0")) or None,
-            "concurrent": int(os.environ.get("DOCUTRANSLATE_CONCURRENT", "10")),
-            "temperature": float(os.environ.get("DOCUTRANSLATE_TEMPERATURE", "0")) or None,
-            "top_p": float(os.environ.get("DOCUTRANSLATE_TOP_P", "0")) or None,
-            "retry": int(os.environ.get("DOCUTRANSLATE_RETRY", "0")) or None,
-            "timeout": int(os.environ.get("DOCUTRANSLATE_TIMEOUT", "0")) or None,
-            "system_proxy_enable": os.environ.get("DOCUTRANSLATE_SYSTEM_PROXY_ENABLE", "").lower() in ("true", "1", "yes"),
-            "force_json": os.environ.get("DOCUTRANSLATE_FORCE_JSON", "").lower() in ("true", "1", "yes") or None,
-            "rpm": int(os.environ.get("DOCUTRANSLATE_RPM", "0")) or None,
-            "tpm": int(os.environ.get("DOCUTRANSLATE_TPM", "0")) or None,
-            "custom_prompt": os.environ.get("DOCUTRANSLATE_CUSTOM_PROMPT", ""),
+            "api_key": API_KEY,
+            "base_url": BASE_URL,
+            "model_id": MODEL_ID,
+            "provider": PROVIDER,
+            "to_lang": TO_LANG,
+            "thinking": THINKING,
+            "chunk_size": CHUNK_SIZE,
+            "concurrent": CONCURRENT,
+            "temperature": TEMPERATURE,
+            "top_p": TOP_P,
+            "retry": RETRY,
+            "timeout": TIMEOUT,
+            "system_proxy_enable": SYSTEM_PROXY_ENABLE,
+            "force_json": FORCE_JSON,
+            "rpm": RPM,
+            "tpm": TPM,
+            "custom_prompt": CUSTOM_PROMPT,
+            "extra_body": EXTRA_BODY,
+            "glossary_generate_enable": GLOSSARY_GENERATE_ENABLE,
             # Convert engine settings
-            "convert_engine": os.environ.get("DOCUTRANSLATE_CONVERT_ENGINE", ""),
-            "md2docx_engine": os.environ.get("DOCUTRANSLATE_MD2DOCX_ENGINE", ""),
+            "convert_engine": CONVERT_ENGINE,
+            "md2docx_engine": MD2DOCX_ENGINE,
             # MinerU settings
-            "mineru_token": os.environ.get("DOCUTRANSLATE_MINERU_TOKEN", ""),
-            "model_version": os.environ.get("DOCUTRANSLATE_MODEL_VERSION", ""),
-            "formula_ocr": os.environ.get("DOCUTRANSLATE_FORMULA_OCR", "").lower() in ("true", "1", "yes") or None,
-            "code_ocr": os.environ.get("DOCUTRANSLATE_CODE_OCR", "").lower() in ("true", "1", "yes") or None,
-            "mineru_language": os.environ.get("DOCUTRANSLATE_MINERU_LANGUAGE", ""),
+            "mineru_token": MINERU_TOKEN,
+            "model_version": MODEL_VERSION,
+            "formula_ocr": FORMULA_OCR,
+            "code_ocr": CODE_OCR,
+            "mineru_language": MINERU_LANGUAGE,
             # MinerU Deploy settings
-            "mineru_deploy_base_url": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_BASE_URL", ""),
-            "mineru_deploy_backend": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_BACKEND", ""),
-            "mineru_deploy_parse_method": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_PARSE_METHOD", ""),
-            "mineru_deploy_formula_enable": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_FORMULA_ENABLE", "").lower() in ("true", "1", "yes") or None,
-            "mineru_deploy_table_enable": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_TABLE_ENABLE", "").lower() in ("true", "1", "yes") or None,
-            "mineru_deploy_start_page_id": int(os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_START_PAGE_ID", "0")) or None,
-            "mineru_deploy_end_page_id": int(os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_END_PAGE_ID", "0")) or None,
+            "mineru_deploy_base_url": MINERU_DEPLOY_BASE_URL,
+            "mineru_deploy_backend": MINERU_DEPLOY_BACKEND,
+            "mineru_deploy_parse_method": MINERU_DEPLOY_PARSE_METHOD,
+            "mineru_deploy_formula_enable": MINERU_DEPLOY_FORMULA_ENABLE,
+            "mineru_deploy_table_enable": MINERU_DEPLOY_TABLE_ENABLE,
+            "mineru_deploy_start_page_id": MINERU_DEPLOY_START_PAGE_ID,
+            "mineru_deploy_end_page_id": MINERU_DEPLOY_END_PAGE_ID,
             "mineru_deploy_lang_list": None,  # List type, not supported via env
-            "mineru_deploy_server_url": os.environ.get("DOCUTRANSLATE_MINERU_DEPLOY_SERVER_URL", ""),
+            "mineru_deploy_server_url": MINERU_DEPLOY_SERVER_URL,
+            # TextWorkflowParams defaults
+            "insert_mode": INSERT_MODE,
+            "separator": SEPARATOR,
+            "segment_mode": SEGMENT_MODE,
         }
 
         # Create FastMCP instance
@@ -692,19 +714,29 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             if use_mineru_deploy_server_url:
                 payload_dict["mineru_deploy_server_url"] = use_mineru_deploy_server_url
 
-            # Add other workflow parameters if provided
-            if insert_mode:
-                payload_dict["insert_mode"] = insert_mode
-            if separator:
-                payload_dict["separator"] = separator
-            if segment_mode:
-                payload_dict["segment_mode"] = segment_mode
+            # Add other workflow parameters if provided or from client_config
+            use_insert_mode = insert_mode or client_config.get("insert_mode")
+            if use_insert_mode:
+                payload_dict["insert_mode"] = use_insert_mode
+            use_separator = separator or client_config.get("separator")
+            if use_separator:
+                payload_dict["separator"] = use_separator
+            use_segment_mode = segment_mode or client_config.get("segment_mode")
+            if use_segment_mode:
+                payload_dict["segment_mode"] = use_segment_mode
             if translate_regions:
                 payload_dict["translate_regions"] = translate_regions
             if json_paths:
                 payload_dict["json_paths"] = json_paths
             if office_password:
                 payload_dict["office_password"] = office_password
+            # Add extra_body and glossary_generate_enable from client_config
+            use_extra_body = extra_body_json or client_config.get("extra_body")
+            if use_extra_body:
+                payload_dict["extra_body"] = use_extra_body
+            use_glossary_generate_enable = glossary_generate_enable if glossary_generate_enable is not None else client_config.get("glossary_generate_enable")
+            if use_glossary_generate_enable is not None:
+                payload_dict["glossary_generate_enable"] = use_glossary_generate_enable
 
             try:
                 # Validate and create payload - AutoWorkflowParams allows extra fields

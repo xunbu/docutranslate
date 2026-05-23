@@ -29,8 +29,16 @@ from docutranslate.config import (
     THINKING, RETRY, SYSTEM_PROXY_ENABLE,
     # Env defaults for empty fields
     API_KEY, BASE_URL, MODEL_ID, TO_LANG, PROVIDER,
+    # Additional BaseWorkflowParams defaults
+    CUSTOM_PROMPT, FORCE_JSON, RPM, TPM, EXTRA_BODY, GLOSSARY_GENERATE_ENABLE,
     # MarkdownWorkflowParams defaults
-    MINERU_TOKEN, MINERU_DEPLOY_BASE_URL,
+    CONVERT_ENGINE, MD2DOCX_ENGINE, MINERU_TOKEN, MINERU_DEPLOY_BASE_URL,
+    MODEL_VERSION, FORMULA_OCR, CODE_OCR, MINERU_LANGUAGE,
+    MINERU_DEPLOY_BACKEND, MINERU_DEPLOY_PARSE_METHOD,
+    MINERU_DEPLOY_TABLE_ENABLE, MINERU_DEPLOY_FORMULA_ENABLE,
+    MINERU_DEPLOY_START_PAGE_ID, MINERU_DEPLOY_END_PAGE_ID, MINERU_DEPLOY_SERVER_URL,
+    # TextWorkflowParams defaults
+    INSERT_MODE, SEPARATOR, SEGMENT_MODE,
 )
 
 # --- 公共类型定义 ---
@@ -139,7 +147,7 @@ class BaseWorkflowParams(BaseModel):
         examples=["gpt-4o"],
     )
     to_lang: str = Field(
-        default="中文", description="目标翻译语言。", examples=["简体中文", "English"]
+        default=TO_LANG, description="目标翻译语言。", examples=["简体中文", "English"]
     )
     chunk_size: int = Field(
         default=CHUNK_SIZE, description="文本分割的块大小（字符）。"
@@ -172,13 +180,13 @@ class BaseWorkflowParams(BaseModel):
     )
     # 修改: 默认值改为 ""
     custom_prompt: Optional[str] = Field(
-        default="", description="用户自定义的翻译Prompt。", alias="custom_prompt"
+        default=CUSTOM_PROMPT, description="用户自定义的翻译Prompt。", alias="custom_prompt"
     )
     glossary_dict: Optional[Dict[str, str]] = Field(
         None, description="术语表字典，key为原文，value为译文。", examples=[None]
     )
     glossary_generate_enable: bool = Field(
-        default=False, description="是否开启术语表自动生成。"
+        default=GLOSSARY_GENERATE_ENABLE, description="是否开启术语表自动生成。"
     )
     glossary_agent_config: Optional[GlossaryAgentConfigPayload] = Field(
         None,
@@ -186,19 +194,19 @@ class BaseWorkflowParams(BaseModel):
         examples=[None],
     )
     force_json: bool = Field(
-        default=False, description="应输出json格式时强制ai输出json"
+        default=FORCE_JSON, description="应输出json格式时强制ai输出json"
     )
     rpm: Optional[int] = Field(
-        default=None, description="RPM限制 (Requests Per Minute)", examples=[None]
+        default=RPM, description="RPM限制 (Requests Per Minute)", examples=[None]
     )
     tpm: Optional[int] = Field(
-        default=None, description="TPM限制 (Tokens Per Minute)", examples=[None]
+        default=TPM, description="TPM限制 (Tokens Per Minute)", examples=[None]
     )
     provider: Optional[ProviderType] = Field(
-        default=None, description="LLM供应商标识", examples=[None]
+        default=PROVIDER, description="LLM供应商标识", examples=[None]
     )
     extra_body: Optional[str] = Field(
-        default="", description="JSON字符串格式的额外请求体参数，会合并到API请求中"
+        default=EXTRA_BODY, description="JSON字符串格式的额外请求体参数，会合并到API请求中"
     )
 
     @model_validator(mode="before")
@@ -296,12 +304,12 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
     convert_engine: Literal[
         "identity", "mineru", "docling", "mineru_deploy"
     ] = Field(
-        "identity",
+        CONVERT_ENGINE,
         description="选择将文件解析为markdown的引擎。'mineru_deploy' 适用于本地部署的 MinerU 服务。如果输入文件是.md，此项可为`identity`或不传。",
         examples=["identity", "mineru", "docling", "mineru_deploy"],
     )
     md2docx_engine: Literal["python", "pandoc", "auto"] | None = Field(
-        "auto",
+        MD2DOCX_ENGINE,
         description="选择将markdown导出为docx的引擎。'python'使用纯Python实现，'pandoc'使用pandoc命令，'auto'自动选择（优先使用pandoc），None表示不生成docx。",
         examples=["python", "pandoc", "auto"],
     )
@@ -311,14 +319,14 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
     # -- For "mineru" (Cloud API) --
     # 修改: 默认值改为 ""
     mineru_token: Optional[str] = Field(
-        default="",
+        default=MINERU_TOKEN or "",
         description="[仅当 convert_engine='mineru'] 必填的API令牌。",
     )
     model_version: Literal["pipeline", "vlm"] = Field(
-        "vlm", description="[仅当 convert_engine='mineru'] Mineru Cloud模型的版本。"
+        MODEL_VERSION, description="[仅当 convert_engine='mineru'] Mineru Cloud模型的版本。"
     )
     formula_ocr: bool = Field(
-        True,
+        FORMULA_OCR,
         description="[仅当 convert_engine='mineru' 或 'docling'] 是否对公式进行OCR识别。",
     )
     mineru_language: Literal[
@@ -326,18 +334,18 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
         "ta", "te", "ka", "el", "th", "latin", "arabic", "cyrillic",
         "east_slavic", "devanagari"
     ] = Field(
-        "ch",
+        MINERU_LANGUAGE,
         description="[仅当 convert_engine='mineru'] 识别语言选项，默认 'ch'（中英文）。",
     )
 
     # -- For "docling" --
     code_ocr: bool = Field(
-        True, description="[仅当 convert_engine='docling'] 是否对代码块进行OCR识别。"
+        CODE_OCR, description="[仅当 convert_engine='docling'] 是否对代码块进行OCR识别。"
     )
 
     # -- For "mineru_deploy" (Local Deployment) --
     mineru_deploy_base_url: Optional[str] = Field(
-        "http://127.0.0.1:8000",
+        MINERU_DEPLOY_BASE_URL,
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务地址。",
     )
     # --- UPDATED BACKEND LIST ---
@@ -348,28 +356,28 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
         "hybrid-auto-engine",
         "hybrid-http-client"
     ] = Field(
-        "hybrid-auto-engine",
+        MINERU_DEPLOY_BACKEND,
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务使用的后端。",
     )
     # --- NEW PARAMETERS START ---
     mineru_deploy_parse_method: Literal["auto", "txt", "ocr"] = Field(
-        "auto",
+        MINERU_DEPLOY_PARSE_METHOD,
         description="[仅当 convert_engine='mineru_deploy'] 解析方法: auto, txt, ocr"
     )
     mineru_deploy_table_enable: bool = Field(
-        True,
+        MINERU_DEPLOY_TABLE_ENABLE,
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的服务是否启用表格解析。",
     )
     # --- NEW PARAMETERS END ---
     mineru_deploy_formula_enable: bool = Field(
-        True,
+        MINERU_DEPLOY_FORMULA_ENABLE,
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的服务是否启用公式解析。",
     )
     mineru_deploy_start_page_id: int = Field(
-        0, description="[仅当 convert_engine='mineru_deploy'] 起始解析页面。"
+        MINERU_DEPLOY_START_PAGE_ID, description="[仅当 convert_engine='mineru_deploy'] 起始解析页面。"
     )
     mineru_deploy_end_page_id: int = Field(
-        99999, description="[仅当 convert_engine='mineru_deploy'] 结束解析页面。"
+        MINERU_DEPLOY_END_PAGE_ID, description="[仅当 convert_engine='mineru_deploy'] 结束解析页面。"
     )
     mineru_deploy_lang_list: Optional[List[str]] = Field(
         None,
@@ -378,7 +386,7 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
     )
     # 修改: 默认值改为 ""
     mineru_deploy_server_url: Optional[str] = Field(
-        default="",
+        default=MINERU_DEPLOY_SERVER_URL or "",
         description="[仅当 convert_engine='mineru_deploy' 且 backend为http-client相关时] Server URL.",
     )
 
@@ -406,15 +414,15 @@ class TextWorkflowParams(BaseWorkflowParams):
         ..., description="指定使用纯文本的翻译工作流。"
     )
     insert_mode: Literal["replace", "append", "prepend"] = Field(
-        "replace",
+        INSERT_MODE,
         description="翻译文本的插入模式。'replace'：替换原文，'append'：附加到原文后，'prepend'：附加到原文前。",
     )
     separator: str = Field(
-        "\n",
+        SEPARATOR,
         description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
     )
     segment_mode: Literal["line", "paragraph", "none"] = Field(
-        default="line",
+        default=SEGMENT_MODE,
         description="分段模式: 'line'(按行), 'paragraph'(按段), 'none'(全文)",
     )
 

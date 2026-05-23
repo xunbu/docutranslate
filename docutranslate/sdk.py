@@ -17,6 +17,7 @@ from docutranslate.core.schemas import TranslatePayload, GlossaryAgentConfigPayl
 from docutranslate.core.factory import create_workflow_from_payload
 from docutranslate.translator import default_params
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
+from docutranslate.config import TO_LANG
 
 # --- 映射配置 ---
 # 格式说明: {workflow_type: {save_type: (method_name, default_suffix)}}
@@ -156,7 +157,7 @@ class Client:
             api_key: Optional[str] = None,
             base_url: Optional[str] = None,
             model_id: Optional[str] = None,
-            to_lang: str = "中文",
+            to_lang: str = TO_LANG,
             concurrent: int = default_params["concurrent"],
             timeout: int = default_params["timeout"],
             retry: int = default_params["retry"],
