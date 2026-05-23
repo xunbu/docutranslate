@@ -212,5 +212,9 @@
   "addExtensionPlaceholder": "Enter extension, e.g. pdf",
   "extensionExistsError": "Extension already exists",
   "dragHere": "Drag here",
-  "webSkipValidation": "Skip empty validation"
+  "webSkipValidation": "Skip empty validation",
+  "docxPasswordLabel": "File Password (Optional)",
+  "xlsxPasswordLabel": "File Password (Optional)",
+  "passwordPlaceholder": "Enter password if file is encrypted",
+  "passwordHelp": "If the file is encrypted, enter the decryption password. Leave empty for unencrypted files."
 }

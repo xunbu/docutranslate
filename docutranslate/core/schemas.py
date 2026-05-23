@@ -276,6 +276,9 @@ class UniversalParamsMixin(BaseModel):
     translate_regions: Optional[List[str]] = None
     segment_mode: Optional[Literal["line", "paragraph", "none"]] = None
 
+    # Docx/Xlsx 密码相关
+    password: Optional[str] = None
+
     # Json 相关
     json_paths: Optional[List[str]] = None
 
@@ -444,6 +447,11 @@ class XlsxWorkflowParams(BaseWorkflowParams):
         description="指定翻译区域列表。示例: ['Sheet1!A1:B10', 'C:D', 'E5']。如果不指定表名 (如 'C:D')，则应用于所有表。如果为 None，则翻译整个文件中的所有文本。",
         examples=[None],
     )
+    password: Optional[str] = Field(
+        default=None,
+        description="用于解密加密文件的密码。如果文件未加密，此参数将被忽略。",
+        examples=[None, "mypassword123"],
+    )
 
 
 class DocxWorkflowParams(BaseWorkflowParams):
@@ -457,6 +465,11 @@ class DocxWorkflowParams(BaseWorkflowParams):
     separator: str = Field(
         "\n",
         description="当 insert_mode 为 'append' 或 'prepend' 时，用于分隔原文和译文的分隔符。",
+    )
+    password: Optional[str] = Field(
+        default=None,
+        description="用于解密加密文件的密码。如果文件未加密，此参数将被忽略。",
+        examples=[None, "mypassword123"],
     )
 
 

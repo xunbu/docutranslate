@@ -24,6 +24,7 @@ dependencies = [
     "charset-normalizer>=3.4.4",
     "html2text>=2024.2.26",
     "python-dotenv>=1.2.1",
+    "msoffcrypto-tool>=4.12.0",
 ]
 dynamic = ["version"]
 

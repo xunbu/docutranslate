@@ -449,6 +449,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 segment_mode: Optional[str] = None,
                 translate_regions: Optional[List[str]] = None,
                 json_paths: Optional[List[str]] = None,
+                password: Optional[str] = None,
         ) -> str:
             """Submit a translation task (asynchronous, returns immediately).
             Use get_task_status to check progress. When complete, it will show
@@ -500,6 +501,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 segment_mode: [Txt only] Segment mode (line, paragraph, none)
                 translate_regions: [Xlsx only] Translation regions list
                 json_paths: [Json only] JsonPath expressions list
+                password: [Docx/Xlsx only] Password for encrypted files
             """
             # Ensure service is properly initialized with event loop and httpx_client
             if service.main_event_loop is None:
@@ -701,6 +703,8 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 payload_dict["translate_regions"] = translate_regions
             if json_paths:
                 payload_dict["json_paths"] = json_paths
+            if password:
+                payload_dict["password"] = password
 
             try:
                 # Validate and create payload - AutoWorkflowParams allows extra fields

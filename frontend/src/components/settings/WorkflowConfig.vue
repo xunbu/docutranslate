@@ -62,6 +62,26 @@
                      v-html="t(currentWorkflowConfig.separatorHelpKey || 'separatorHelp')"></div>
             </div>
 
+            <!-- DOCX Password -->
+            <div class="mb-3" v-if="form.workflow_type === 'docx'">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('docxPasswordLabel') }}</label>
+                <div class="flex">
+                    <input :type="showDocxPassword ? 'text' : 'password'"
+                           autocomplete="new-password"
+                           class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-l bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                           v-model="workflowParams.docx.password"
+                           @input="saveWorkflowParam('password')"
+                           :placeholder="t('passwordPlaceholder')">
+                    <button class="px-3 py-1.5 text-sm border border-l-0 border-gray-300 dark:border-gray-600 rounded-r bg-gray-50 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors"
+                            type="button"
+                            @click="showDocxPassword = !showDocxPassword">
+                        <Heroicon v-if="showDocxPassword" name="EyeSlashIcon" class="w-5 h-5" />
+                        <Heroicon v-else name="EyeIcon" class="w-5 h-5" />
+                    </button>
+                </div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('passwordHelp') }}</div>
+            </div>
+
             <!-- TXT Specific -->
             <div class="mb-3" v-if="form.workflow_type === 'txt'">
                 <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('segmentModeLabel') }}</label>
@@ -81,6 +101,25 @@
                           v-model="workflowParams.xlsx.translate_regions"
                           @input="saveWorkflowParam('translate_regions')" rows="3"
                           :placeholder="t('xlsxTranslateRegionsPlaceholder')"></textarea>
+            </div>
+            <!-- XLSX Password -->
+            <div class="mb-3" v-if="form.workflow_type === 'xlsx'">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('xlsxPasswordLabel') }}</label>
+                <div class="flex">
+                    <input :type="showXlsxPassword ? 'text' : 'password'"
+                           autocomplete="new-password"
+                           class="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-l bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                           v-model="workflowParams.xlsx.password"
+                           @input="saveWorkflowParam('password')"
+                           :placeholder="t('passwordPlaceholder')">
+                    <button class="px-3 py-1.5 text-sm border border-l-0 border-gray-300 dark:border-gray-600 rounded-r bg-gray-50 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-500 transition-colors"
+                            type="button"
+                            @click="showXlsxPassword = !showXlsxPassword">
+                        <Heroicon v-if="showXlsxPassword" name="EyeSlashIcon" class="w-5 h-5" />
+                        <Heroicon v-else name="EyeIcon" class="w-5 h-5" />
+                    </button>
+                </div>
+                <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('passwordHelp') }}</div>
             </div>
             <!-- JSON Specific -->
             <div class="mb-3" v-if="form.workflow_type === 'json'">
@@ -313,6 +352,8 @@ const clearError = inject('clearError');
 
 // Local state for collapse
 const isWorkflowConfigOpen = ref(false);
+const showDocxPassword = ref(false);
+const showXlsxPassword = ref(false);
 
 const openDefaultWorkflowModal = () => {
     emit('openDefaultWorkflowModal');

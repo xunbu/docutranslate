@@ -212,5 +212,9 @@
   "addExtensionPlaceholder": "输入后缀，如 pdf",
   "extensionExistsError": "该后缀已存在",
   "dragHere": "拖拽到此处",
-  "webSkipValidation": "跳过空值检查"
+  "webSkipValidation": "跳过空值检查",
+  "docxPasswordLabel": "文件密码 (可选)",
+  "xlsxPasswordLabel": "文件密码 (可选)",
+  "passwordPlaceholder": "如果文件已加密，请输入密码",
+  "passwordHelp": "如果文件已加密，请输入解密密码。未加密的文件请留空。"
 }

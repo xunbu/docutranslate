@@ -5,7 +5,7 @@ from collections import defaultdict
 from copy import deepcopy
 from dataclasses import dataclass
 from io import BytesIO
-from typing import Self, Literal, List, Dict, Any, Tuple
+from typing import Self, Literal, List, Dict, Any, Tuple, Optional
 
 import docx
 from docx.document import Document as DocumentObject
@@ -74,6 +74,7 @@ def is_instr_text_run(run: Run) -> bool:
 class DocxTranslatorConfig(AiTranslatorConfig):
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
     separator: str = "\n"
+    password: Optional[str] = None
 
 
 # ---------------- 主类 ----------------
@@ -125,6 +126,29 @@ class DocxTranslator(AiTranslator):
             self.translate_agent = SegmentsTranslateAgent(agent_config)
         self.insert_mode = config.insert_mode
         self.separator = config.separator
+        self.password = config.password
+
+    def _decrypt_if_needed(self, content: bytes) -> bytes:
+        """如果文件加密则解密，否则返回原内容"""
+        import msoffcrypto
+        import msoffcrypto.exceptions
+        from io import BytesIO
+
+        file_stream = BytesIO(content)
+        try:
+            office_file = msoffcrypto.OfficeFile(file_stream)
+            if office_file.is_encrypted():
+                if not self.password:
+                    raise ValueError("此DOCX文件已加密，但未提供密码。")
+                decrypted = BytesIO()
+                office_file.load_key(password=self.password)
+                office_file.decrypt(decrypted)
+                return decrypted.getvalue()
+            return content
+        except msoffcrypto.exceptions.FileFormatError:
+            return content
+        finally:
+            file_stream.close()
 
     def _get_significant_styles(self, run: Run) -> frozenset:
         """从一个 Run 中提取“显著”格式标签的集合。"""
@@ -265,7 +289,8 @@ class DocxTranslator(AiTranslator):
             self._process_body_elements(parent_element, container, elements, texts)
 
     def _pre_translate(self, document: Document) -> Tuple[DocumentObject, List[Dict[str, Any]], List[str]]:
-        doc = docx.Document(BytesIO(document.content))
+        content = self._decrypt_if_needed(document.content)
+        doc = docx.Document(BytesIO(content))
         elements, texts = [], []
 
         self._traverse_container(doc, elements, texts)

@@ -21,6 +21,7 @@ class XlsxTranslatorConfig(AiTranslatorConfig):
     separator: str = "\n"
     # 指定翻译区域列表。
     translate_regions: Optional[List[str]] = None
+    password: Optional[str] = None
 
 
 class XlsxTranslator(AiTranslator):
@@ -68,6 +69,7 @@ class XlsxTranslator(AiTranslator):
         self.insert_mode = config.insert_mode
         self.separator = config.separator
         self.translate_regions = config.translate_regions
+        self.password = config.password
 
         # 注册常用命名空间，防止ElementTree写回时产生 ns0, ns1 等前缀导致Excel报错
         self.NS_MAIN = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main'
@@ -89,6 +91,33 @@ class XlsxTranslator(AiTranslator):
         ET.register_namespace('x14ac', "http://schemas.microsoft.com/office/spreadsheetml/2009/9/ac")
         ET.register_namespace('x15', "http://schemas.microsoft.com/office/spreadsheetml/2010/11/main")
         ET.register_namespace('x15ac', "http://schemas.microsoft.com/office/spreadsheetml/2010/11/ac")
+
+    def _decrypt_if_needed(self, content: bytes) -> bytes:
+        """如果文件加密则解密，否则返回原内容"""
+        import msoffcrypto
+        import msoffcrypto.exceptions
+        from io import BytesIO
+
+        file_stream = BytesIO(content)
+        try:
+            office_file = msoffcrypto.OfficeFile(file_stream)
+            if office_file.is_encrypted():
+                if not self.password:
+                    raise ValueError("此XLSX文件已加密，但未提供密码。")
+                decrypted = BytesIO()
+                office_file.load_key(password=self.password)
+                office_file.decrypt(decrypted)
+                return decrypted.getvalue()
+            return content
+        except msoffcrypto.exceptions.FileFormatError:
+            return content
+        finally:
+            file_stream.close()
+
+    def _get_zipfile(self, content: bytes) -> zipfile.ZipFile:
+        """获取ZipFile对象，如果文件加密则先解密"""
+        decrypted = self._decrypt_if_needed(content)
+        return zipfile.ZipFile(BytesIO(decrypted), 'r')
 
     # =========================================================================
     # 核心辅助方法
@@ -244,7 +273,7 @@ class XlsxTranslator(AiTranslator):
 
     def _get_texts_xml_regions(self, document: Document) -> List[str]:
         texts_to_translate = set()
-        with zipfile.ZipFile(BytesIO(document.content), 'r') as zf:
+        with self._get_zipfile(document.content) as zf:
             shared_strings = self._get_shared_strings(zf)
             sheet_mapping = self._get_sheet_mapping(zf)
             if not sheet_mapping:
@@ -290,7 +319,8 @@ class XlsxTranslator(AiTranslator):
 
     def _rebuild_xml_regions(self, original_content_bytes: bytes, translation_map: dict) -> bytes:
         output_zip_io = BytesIO()
-        with zipfile.ZipFile(BytesIO(original_content_bytes), 'r') as zf_in:
+        decrypted_content = self._decrypt_if_needed(original_content_bytes)
+        with zipfile.ZipFile(BytesIO(decrypted_content), 'r') as zf_in:
             with zipfile.ZipFile(output_zip_io, 'w', zipfile.ZIP_DEFLATED) as zf_out:
                 shared_strings = self._get_shared_strings(zf_in)
                 sheet_mapping = self._get_sheet_mapping(zf_in)
@@ -363,7 +393,7 @@ class XlsxTranslator(AiTranslator):
     def _get_texts_xml_all(self, document: Document) -> List[str]:
         texts_to_translate = set()
         try:
-            with zipfile.ZipFile(BytesIO(document.content), 'r') as zf:
+            with self._get_zipfile(document.content) as zf:
                 # 1. Shared Strings
                 if "xl/sharedStrings.xml" in zf.namelist():
                     with zf.open("xl/sharedStrings.xml") as f:
@@ -418,7 +448,8 @@ class XlsxTranslator(AiTranslator):
     def _rebuild_xml_all(self, original_content_bytes: bytes, translation_map: dict) -> bytes:
         output_zip_io = BytesIO()
         try:
-            with zipfile.ZipFile(BytesIO(original_content_bytes), 'r') as zf_in:
+            decrypted_content = self._decrypt_if_needed(original_content_bytes)
+            with zipfile.ZipFile(BytesIO(decrypted_content), 'r') as zf_in:
                 with zipfile.ZipFile(output_zip_io, 'w', zipfile.ZIP_DEFLATED) as zf_out:
                     for item in zf_in.infolist():
                         content = zf_in.read(item.filename)
