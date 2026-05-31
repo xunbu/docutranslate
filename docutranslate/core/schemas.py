@@ -29,6 +29,8 @@ from docutranslate.config import (
     THINKING, RETRY, SYSTEM_PROXY_ENABLE,
     # Env defaults for empty fields
     API_KEY, BASE_URL, MODEL_ID, TO_LANG, PROVIDER,
+    # Force override flag and env set tracker
+    ENV_FORCE_OVERRIDE, ENV_SET,
     # Additional BaseWorkflowParams defaults
     CUSTOM_PROMPT, FORCE_JSON, RPM, TPM, EXTRA_BODY, GLOSSARY_GENERATE_ENABLE,
     # MarkdownWorkflowParams defaults
@@ -221,19 +223,37 @@ class BaseWorkflowParams(BaseModel):
 
         if isinstance(values, dict):
             if not values.get("skip_translate"):
-                # 使用 .env 默认值填充空字段
-                if not (values.get("base_url") or values.get("baseurl")):
-                    if BASE_URL:
-                        values["base_url"] = BASE_URL
-                if not values.get("model_id"):
-                    if MODEL_ID:
-                        values["model_id"] = MODEL_ID
-                if not values.get("api_key") and API_KEY:
-                    values["api_key"] = API_KEY
-                if not values.get("to_lang") and TO_LANG:
-                    values["to_lang"] = TO_LANG
-                if not values.get("provider") and PROVIDER:
-                    values["provider"] = PROVIDER
+                # 环境变量值映射
+                env_values = {
+                    "base_url": BASE_URL,
+                    "model_id": MODEL_ID,
+                    "api_key": API_KEY,
+                    "provider": PROVIDER,
+                    "to_lang": TO_LANG,
+                    "thinking": THINKING,
+                    "chunk_size": CHUNK_SIZE,
+                    "concurrent": CONCURRENT,
+                    "temperature": TEMPERATURE,
+                    "top_p": TOP_P,
+                    "retry": RETRY,
+                    "system_proxy_enable": SYSTEM_PROXY_ENABLE,
+                    "custom_prompt": CUSTOM_PROMPT,
+                    "force_json": FORCE_JSON,
+                    "rpm": RPM,
+                    "tpm": TPM,
+                    "extra_body": EXTRA_BODY,
+                }
+
+                if ENV_FORCE_OVERRIDE:
+                    # 强制覆盖模式：仅当 .env 中实际设置了值时才覆盖前端传参
+                    for field, env_value in env_values.items():
+                        if ENV_SET.get(field):
+                            values[field] = env_value
+                else:
+                    # 默认模式：仅空值时填充
+                    for field, env_value in env_values.items():
+                        if not values.get(field) and env_value:
+                            values[field] = env_value
 
                 # 验证：如果填充后仍为空，则报错（Auto 模式除外）
                 if not (values.get("base_url") or values.get("baseurl")):

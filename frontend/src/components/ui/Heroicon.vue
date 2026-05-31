@@ -40,7 +40,8 @@ import {
     CloudArrowUpIcon,
     CommandLineIcon,
     EyeSlashIcon,
-    SparklesIcon
+    SparklesIcon,
+    LockClosedIcon
 } from '@heroicons/vue/24/outline';
 
 import {
@@ -112,7 +113,8 @@ const iconComponents = {
     'CloudArrowUpIcon': { outline: CloudArrowUpIcon, solid: CloudArrowUpIcon },
     'CommandLineIcon': { outline: CommandLineIcon, solid: CommandLineIcon },
     'SparklesIcon': { outline: SparklesIcon, solid: SparklesIcon },
-    'CheckBadgeIcon': { outline: CheckBadgeIconSolid, solid: CheckBadgeIconSolid }
+    'CheckBadgeIcon': { outline: CheckBadgeIconSolid, solid: CheckBadgeIconSolid },
+    'LockClosedIcon': { outline: LockClosedIcon, solid: LockClosedIcon }
 };
 
 const iconComponent = computed(() => {

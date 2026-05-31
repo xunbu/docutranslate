@@ -213,6 +213,7 @@
   "extensionExistsError": "该后缀已存在",
   "dragHere": "拖拽到此处",
   "webSkipValidation": "跳过空值检查",
+  "envForceOverride": "强制使用环境变量配置",
   "docxPasswordLabel": "文件密码 (可选)",
   "xlsxPasswordLabel": "文件密码 (可选)",
   "passwordPlaceholder": "如果文件已加密，请输入密码",

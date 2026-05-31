@@ -64,9 +64,12 @@
             <p class="mb-2">{{ t('qqGroup') }}</p>
             <p class="mb-0">version:<span>{{ version ? 'v' + version : '' }}</span></p>
             <!-- Status Flags -->
-            <div v-if="webSkipValidation" class="status-flags mt-2">
-                <span :title="t('webSkipValidation')" class="status-flag">
+            <div v-if="webSkipValidation || envForceOverride" class="status-flags mt-2">
+                <span v-if="webSkipValidation" :title="t('webSkipValidation')" class="status-flag">
                     <Heroicon name="CheckBadgeIcon" class="w-4 h-4" />
+                </span>
+                <span v-if="envForceOverride" :title="t('envForceOverride')" class="status-flag status-flag-warning">
+                    <Heroicon name="LockClosedIcon" class="w-4 h-4" />
                 </span>
             </div>
         </div>
@@ -131,6 +134,7 @@ const exportConfig = inject('exportConfig');
 const importConfig = inject('importConfig');
 const saveDefaultWorkflows = inject('saveDefaultWorkflows');
 const webSkipValidation = inject('webSkipValidation');
+const envForceOverride = inject('envForceOverride');
 
 const configFile = ref(null);
 const showTutorial = ref(false);
@@ -169,5 +173,12 @@ const openDefaultWorkflowModal = () => {
 }
 .status-flag:hover {
     background: rgba(59, 130, 246, 0.2);
+}
+.status-flag-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+.status-flag-warning:hover {
+    background: rgba(245, 158, 11, 0.2);
 }
 </style>

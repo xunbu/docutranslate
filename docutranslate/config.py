@@ -90,6 +90,12 @@ def _get_env_optional_str(key: str) -> Optional[str]:
     return val if val else None
 
 
+def _is_env_set(key: str) -> bool:
+    """检查环境变量是否被实际设置（非空）"""
+    val = os.environ.get(key)
+    return val is not None and val != ""
+
+
 # ============================================================
 # BaseWorkflowParams 默认值
 # ============================================================
@@ -114,10 +120,35 @@ PROVIDER = _get_env_optional_str("DOCUTRANSLATE_PROVIDER")
 EXTRA_BODY = _get_env_str("DOCUTRANSLATE_EXTRA_BODY", "")
 GLOSSARY_GENERATE_ENABLE = _get_env_bool("DOCUTRANSLATE_GLOSSARY_GENERATE_ENABLE", False)
 
+# 环境变量是否被实际设置的标记（用于强制覆盖逻辑）
+ENV_SET = {
+    "api_key": _is_env_set("DOCUTRANSLATE_API_KEY"),
+    "base_url": _is_env_set("DOCUTRANSLATE_BASE_URL"),
+    "model_id": _is_env_set("DOCUTRANSLATE_MODEL_ID"),
+    "to_lang": _is_env_set("DOCUTRANSLATE_TO_LANG"),
+    "provider": _is_env_set("DOCUTRANSLATE_PROVIDER"),
+    "thinking": _is_env_set("DOCUTRANSLATE_THINKING"),
+    "chunk_size": _is_env_set("DOCUTRANSLATE_CHUNK_SIZE"),
+    "concurrent": _is_env_set("DOCUTRANSLATE_CONCURRENT"),
+    "temperature": _is_env_set("DOCUTRANSLATE_TEMPERATURE"),
+    "top_p": _is_env_set("DOCUTRANSLATE_TOP_P"),
+    "retry": _is_env_set("DOCUTRANSLATE_RETRY"),
+    "system_proxy_enable": _is_env_set("DOCUTRANSLATE_SYSTEM_PROXY_ENABLE"),
+    "custom_prompt": _is_env_set("DOCUTRANSLATE_CUSTOM_PROMPT"),
+    "force_json": _is_env_set("DOCUTRANSLATE_FORCE_JSON"),
+    "rpm": _is_env_set("DOCUTRANSLATE_RPM"),
+    "tpm": _is_env_set("DOCUTRANSLATE_TPM"),
+    "extra_body": _is_env_set("DOCUTRANSLATE_EXTRA_BODY"),
+}
+
 # ============================================================
 # 环境变量默认值模式（仅影响 Web 前端）
 # ============================================================
 WEB_SKIP_VALIDATION = _get_env_bool("DOCUTRANSLATE_WEB_SKIP_VALIDATION", False)
+# 是否强制使用环境变量的值（仅对 API_KEY, BASE_URL, MODEL_ID, PROVIDER 生效）
+# 设为 true 时，无论前端是否传参，都强制使用 .env 中的值
+# 设为 false 时，仅当前端传参为空时才使用 .env 中的值
+ENV_FORCE_OVERRIDE = _get_env_bool("DOCUTRANSLATE_ENV_FORCE_OVERRIDE", False)
 
 # ============================================================
 # MarkdownWorkflowParams 默认值
@@ -166,4 +197,5 @@ default_params = {
     "system_proxy_enable": SYSTEM_PROXY_ENABLE,
     "extra_body": EXTRA_BODY,
     "web_skip_validation": WEB_SKIP_VALIDATION,
+    "env_force_override": ENV_FORCE_OVERRIDE,
 }

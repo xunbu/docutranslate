@@ -212,6 +212,8 @@
   "addExtensionPlaceholder": "Nhập phần mở rộng, ví dụ pdf",
   "extensionExistsError": "Phần mở rộng đã tồn tại",
   "dragHere": "Kéo vào đây",
+  "webSkipValidation": "Bỏ qua xác thực trống",
+  "envForceOverride": "Buộc sử dụng cấu hình env",
   "docxPasswordLabel": "Mật khẩu tệp (Tùy chọn)",
   "xlsxPasswordLabel": "Mật khẩu tệp (Tùy chọn)",
   "passwordPlaceholder": "Nhập mật khẩu nếu tệp được mã hóa",

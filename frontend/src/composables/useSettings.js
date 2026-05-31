@@ -81,7 +81,7 @@ export function useSettings() {
         formula_ocr: true,
         code_ocr: true,
         skip_translate: false,
-        platform: 'https://api.302.ai/v1',
+        platform: 'custom',
         base_url: '',
         api_key: '',
         model_id: '',
@@ -103,7 +103,7 @@ export function useSettings() {
         glossary_generate_enable: false,
         glossary_agent_custom_prompt: '',
         glossary_agent_config_choice: 'same',
-        glossary_agent_platform: 'https://api.302.ai/v1',
+        glossary_agent_platform: 'custom',
         glossary_agent_baseurl: '',
         glossary_agent_key: '',
         glossary_agent_model_id: '',
@@ -140,6 +140,8 @@ export function useSettings() {
 
     // 是否跳过前端空值检查（从后端获取）
     const webSkipValidation = ref(false);
+    // 是否强制使用环境变量值（从后端获取）
+    const envForceOverride = ref(false);
 
     // Nested Params for specific workflows
     const workflowParams = reactive({
@@ -181,7 +183,7 @@ export function useSettings() {
         form.formula_ocr = storage.getBool('translator_formula_ocr', true);
         form.code_ocr = storage.getBool('translator_code_ocr', true);
         form.skip_translate = storage.getBool('translator_skip_translate', false);
-        form.platform = storage.get(STORAGE.keys.PLATFORM, 'https://api.302.ai/v1');
+        form.platform = storage.get(STORAGE.keys.PLATFORM, 'custom');
         form.system_proxy_enable = storage.getBool('translator_system_proxy_enable', defaults.system_proxy_enable ?? false);
         form.force_json = storage.getBool('translator_force_json', false);
         form.to_lang = storage.get('translator_to_lang', 'Simplified Chinese');
@@ -211,7 +213,7 @@ export function useSettings() {
         form.glossary_generate_enable = storage.getBool('glossary_generate_enable', false);
         form.glossary_agent_custom_prompt = storage.get('glossary_agent_custom_prompt', '');
         form.glossary_agent_config_choice = storage.get('glossary_agent_config_choice', 'same');
-        form.glossary_agent_platform = storage.get('glossary_agent_platform_last_platform', 'https://api.302.ai/v1');
+        form.glossary_agent_platform = storage.get('glossary_agent_platform_last_platform', 'custom');
         form.glossary_agent_to_lang = storage.get('glossary_agent_to_lang', 'Simplified Chinese');
         form.glossary_agent_custom_to_lang = storage.get('glossary_agent_custom_to_lang', '');
         form.glossary_agent_chunk_size = storage.getNum('glossary_agent_chunk_size', defaults.chunk_size ?? 1000);
@@ -468,6 +470,7 @@ export function useSettings() {
         default_workflows,
         queue_concurrent,
         webSkipValidation,
+        envForceOverride,
 
         // Methods
         clearError,

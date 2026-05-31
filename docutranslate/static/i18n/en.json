@@ -213,6 +213,7 @@
   "extensionExistsError": "Extension already exists",
   "dragHere": "Drag here",
   "webSkipValidation": "Skip empty validation",
+  "envForceOverride": "Force use env config",
   "docxPasswordLabel": "File Password (Optional)",
   "xlsxPasswordLabel": "File Password (Optional)",
   "passwordPlaceholder": "Enter password if file is encrypted",

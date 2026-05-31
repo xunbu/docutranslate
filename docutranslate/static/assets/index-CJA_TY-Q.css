@@ -31,12 +31,12 @@
   opacity: 0;
 }
 
-.status-flags[data-v-20538fdf] {
+.status-flags[data-v-79ef5992] {
     display: flex;
     justify-content: center;
     gap: 8px;
 }
-.status-flag[data-v-20538fdf] {
+.status-flag[data-v-79ef5992] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -47,8 +47,15 @@
     color: #3b82f6;
     cursor: help;
 }
-.status-flag[data-v-20538fdf]:hover {
+.status-flag[data-v-79ef5992]:hover {
     background: rgba(59, 130, 246, 0.2);
+}
+.status-flag-warning[data-v-79ef5992] {
+    background: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+}
+.status-flag-warning[data-v-79ef5992]:hover {
+    background: rgba(245, 158, 11, 0.2);
 }
 
 .dropdown-enter-active[data-v-b327c507],
