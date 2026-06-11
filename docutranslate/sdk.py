@@ -4,7 +4,9 @@
 
 import asyncio
 import base64
+import json
 import os
+import tempfile
 from pathlib import Path
 from typing import Optional, Literal, Dict, Any, List, Union
 
@@ -18,6 +20,7 @@ from docutranslate.core.factory import create_workflow_from_payload
 from docutranslate.translator import default_params
 from docutranslate.global_values.conditional_import import DOCLING_EXIST
 from docutranslate.config import TO_LANG
+from docutranslate.workflow.record_helper import RecordFieldMapping, RecordTranslationHelper
 
 # --- 映射配置 ---
 # 格式说明: {workflow_type: {save_type: (method_name, default_suffix)}}
@@ -385,6 +388,90 @@ class Client:
             await workflow.translate_async()
 
         return TranslationResult(workflow, final_params["workflow_type"], path_obj.name)
+
+    # ------------------------------------------------------------------
+    # Record-based translation (batch records with IDs)
+    # ------------------------------------------------------------------
+
+    def translate_records(
+            self,
+            records: List[Dict[str, Any]],
+            *,
+            id_field: str = "record_id",
+            text_field: str = "source_text",
+            records_key: str = "records",
+            output_dir: str = "./output",
+            **kwargs,
+    ) -> List[Dict[str, Any]]:
+        """Translate a list of records that each carry an ID and a text field.
+
+        This is a convenience wrapper around :meth:`translate` for the common
+        "batch text translation with ID tracking" pattern found in CMS exports,
+        database dumps, CAD annotation lists, subtitle files, etc.
+
+        All non-text fields are preserved; only *text_field* is translated.
+
+        :param records: List of record dicts, e.g.
+            ``[{"record_id": "r1", "source_text": "你好"}]``.
+        :param id_field: Name of the unique-ID field inside each record.
+        :param text_field: Name of the field whose value should be translated.
+        :param records_key: Top-level key that holds the records array in the
+            JSON envelope (default ``"records"``).
+        :param output_dir: Directory for intermediate / output files.
+        :param kwargs: Extra keyword arguments forwarded to :meth:`translate`
+            (e.g. ``concurrent``, ``temperature``, ``custom_prompt``).
+        :returns: A new list of record dicts with *text_field* replaced by the
+            translated text, in the same order as *records*.
+        """
+        return asyncio.run(
+            self.translate_records_async(
+                records,
+                id_field=id_field,
+                text_field=text_field,
+                records_key=records_key,
+                output_dir=output_dir,
+                **kwargs,
+            )
+        )
+
+    async def translate_records_async(
+            self,
+            records: List[Dict[str, Any]],
+            *,
+            id_field: str = "record_id",
+            text_field: str = "source_text",
+            records_key: str = "records",
+            output_dir: str = "./output",
+            **kwargs,
+    ) -> List[Dict[str, Any]]:
+        """Async version of :meth:`translate_records`."""
+        helper = RecordTranslationHelper(
+            RecordFieldMapping(id_field=id_field, text_field=text_field, records_key=records_key)
+        )
+
+        # 1. Build payload and write to a temp file
+        payload = helper.build_payload(records)
+        tmp_dir = Path(output_dir)
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        tmp_input = tmp_dir / "_records_input.json"
+        tmp_input.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+        try:
+            # 2. Translate using the existing Client.translate pipeline
+            result = await self.translate_async(
+                str(tmp_input),
+                json_paths=helper.build_json_paths(),
+                **kwargs,
+            )
+
+            # 3. Save translated file and read back
+            saved_path = result.save(output_dir=output_dir, fmt="json")
+            translated_payload = helper.read_translated_payload(saved_path)
+
+            # 4. Map back onto original record order
+            return helper.extract_translated_records(records, translated_payload)
+        finally:
+            tmp_input.unlink(missing_ok=True)
 
     def _detect_workflow(self, path: Path) -> str:
         ext = path.suffix.lower().lstrip(".")

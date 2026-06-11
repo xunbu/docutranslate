@@ -106,7 +106,10 @@ class JsonTranslator(AiTranslator):
         # 1. 查找所有顶层匹配项
         all_matches = []
         for path_str in self.json_paths:
-            jsonpath_expr = parse(path_str)
+            try:
+                jsonpath_expr = parse(path_str)
+            except Exception as exc:
+                raise ValueError(f"Invalid json_paths expression: {path_str}") from exc
             all_matches.extend(jsonpath_expr.find(content))
 
         # 2. 遍历匹配项并启动递归收集
