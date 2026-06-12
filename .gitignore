@@ -8,9 +8,6 @@ wheels/
 tests/
 !tests/
 tests/*
-!tests/test_translator/
-tests/test_translator/*
-!tests/test_translator/test_json_translator.py
 !tests/test_workflow/
 tests/test_workflow/*
 !tests/test_workflow/test_cad_workflow.py

@@ -4,7 +4,7 @@
 
 Supports DWG/DXF files with automatic text extraction, LLM translation,
 and write-back. Requires ``ezdxf`` (install with ``pip install docutranslate[cad]``).
-DWG conversion requires an external tool (LibreDWG, HaoChen, AutoCAD, or ODA).
+DWG conversion requires an external tool (LibreDWG, HaoChen, or AutoCAD).
 """
 from __future__ import annotations
 
@@ -160,7 +160,7 @@ class CadWorkflow(Workflow[CadWorkflowConfig, Document, Document]):
         output_path: str,
         mode: str = "",
         font_name: str = "",
-        font_size_reduction: int = 0,
+        font_size_reduction: int | None = None,
     ) -> Self:
         """Apply translated text back to DXF file."""
         if not self._extraction_result or not self._dxf_path:
@@ -190,7 +190,7 @@ class CadWorkflow(Workflow[CadWorkflowConfig, Document, Document]):
             translation_map=translation_map,
             mode=mode or self.config.insert_mode,
             font_name=font_name or self.config.font_name,
-            font_size_reduction=font_size_reduction or self.config.font_size_reduction,
+            font_size_reduction=font_size_reduction if font_size_reduction is not None else self.config.font_size_reduction,
         )
 
         if not result.success:

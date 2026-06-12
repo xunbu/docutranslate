@@ -1,13 +1,11 @@
-import json
-import os
 import shutil
 import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
-from docutranslate.cad.text_extractor import CadTextExtractor, ExtractionResult, TextEntity
-from docutranslate.cad.text_applier import CadTextApplier, ApplyResult
-from docutranslate.cad.dwg_converter import DwgConverter, ConverterResult
+from docutranslate.cad.text_extractor import CadTextExtractor
+from docutranslate.cad.text_applier import CadTextApplier
+from docutranslate.cad.dwg_converter import DwgConverter
 
 TESTS_DIR = Path(__file__).parent
 TEST_DWG = TESTS_DIR / "test_cad_input.dwg"
@@ -15,23 +13,12 @@ TEST_DXF = TESTS_DIR / "test_cad_simple.dxf"
 
 
 def _libredwg_available() -> bool:
-    """Check if dwg2dxf is available (in PATH or known location)."""
-    if shutil.which("dwg2dxf"):
-        return True
-    known = Path(r"C:\Users\zhenhe\OneDrive\永盛\翻译\cad code\tools\libredwg\0.13.3-win64")
-    return (known / "dwg2dxf.exe").exists()
-
-
-def _add_libredwg_to_path():
-    """Temporarily add LibreDWG to PATH for testing."""
-    known = Path(r"C:\Users\zhenhe\OneDrive\永盛\翻译\cad code\tools\libredwg\0.13.3-win64")
-    if known.exists() and str(known) not in os.environ.get("PATH", ""):
-        os.environ["PATH"] = str(known) + os.pathsep + os.environ.get("PATH", "")
+    return shutil.which("dwg2dxf") is not None
 
 
 requires_libredwg = pytest.mark.skipif(
     not _libredwg_available() or not TEST_DWG.exists(),
-    reason="LibreDWG or test DWG file not available"
+    reason="LibreDWG (dwg2dxf) or test DWG file not available"
 )
 
 
@@ -121,7 +108,6 @@ def test_converter_missing_file():
 @requires_libredwg
 def test_dwg_to_dxf_conversion(tmp_path):
     """Convert real DWG file to DXF using LibreDWG."""
-    _add_libredwg_to_path()
     converter = DwgConverter(backend="libredwg")
     output_dir = tmp_path / "output"
     result = converter.dwg_to_dxf(str(TEST_DWG), str(output_dir))

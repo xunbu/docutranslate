@@ -7,7 +7,6 @@ DocuTranslate does NOT bundle converters — users install them separately.
 """
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 from dataclasses import dataclass
