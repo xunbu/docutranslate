@@ -7,7 +7,7 @@ import logging
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig
 from docutranslate.core.schemas import TranslatePayload, MarkdownWorkflowParams, TextWorkflowParams, JsonWorkflowParams, \
     XlsxWorkflowParams, DocxWorkflowParams, SrtWorkflowParams, EpubWorkflowParams, HtmlWorkflowParams, \
-    AssWorkflowParams, PPTXWorkflowParams
+    AssWorkflowParams, PPTXWorkflowParams, CadWorkflowParams
 from docutranslate.converter.x2md.converter_docling import ConverterDoclingConfig
 from docutranslate.converter.x2md.converter_mineru import ConverterMineruConfig
 from docutranslate.converter.x2md.converter_mineru_deploy import ConverterMineruDeployConfig
@@ -140,5 +140,29 @@ def create_workflow_from_payload(payload: TranslatePayload, logger: logging.Logg
                                            html_exporter_config=html_exporter_config, logger=logger)
 
             return WorkClass(config=workflow_config)
+
+    # CAD Workflow (special handling)
+    if isinstance(payload, CadWorkflowParams):
+        from docutranslate.workflow.cad_workflow import CadWorkflowConfig, CadWorkflow
+
+        translator_args = payload.model_dump(
+            include={"skip_translate", "base_url", "api_key", "model_id", "to_lang", "custom_prompt",
+                     "temperature", "top_p", "thinking", "chunk_size", "concurrent", "glossary_dict", "timeout",
+                     "retry", "system_proxy_enable", "force_json", "rpm", "tpm", "provider", "extra_body"},
+            exclude_none=True,
+        )
+        translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
+        translator_args["glossary_agent_config"] = build_glossary_agent_config()
+        translator_config = TXTTranslatorConfig(**translator_args)
+
+        workflow_config = CadWorkflowConfig(
+            translator_config=translator_config,
+            cad_converter_backend=payload.cad_converter_backend,
+            insert_mode=payload.insert_mode,
+            font_name=payload.font_name,
+            font_size_reduction=payload.font_size_reduction,
+            logger=logger,
+        )
+        return CadWorkflow(config=workflow_config)
 
     raise ValueError(f"未知的 Payload 类型: {type(payload)}")
