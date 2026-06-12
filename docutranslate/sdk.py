@@ -472,6 +472,8 @@ class Client:
             return helper.extract_translated_records(records, translated_payload)
         finally:
             tmp_input.unlink(missing_ok=True)
+            if 'saved_path' in locals() and Path(saved_path).exists():
+                Path(saved_path).unlink(missing_ok=True)
 
     def _detect_workflow(self, path: Path) -> str:
         ext = path.suffix.lower().lstrip(".")

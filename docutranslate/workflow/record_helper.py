@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Any, Sequence
 
 
 @dataclass(frozen=True)
@@ -47,7 +47,7 @@ class RecordTranslationHelper:
         fm = self.field_mapping
         return [f"$.{fm.records_key}[*].{fm.text_field}"]
 
-    def build_payload(self, records: Sequence[Dict[str, Any]]) -> dict[str, Any]:
+    def build_payload(self, records: Sequence[dict[str, Any]]) -> dict[str, Any]:
         """Wrap *records* inside the expected JSON envelope."""
         return {self.field_mapping.records_key: list(records)}
 
@@ -57,8 +57,8 @@ class RecordTranslationHelper:
 
     def extract_translated_records(
         self,
-        original_records: Sequence[Dict[str, Any]],
-        translated_payload: Dict[str, Any],
+        original_records: Sequence[dict[str, Any]],
+        translated_payload: dict[str, Any],
     ) -> list[dict[str, Any]]:
         """Map the translated payload back onto the original record order.
 
@@ -97,7 +97,7 @@ class RecordTranslationHelper:
 
     def write_payload_to_file(
         self,
-        records: Sequence[Dict[str, Any]],
+        records: Sequence[dict[str, Any]],
         output_path: Path | str,
     ) -> Path:
         """Serialize *records* as a JSON file suitable for ``JsonWorkflow``."""
