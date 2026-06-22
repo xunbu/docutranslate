@@ -34,13 +34,12 @@ const formatError = (data) => {
 };
 
 export function useTasks(settings, glossary, i18n) {
-    const { form, workflowParams, default_workflows, saveSetting, saveAllSettings, updatePlatformParams, STORAGE, errors, webSkipValidation } = settings;
+    const { form, workflowParams, default_workflows, queue_concurrent, saveSetting, saveAllSettings, updatePlatformParams, STORAGE, errors, webSkipValidation } = settings;
     const { glossaryData } = glossary;
     const { t } = i18n;
 
     const tasks = ref([]);
     const runningCount = ref(0);
-    const queue_concurrent = ref(3);
 
     // Pending queue for batch processing
     const pendingQueue = [];
