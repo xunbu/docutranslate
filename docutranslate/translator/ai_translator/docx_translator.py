@@ -86,10 +86,10 @@ class DocxTranslator(AiTranslator):
     IGNORED_TAGS = {
         qn('w:proofErr'), qn('w:lastRenderedPageBreak'), qn('w:bookmarkStart'),
         qn('w:bookmarkEnd'), qn('w:commentRangeStart'), qn('w:commentRangeEnd'),
-        qn('w:del'), qn('w:ins'), qn('w:moveFrom'), qn('w:moveTo'),
+        qn('w:del'), qn('w:moveFrom'), qn('w:moveTo'),
     }
     RECURSIVE_CONTAINER_TAGS = {
-        qn('w:smartTag'), qn('w:sdtContent'), qn('w:hyperlink'),
+        qn('w:smartTag'), qn('w:sdtContent'), qn('w:hyperlink'), qn('w:ins'),
     }
 
     def __init__(self, config: DocxTranslatorConfig):
