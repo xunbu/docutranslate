@@ -212,9 +212,9 @@ class DocxTranslator(AiTranslator):
                     if text_boxes:
                         flush_segment()  # 包含文本的形状是一个边界，刷新前面的文本
                         for txbx_content in text_boxes:
-                            for p_element in txbx_content.findall(qn('w:p')):
-                                shape_para = Paragraph(p_element, parent_paragraph)
-                                self._process_paragraph(shape_para, elements, texts, top_level_para=top_level_para)
+                            container = parent_paragraph._parent if parent_paragraph._parent is not None else parent_paragraph
+                            self._process_body_elements(txbx_content, container, elements, texts,
+                                                        top_level_para=top_level_para)
                         continue
 
                 # 增加对 instrText 的检查，防止提取出 TOC 指令作为原文
@@ -254,11 +254,13 @@ class DocxTranslator(AiTranslator):
                 texts.append(full_text)
             current_runs.clear()
 
-    def _process_body_elements(self, parent_element, container, elements: List[Dict[str, Any]], texts: List[str]):
+    def _process_body_elements(self, parent_element, container, elements: List[Dict[str, Any]], texts: List[str],
+                               top_level_para: Paragraph = None):
         """ 遍历一个容器内的所有顶级元素（段落、表格、内容控件等） """
         for child_element in parent_element:
             if child_element.tag.endswith('p'):
-                self._process_paragraph(Paragraph(child_element, container), elements, texts)
+                self._process_paragraph(Paragraph(child_element, container), elements, texts,
+                                        top_level_para=top_level_para)
             elif child_element.tag.endswith('tbl'):
                 table = Table(child_element, container)
                 for row in table.rows:
@@ -267,7 +269,8 @@ class DocxTranslator(AiTranslator):
             elif child_element.tag.endswith('sdt'):
                 sdt_content = child_element.find(qn('w:sdtContent'))
                 if sdt_content is not None:
-                    self._process_body_elements(sdt_content, container, elements, texts)
+                    self._process_body_elements(sdt_content, container, elements, texts,
+                                                top_level_para=top_level_para)
 
     def _traverse_container(self, container: Any, elements: List[Dict[str, Any]], texts: List[str]):
         if container is None:
