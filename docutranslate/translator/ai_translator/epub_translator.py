@@ -14,6 +14,109 @@ from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, Se
 from docutranslate.ir.document import Document
 from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTranslator
 
+# 块级元素集合：遇到这些标签时必须闭合当前段落，原样保留，避免嵌套进 <p>
+_BLOCK_ELEMENTS = frozenset({
+    'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'table', 'ul', 'ol', 'li', 'blockquote',
+    'img', 'hr', 'pre', 'header', 'section',
+})
+
+# 容器型元素：需要递归处理其内部的裸露文本
+_CONTAINER_ELEMENTS = frozenset({
+    'div', 'section', 'td', 'th', 'li', 'blockquote',
+    'article', 'aside', 'header', 'footer', 'main', 'nav',
+})
+
+
+def _wrap_bare_texts_in_element(element: Tag, soup: BeautifulSoup) -> None:
+    """递归处理元素内部的裸露文本，将由 <br/> 分隔的裸露文本用 <p> 包裹。
+
+    先递归处理所有子容器元素，再处理当前元素自身的直接子节点。
+    块级元素会打断当前段落并原样保留，内联元素则正常加入当前段落。
+    """
+    # 1. 先递归处理所有子容器元素
+    for child in list(element.children):
+        if isinstance(child, Tag) and child.name in _CONTAINER_ELEMENTS:
+            _wrap_bare_texts_in_element(child, soup)
+
+    # 2. 检查当前元素的直接子节点中是否有裸露文本或 <br/>
+    has_direct_text = False
+    has_br = False
+    for child in element.contents:
+        if isinstance(child, NavigableString) and child.strip():
+            has_direct_text = True
+            break
+        if isinstance(child, Tag) and child.name == 'br':
+            has_br = True
+            break
+
+    if not has_direct_text and not has_br:
+        return  # 无裸露文本，无需处理
+
+    # 3. 重构当前元素的内容
+    new_contents = []
+    current_paragraph = []
+    leading_elements = []  # 用于存放开头的结构标记（如 span#pagestart）
+    found_first_content = False
+
+    for child in list(element.contents):
+        if isinstance(child, NavigableString):
+            if child.strip():
+                found_first_content = True
+                current_paragraph.append(child)
+            else:
+                # 空白文本，根据是否已找到内容决定放哪里
+                if found_first_content:
+                    current_paragraph.append(child)
+                else:
+                    leading_elements.append(child)
+        elif isinstance(child, Tag):
+            if child.name == 'br':
+                found_first_content = True
+                # 遇到 <br/>，结束当前段落
+                if current_paragraph:
+                    p_tag = soup.new_tag('p')
+                    for node in current_paragraph:
+                        p_tag.append(node)
+                    new_contents.append(p_tag)
+                    current_paragraph = []
+            elif child.name in _BLOCK_ELEMENTS:
+                # 块级元素：先闭合当前段落，再原样保留
+                if current_paragraph:
+                    p_tag = soup.new_tag('p')
+                    for node in current_paragraph:
+                        p_tag.append(node)
+                    new_contents.append(p_tag)
+                    current_paragraph = []
+                new_contents.append(child)
+                found_first_content = True
+            else:
+                # 内联元素（span, a, em 等）正常加入当前段落
+                if not found_first_content:
+                    # 检查是否是结构标记（如 span#pagestart）
+                    if (child.name == 'span' and child.get('id')) or child.name in ['a', 'link']:
+                        leading_elements.append(child)
+                    else:
+                        found_first_content = True
+                        current_paragraph.append(child)
+                else:
+                    current_paragraph.append(child)
+
+    # 处理最后一个段落
+    if current_paragraph:
+        p_tag = soup.new_tag('p')
+        for node in current_paragraph:
+            p_tag.append(node)
+        new_contents.append(p_tag)
+
+    # 替换元素内容
+    if new_contents:
+        element.clear()
+        for elem in leading_elements:
+            element.append(elem)
+        for p in new_contents:
+            element.append(p)
+
 
 @dataclass
 class EpubTranslatorConfig(AiTranslatorConfig):
@@ -132,81 +235,10 @@ class EpubTranslator(AiTranslator):
 
                 soup = soups[file_path]
 
-                # 预处理：检测并处理 body 下的直接文本内容（用 <br/> 换行的情况）
-                # 将直接在 body 下的文本按 <br/> 切分并用 <p> 包裹
+                # 预处理：递归处理所有容器内的裸露文本，用 <p> 包裹
                 body = soup.body
                 if body:
-                    # 检查 body 的直接子节点中是否有 NavigableString 或 <br/>
-                    has_direct_text = False
-                    has_br = False
-                    for child in body.contents:
-                        if isinstance(child, NavigableString) and child.strip():
-                            has_direct_text = True
-                            break
-                        if isinstance(child, Tag) and child.name == 'br':
-                            has_br = True
-                            break
-
-                    if has_direct_text or has_br:
-                        # 需要重构 body 内容
-                        new_body_contents = []
-                        current_paragraph = []
-                        leading_elements = []  # 用于存放开头的结构标记（如 span#pagestart）
-
-                        # 首先收集开头的非文本标记（直到遇到第一个有意义的文本或 br）
-                        found_first_content = False
-
-                        for child in list(body.contents):
-                            # 提取节点需要复制，避免修改原列表时的问题
-                            if isinstance(child, NavigableString):
-                                if child.strip():
-                                    found_first_content = True
-                                    current_paragraph.append(child)
-                                else:
-                                    # 空白文本，根据是否已找到内容决定放哪里
-                                    if found_first_content:
-                                        current_paragraph.append(child)
-                                    else:
-                                        leading_elements.append(child)
-                            elif isinstance(child, Tag):
-                                if child.name == 'br':
-                                    found_first_content = True
-                                    # 遇到 <br/>，结束当前段落
-                                    if current_paragraph:
-                                        p_tag = soup.new_tag('p')
-                                        for node in current_paragraph:
-                                            p_tag.append(node)
-                                        new_body_contents.append(p_tag)
-                                        current_paragraph = []
-                                else:
-                                    # 其他标签
-                                    if not found_first_content:
-                                        # 检查是否是结构标记（如 span#pagestart）
-                                        if (child.name == 'span' and child.get('id')) or child.name in ['a', 'link']:
-                                            leading_elements.append(child)
-                                        else:
-                                            found_first_content = True
-                                            current_paragraph.append(child)
-                                    else:
-                                        current_paragraph.append(child)
-
-                        # 处理最后一个段落
-                        if current_paragraph:
-                            p_tag = soup.new_tag('p')
-                            for node in current_paragraph:
-                                p_tag.append(node)
-                            new_body_contents.append(p_tag)
-
-                        # 只有当确实生成了段落时才替换 body 内容
-                        if new_body_contents:
-                            # 清空 body 并重新填充
-                            body.clear()
-                            # 先添加开头的结构标记
-                            for elem in leading_elements:
-                                body.append(elem)
-                            # 再添加新的段落
-                            for p in new_body_contents:
-                                body.append(p)
+                    _wrap_bare_texts_in_element(body, soup)
 
                 all_potential_tags = soup.find_all(TAGS_TO_TRANSLATE)
                 all_potential_tags_set = set(all_potential_tags)
