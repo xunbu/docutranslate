@@ -33,6 +33,7 @@ SIGNIFICANT_STYLES = frozenset([
     qn('w:bdr'),  # 边框
     qn('w:effectLst'),  # 文本效果 (如发光、阴影)
     qn('w:em'),  # 强调标记 (着重号)
+    qn('w:vertAlign'),  # 上标/下标
 ])
 
 
@@ -157,7 +158,16 @@ class DocxTranslator(AiTranslator):
         rPr = run.element.rPr
         if rPr is None:
             return frozenset()
-        return frozenset(child.tag for child in rPr if child.tag in SIGNIFICANT_STYLES)
+        styles = set()
+        for child in rPr:
+            if child.tag in SIGNIFICANT_STYLES:
+                # 对于 vertAlign，必须同时考虑其值（上标/下标/基线），避免误合并
+                if child.tag == qn('w:vertAlign'):
+                    val = child.get(qn('w:val'))
+                    styles.add( (child.tag, val) )
+                else:
+                    styles.add(child.tag)
+        return frozenset(styles)
 
     def _have_same_significant_styles(self, run1: Run, run2: Run) -> bool:
         """检查两个 Run 是否具有相同的“显著”格式集合。"""
