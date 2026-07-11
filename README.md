@@ -455,6 +455,65 @@ Key config options:
 - **json_paths**: JSONPath expressions for JSON translation (e.g., `["$.*", "$.name"]`)
 - **separator**: Text separator for `"append"` / `"prepend"` modes
 
+When using the JSON workflow, prefer explicit field paths such as `["$.items[*].text"]` when only specific values
+should be translated. This keeps non-matching fields, such as IDs, flags, and metadata, unchanged in the output JSON.
+
+### Record Translation (Batch Records with IDs)
+
+For scenarios where you have a list of records with unique IDs and need to translate only the text field
+while preserving all other fields (CMS exports, database dumps, CAD annotations, subtitle files, etc.),
+use the `translate_records` convenience method:
+
+```python
+from docutranslate.sdk import Client
+
+client = Client(
+    api_key="YOUR_API_KEY",
+    base_url="https://api.openai.com/v1/",
+    model_id="gpt-4o",
+    to_lang="Chinese",
+)
+
+records = [
+    {"record_id": "r1", "source_text": "总说明", "category": "doc"},
+    {"record_id": "r2", "source_text": "平面图", "category": "drawing"},
+    {"record_id": "r3", "source_text": "施工进度", "category": "schedule"},
+]
+
+translated = client.translate_records(records)
+
+# translated[0] = {"record_id": "r1", "source_text": "General Description", "category": "doc"}
+# All non-text fields (category, etc.) are preserved.
+```
+
+Custom field names (for different JSON structures):
+
+```python
+translated = client.translate_records(
+    records,
+    id_field="key",           # custom ID field name
+    text_field="content",     # custom text field name
+    records_key="items",      # custom records array key
+)
+```
+
+**Web API** — `POST /service/translate/records`:
+
+```json
+{
+  "records": [
+    {"record_id": "r1", "source_text": "总说明"},
+    {"record_id": "r2", "source_text": "平面图"}
+  ],
+  "id_field": "record_id",
+  "text_field": "source_text",
+  "to_lang": "English",
+  "api_key": "sk-xxx",
+  "base_url": "https://api.openai.com/v1",
+  "model_id": "gpt-4o"
+}
+```
+
 ## Prerequisites and Detailed Configuration
 
 ### 1. Get Large Model API Key
