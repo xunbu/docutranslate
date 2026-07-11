@@ -46,7 +46,7 @@ from docutranslate.config import (
 # --- 公共类型定义 ---
 WorkflowType = Literal[
     "auto", "markdown_based", "txt", "json", "xlsx", "docx",
-    "srt", "epub", "html", "ass", "pptx"
+    "srt", "epub", "html", "ass", "pptx", "cad"
 ]
 InsertMode = Literal["replace", "append", "prepend"]
 
@@ -584,6 +584,31 @@ class PPTXWorkflowParams(BaseWorkflowParams):
 # --- PPTX WORKFLOW PARAMS END ---
 
 
+class CadWorkflowParams(BaseWorkflowParams):
+    workflow_type: Literal["cad"] = Field(
+        ..., description="指定使用CAD文件(DWG/DXF)的翻译工作流。"
+    )
+    insert_mode: Literal["replace", "append", "prepend"] = Field(
+        "replace",
+        description="翻译文本的插入模式。'replace'：替换原文，'append'：附加到原文后，'prepend'：附加到原文前。",
+    )
+    cad_converter_backend: str = Field(
+        "auto",
+        description="DWG转换后端: auto, libredwg, haochen, autocad, dxf_only",
+    )
+    font_name: str = Field(
+        "Times New Roman",
+        description="输出字体名称。",
+    )
+    font_size_reduction: int = Field(
+        2,
+        description="字号缩小量。",
+    )
+
+
+# --- CAD WORKFLOW PARAMS END ---
+
+
 TranslatePayload = Annotated[
     Union[
         AutoWorkflowParams,
@@ -597,6 +622,7 @@ TranslatePayload = Annotated[
         HtmlWorkflowParams,
         AssWorkflowParams,
         PPTXWorkflowParams,
+        CadWorkflowParams,
     ],
     Field(discriminator="workflow_type"),
 ]

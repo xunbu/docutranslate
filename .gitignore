@@ -6,6 +6,12 @@ dist/
 wheels/
 *.egg-info
 tests/
+!tests/
+tests/*
+!tests/test_workflow/
+tests/test_workflow/*
+!tests/test_workflow/test_cad_workflow.py
+!tests/test_workflow/test_cad_simple.dxf
 tests/resource/
 tests/test_data/
 htmlcov/
