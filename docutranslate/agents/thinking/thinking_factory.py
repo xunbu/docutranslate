@@ -2,7 +2,7 @@ from typing import TypeAlias, Literal, Any
 
 from docutranslate.agents.provider import ProviderType
 
-ModeType: TypeAlias = Literal["ollama", "bigmodel", "aliyuncs", "volces", "google", "siliconflow", "deepseek", "default"]
+ModeType: TypeAlias = Literal["ollama", "bigmodel", "aliyuncs", "volces", "google", "siliconflow", "deepseek", "litellm", "default"]
 ThinkingField: TypeAlias = str
 EnableValueType: TypeAlias = str | dict[str, Any] | bool
 DisableValueType: TypeAlias = str | dict[str, Any] | bool
@@ -23,6 +23,7 @@ thinking_mode: dict[ProviderType, ThinkingConfig] = {
     "google": ("reasoning_effort", "medium", "none"),
     "siliconflow": ("enable_thinking", True, False),
     "deepseek": ("thinking", {"type": "enabled"}, {"type": "disabled"}),
+    "litellm": ("reasoning_effort", "medium", "none"),
     "default": ("reasoning_effort", "medium", "none"),
 }
 
@@ -55,4 +56,6 @@ def get_thinking_mode(provider: ProviderType, model_id: str) -> ThinkingConfig:
         return thinking_mode["ollama"]
     elif provider == "deepseek":
         return thinking_mode["deepseek"]
+    elif provider == "litellm":
+        return get_thinking_mode_by_model_id(model_id)
     return get_thinking_mode_by_model_id(model_id)
