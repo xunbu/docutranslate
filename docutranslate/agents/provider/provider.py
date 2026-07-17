@@ -15,6 +15,6 @@ def get_provider_by_domain(domain:str)->ProviderType:
         return "siliconflow"
     elif domain == "api.deepseek.com":
         return "deepseek"
-    elif "litellm" in domain or domain in ("localhost", "127.0.0.1"):
+    elif "litellm" in domain:
         return "litellm"
     return "default"
