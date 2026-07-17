@@ -439,6 +439,44 @@ class Agent:
             # 普通字段直接设置
             data[field_thinking] = value
 
+    def _call_litellm_sync(self, data: dict) -> dict:
+        """Call litellm.completion() synchronously. Returns OpenAI-format response dict."""
+        import litellm
+        kwargs = {
+            "model": data["model"],
+            "messages": data["messages"],
+            "temperature": data.get("temperature"),
+            "top_p": data.get("top_p"),
+            "stream": False,
+            "drop_params": True,
+        }
+        if self.key and self.key != "xx":
+            kwargs["api_key"] = self.key
+        if data.get("response_format"):
+            kwargs["response_format"] = data["response_format"]
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        response = litellm.completion(**kwargs)
+        return response.model_dump()
+
+    async def _call_litellm_async(self, data: dict) -> dict:
+        """Call litellm.acompletion() asynchronously. Returns OpenAI-format response dict."""
+        import litellm
+        kwargs = {
+            "model": data["model"],
+            "messages": data["messages"],
+            "temperature": data.get("temperature"),
+            "top_p": data.get("top_p"),
+            "stream": False,
+            "drop_params": True,
+        }
+        if self.key and self.key != "xx":
+            kwargs["api_key"] = self.key
+        if data.get("response_format"):
+            kwargs["response_format"] = data["response_format"]
+        kwargs = {k: v for k, v in kwargs.items() if v is not None}
+        response = await litellm.acompletion(**kwargs)
+        return response.model_dump()
+
     def _prepare_request_data(
             self, prompt: str, system_prompt: str, temperature=None, top_p=None, json_format=False
     ):
@@ -526,14 +564,17 @@ class Agent:
         headers, data = self._prepare_request_data(continue_prompt, system_prompt, json_format=force_json)
 
         try:
-            response = await client.post(
-                f"{self.baseurl}/chat/completions",
-                json=data,
-                headers=headers,
-                timeout=self.timeout,
-            )
-            response.raise_for_status()
-            response_data = _parse_response_json(response)
+            if self.provider == "litellm":
+                response_data = await self._call_litellm_async(data)
+            else:
+                response = await client.post(
+                    f"{self.baseurl}/chat/completions",
+                    json=data,
+                    headers=headers,
+                    timeout=self.timeout,
+                )
+                response.raise_for_status()
+                response_data = _parse_response_json(response)
 
             # 安全提取 choices 和 content
             choices = response_data.get("choices", [])
@@ -640,14 +681,17 @@ class Agent:
         input_tokens = 0
         output_tokens = 0
         try:
-            response = await client.post(
-                f"{self.baseurl}/chat/completions",
-                json=data,
-                headers=headers,
-                timeout=self.timeout,
-            )
-            response.raise_for_status()
-            response_data = _parse_response_json(response)
+            if self.provider == "litellm":
+                response_data = await self._call_litellm_async(data)
+            else:
+                response = await client.post(
+                    f"{self.baseurl}/chat/completions",
+                    json=data,
+                    headers=headers,
+                    timeout=self.timeout,
+                )
+                response.raise_for_status()
+                response_data = _parse_response_json(response)
 
             # 检查 finish_reason
             choices = response_data.get("choices", [])
@@ -950,14 +994,17 @@ class Agent:
         headers, data = self._prepare_request_data(continue_prompt, system_prompt, json_format=force_json)
 
         try:
-            response = client.post(
-                f"{self.baseurl}/chat/completions",
-                json=data,
-                headers=headers,
-                timeout=self.timeout,
-            )
-            response.raise_for_status()
-            response_data = _parse_response_json(response)
+            if self.provider == "litellm":
+                response_data = self._call_litellm_sync(data)
+            else:
+                response = client.post(
+                    f"{self.baseurl}/chat/completions",
+                    json=data,
+                    headers=headers,
+                    timeout=self.timeout,
+                )
+                response.raise_for_status()
+                response_data = _parse_response_json(response)
 
             # 安全提取 choices 和 content
             choices = response_data.get("choices", [])
@@ -1058,14 +1105,17 @@ class Agent:
         current_partial_result = None
 
         try:
-            response = client.post(
-                f"{self.baseurl}/chat/completions",
-                json=data,
-                headers=headers,
-                timeout=self.timeout,
-            )
-            response.raise_for_status()
-            response_data = _parse_response_json(response)
+            if self.provider == "litellm":
+                response_data = self._call_litellm_sync(data)
+            else:
+                response = client.post(
+                    f"{self.baseurl}/chat/completions",
+                    json=data,
+                    headers=headers,
+                    timeout=self.timeout,
+                )
+                response.raise_for_status()
+                response_data = _parse_response_json(response)
 
             # 检查 finish_reason
             choices = response_data.get("choices", [])
