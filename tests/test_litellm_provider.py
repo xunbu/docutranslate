@@ -6,18 +6,11 @@ from docutranslate.agents.thinking.thinking_factory import get_thinking_mode, th
 
 class TestProviderDetection:
 
-    def test_litellm_in_hostname(self):
-        assert get_provider_by_domain("litellm.example.com") == "litellm"
-
-    def test_litellm_subdomain(self):
-        assert get_provider_by_domain("my-litellm-proxy.internal") == "litellm"
-
-    def test_localhost_not_matched_as_litellm(self):
-        """localhost should NOT be auto-detected as litellm - it could be Ollama or anything."""
+    def test_litellm_not_autodetected(self):
+        """LiteLLM runs on any host - it's set via --provider litellm, not auto-detected."""
         assert get_provider_by_domain("localhost") == "default"
-
-    def test_127_not_matched_as_litellm(self):
         assert get_provider_by_domain("127.0.0.1") == "default"
+        assert get_provider_by_domain("my-proxy.internal") == "default"
 
     def test_existing_providers_unaffected(self):
         assert get_provider_by_domain("open.bigmodel.cn") == "bigmodel"
@@ -26,10 +19,6 @@ class TestProviderDetection:
         assert get_provider_by_domain("generativelanguage.googleapis.com") == "google"
         assert get_provider_by_domain("api.siliconflow.cn") == "siliconflow"
         assert get_provider_by_domain("ark.cn-beijing.volces.com") == "volces"
-
-    def test_unknown_domain_returns_default(self):
-        assert get_provider_by_domain("api.example.com") == "default"
-        assert get_provider_by_domain("random.host.io") == "default"
 
 
 class TestThinkingMode:
@@ -57,6 +46,5 @@ class TestThinkingMode:
         assert result == thinking_mode["default"]
 
     def test_litellm_type_in_provider_type(self):
-        """Verify 'litellm' is a valid ProviderType literal value."""
         provider: ProviderType = "litellm"
         assert provider == "litellm"
