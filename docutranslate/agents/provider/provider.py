@@ -1,6 +1,6 @@
 from typing import TypeAlias, Literal
 
-ProviderType: TypeAlias = Literal["minimax", "ollama", "bigmodel", "aliyuncs", "volces", "google", "siliconflow", "deepseek", "default"]
+ProviderType: TypeAlias = Literal["minimax", "ollama", "bigmodel", "aliyuncs", "volces", "google", "siliconflow", "deepseek", "litellm", "default"]
 
 def get_provider_by_domain(domain:str)->ProviderType:
     if domain == "open.bigmodel.cn":
@@ -15,4 +15,6 @@ def get_provider_by_domain(domain:str)->ProviderType:
         return "siliconflow"
     elif domain == "api.deepseek.com":
         return "deepseek"
+    elif "litellm" in domain or domain in ("localhost", "127.0.0.1"):
+        return "litellm"
     return "default"
