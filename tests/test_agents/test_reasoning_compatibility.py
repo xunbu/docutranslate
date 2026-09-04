@@ -1,3 +1,4 @@
+import gzip
 import json
 import logging
 
@@ -15,6 +16,23 @@ from docutranslate.agents.thinking.controller import (
     clear_reasoning_compatibility_cache,
 )
 from docutranslate.agents.thinking.thinking_factory import get_thinking_mode
+
+
+class ChunkedAsyncStream(httpx.AsyncByteStream):
+    def __init__(self, chunks):
+        self.chunks = chunks
+
+    async def __aiter__(self):
+        for chunk in self.chunks:
+            yield chunk
+
+
+class ChunkedSyncStream(httpx.SyncByteStream):
+    def __init__(self, chunks):
+        self.chunks = chunks
+
+    def __iter__(self):
+        yield from self.chunks
 
 
 def make_agent(
@@ -364,6 +382,71 @@ def test_streaming_accumulator_ignores_reasoning_fields():
 
     result = accumulator.finish(b"")
     assert result["choices"][0]["message"]["content"] == "translated"
+
+
+@pytest.mark.asyncio
+async def test_async_gzip_stream_is_decoded_before_sse_parsing():
+    body = gzip.compress(
+        'data: {"choices":[{"delta":{"content":"compressed"}}]}\n\n'
+        'data: [DONE]\n\n'.encode()
+    )
+    midpoint = len(body) // 2
+
+    async def handler(request):
+        return httpx.Response(
+            200,
+            headers={
+                "content-type": "text/event-stream",
+                "content-encoding": "gzip",
+            },
+            stream=ChunkedAsyncStream([body[:midpoint], body[midpoint:]]),
+        )
+
+    agent = Agent(AgentConfig(
+        base_url="https://example.invalid/v1",
+        model_id="test-model",
+        streaming=True,
+    ))
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        response = await agent._request_completion_async(
+            client,
+            {"model": "test-model", "messages": []},
+            {},
+        )
+
+    assert response["choices"][0]["message"]["content"] == "compressed"
+
+
+def test_sync_gzip_stream_is_decoded_before_sse_parsing():
+    body = gzip.compress(
+        'data: {"choices":[{"delta":{"content":"compressed"}}]}\n\n'
+        'data: [DONE]\n\n'.encode()
+    )
+    midpoint = len(body) // 2
+
+    def handler(request):
+        return httpx.Response(
+            200,
+            headers={
+                "content-type": "text/event-stream",
+                "content-encoding": "gzip",
+            },
+            stream=ChunkedSyncStream([body[:midpoint], body[midpoint:]]),
+        )
+
+    agent = Agent(AgentConfig(
+        base_url="https://example.invalid/v1",
+        model_id="test-model",
+        streaming=True,
+    ))
+    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
+        response = agent._request_completion_sync(
+            client,
+            {"model": "test-model", "messages": []},
+            {},
+        )
+
+    assert response["choices"][0]["message"]["content"] == "compressed"
 
 
 def test_leading_minimax_think_block_is_removed_from_translation():

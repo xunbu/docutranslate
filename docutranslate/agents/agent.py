@@ -643,7 +643,10 @@ class Agent:
                     return accumulator.finish(response.content)
                 accumulator = _StreamingResponseAccumulator()
                 raw_body = bytearray()
-                iterator = response.aiter_raw()
+                # HTTPX 的 raw 迭代器会绕过 Content-Encoding 解码，导致 gzip
+                # 压缩的 SSE 被直接当作 UTF-8 文本解析。bytes 迭代器会保留
+                # 流式读取，同时按响应头增量解压 gzip/deflate 等编码。
+                iterator = response.aiter_bytes()
                 saw_data = False
                 while not accumulator.done:
                     try:
@@ -777,7 +780,9 @@ class Agent:
                     return accumulator.finish(response.content)
                 accumulator = _StreamingResponseAccumulator()
                 raw_body = bytearray()
-                for chunk in response.iter_raw():
+                # 与异步路径一致，让 HTTPX 在解析 SSE 前增量处理
+                # Content-Encoding（尤其是部分网关默认启用的 gzip）。
+                for chunk in response.iter_bytes():
                     if not chunk:
                         continue
                     raw_body.extend(chunk)
