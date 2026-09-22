@@ -26,7 +26,7 @@ from docutranslate.config import (
     EXTRA_BODY, GLOSSARY_GENERATE_ENABLE,
     # MarkdownWorkflowParams defaults
     CONVERT_ENGINE, MD2DOCX_ENGINE, MINERU_TOKEN, MODEL_VERSION,
-    FORMULA_OCR, CODE_OCR, MINERU_LANGUAGE,
+    FORMULA_OCR, MINERU_LANGUAGE,
     MINERU_DEPLOY_BASE_URL, MINERU_DEPLOY_BACKEND, MINERU_DEPLOY_EFFORT,
     MINERU_DEPLOY_PARSE_METHOD, MINERU_DEPLOY_TABLE_ENABLE,
     MINERU_DEPLOY_FORMULA_ENABLE, MINERU_DEPLOY_IMAGE_ANALYSIS,
@@ -166,7 +166,6 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             "mineru_token": MINERU_TOKEN,
             "model_version": MODEL_VERSION,
             "formula_ocr": FORMULA_OCR,
-            "code_ocr": CODE_OCR,
             "mineru_language": MINERU_LANGUAGE,
             # MinerU Deploy settings
             "mineru_deploy_base_url": MINERU_DEPLOY_BASE_URL,
@@ -244,7 +243,6 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 mineru_token: Optional[str] = None,
                 model_version: Optional[str] = None,
                 formula_ocr: Optional[bool] = None,
-                code_ocr: Optional[bool] = None,
                 mineru_language: Optional[str] = None,
                 # MinerU Deploy settings
                 mineru_deploy_base_url: Optional[str] = None,
@@ -280,12 +278,11 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 rpm: RPM limit (Requests Per Minute)
                 tpm: TPM limit (Tokens Per Minute)
                 custom_prompt: Custom system prompt
-                convert_engine: PDF conversion engine (identity, mineru, docling, mineru_deploy)
+                convert_engine: PDF conversion engine (identity, mineru, mineru_deploy)
                 md2docx_engine: Markdown to docx engine (python, pandoc, auto)
                 mineru_token: MinerU Cloud API Token
                 model_version: MinerU Cloud model version (pipeline, vlm)
                 formula_ocr: Enable formula OCR
-                code_ocr: Enable code block OCR
                 mineru_language: MinerU Cloud language option
                 mineru_deploy_base_url: MinerU local deployment base URL
                 mineru_deploy_backend: MinerU local backend type (pipeline, vlm-engine, vlm-http-client, hybrid-engine, hybrid-http-client)
@@ -346,8 +343,6 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 client_config["model_version"] = model_version
             if formula_ocr is not None:
                 client_config["formula_ocr"] = formula_ocr
-            if code_ocr is not None:
-                client_config["code_ocr"] = code_ocr
             if mineru_language is not None:
                 client_config["mineru_language"] = mineru_language
             # MinerU Deploy settings
@@ -466,7 +461,6 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 mineru_token: str = "",
                 model_version: Optional[str] = None,
                 formula_ocr: Optional[bool] = None,
-                code_ocr: Optional[bool] = None,
                 mineru_language: Optional[str] = None,
                 mineru_deploy_base_url: Optional[str] = None,
                 mineru_deploy_backend: Optional[str] = None,
@@ -516,12 +510,11 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 rpm: RPM limit (Requests Per Minute)
                 tpm: TPM limit (Tokens Per Minute)
                 provider: LLM provider identifier
-                convert_engine: PDF conversion engine (identity, mineru, docling, mineru_deploy)
+                convert_engine: PDF conversion engine (identity, mineru, mineru_deploy)
                 md2docx_engine: Markdown to docx engine (python, pandoc, auto)
                 mineru_token: MinerU Cloud API Token
                 model_version: MinerU Cloud model version (pipeline, vlm)
                 formula_ocr: Enable formula OCR
-                code_ocr: Enable code block OCR
                 mineru_language: MinerU Cloud language option (ch, ch_server, en, japan, korean, chinese_cht, ta, te, ka, el, th, latin, arabic, cyrillic, east_slavic, devanagari)
                 mineru_deploy_base_url: MinerU local deployment base URL
                 mineru_deploy_backend: MinerU local backend type (pipeline, vlm-engine, vlm-http-client, hybrid-engine, hybrid-http-client)
@@ -696,9 +689,6 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             use_formula_ocr = formula_ocr if formula_ocr is not None else client_config.get("formula_ocr")
             if use_formula_ocr is not None:
                 payload_dict["formula_ocr"] = use_formula_ocr
-            use_code_ocr = code_ocr if code_ocr is not None else client_config.get("code_ocr")
-            if use_code_ocr is not None:
-                payload_dict["code_ocr"] = use_code_ocr
             use_mineru_language = mineru_language or client_config.get("mineru_language")
             if use_mineru_language:
                 payload_dict["mineru_language"] = use_mineru_language

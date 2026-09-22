@@ -271,7 +271,6 @@ print(f"エクスポートコンテンツ長さ: {len(base64_content)}")
 | **translate_regions** | `list` | - | Excel 翻訳領域（例: `"Sheet1!A1:B10"`） |
 | **model_version** | `str` | `"vlm"` | MinerU モデルバージョン: `"pipeline"`、`"vlm"` |
 | **formula_ocr** | `bool` | `True` | PDF 解析で数式 OCR を有効化 |
-| **code_ocr** | `bool` | `True` | PDF 解析でコード OCR を有効化 |
 | **mineru_deploy_backend** | `str` | `"hybrid-engine"` | MinerU ローカルバックエンド: `"pipeline"`、`"vlm-engine"`、`"vlm-http-client"`、`"hybrid-engine"`、`"hybrid-http-client"` |
 | **mineru_deploy_effort** | `str` | `"medium"` | Hybrid 解析強度: `"medium"`、`"high"` |
 | **mineru_deploy_formula_enable** | `bool` | `True` | ローカル MinerU で数式認識を有効化 |

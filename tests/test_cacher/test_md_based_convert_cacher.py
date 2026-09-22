@@ -41,7 +41,7 @@ def test_get_hashcode():
     assert hash1 == hash3
 
     # Test different engine produces different hash
-    hash4 = cacher._get_hashcode(mock_document, "docling", mock_config)
+    hash4 = cacher._get_hashcode(mock_document, "mineru_deploy", mock_config)
     assert hash1 != hash4
 
 

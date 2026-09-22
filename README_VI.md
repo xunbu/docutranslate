@@ -272,7 +272,6 @@ print(f"Độ dài nội dung đã xuất: {len(base64_content)}")
 | **translate_regions** | `list` | - | Vùng dịch Excel (ví dụ: `"Sheet1!A1:B10"`) |
 | **model_version** | `str` | `"vlm"` | Phiên bản model MinerU: `"pipeline"`, `"vlm"` |
 | **formula_ocr** | `bool` | `True` | Bật nhận dạng công thức OCR khi phân tích PDF |
-| **code_ocr** | `bool` | `True` | Bật nhận dạng mã OCR khi phân tích PDF |
 | **mineru_deploy_backend** | `str` | `"hybrid-engine"` | Backend MinerU cục bộ: `"pipeline"`, `"vlm-engine"`, `"vlm-http-client"`, `"hybrid-engine"`, `"hybrid-http-client"` |
 | **mineru_deploy_effort** | `str` | `"medium"` | Mức phân tích Hybrid: `"medium"`, `"high"` |
 | **mineru_deploy_formula_enable** | `bool` | `True` | Bật nhận dạng công thức cho MinerU cục bộ |

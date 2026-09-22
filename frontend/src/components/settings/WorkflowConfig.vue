@@ -319,11 +319,6 @@
                         :label="t('formulaOcrLabel')"
                         @update:modelValue="saveSetting('translator_formula_ocr', form.formula_ocr)"
                         class="mb-2" />
-                <Toggle v-if="ocrOptions.showCode"
-                        v-model="form.code_ocr"
-                        :label="t('codeOcrLabel')"
-                        @update:modelValue="saveSetting('translator_code_ocr', form.code_ocr)"
-                        class="mb-2" />
             </div>
 
             <!-- Markdown to Docx Engine Selector -->
@@ -441,7 +436,6 @@ const currentWorkflowConfig = computed(() => {
 });
 
 const ocrOptions = computed(() => ({
-    showFormula: ['mineru', 'docling'].includes(form.convert_engine),
-    showCode: form.convert_engine === 'docling'
+    showFormula: form.convert_engine === 'mineru',
 }));
 </script>

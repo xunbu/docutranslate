@@ -49,7 +49,6 @@ from pydantic import (
 from docutranslate import __version__
 from docutranslate.core.schemas import TranslatePayload
 from docutranslate.exporter.md.types import ConvertEngineType
-from docutranslate.global_values.conditional_import import DOCLING_EXIST
 from docutranslate.logger import global_logger
 # Shared server layer imports
 from docutranslate.server import (
@@ -812,14 +811,14 @@ async def service_content(
 @service_router.get(
     "/engin-list",
     summary="获取可用的转换引擎",
-    description="返回当前服务支持的文档转换引擎列表，包括 MinerU Cloud、MinerU Local 和 Docling（如果已安装）。",
+    description="返回当前服务支持的文档转换引擎列表，包括 MinerU Cloud、MinerU Local。",
     tags=["Application"],
     responses={
         200: {
             "description": "成功返回可用的转换引擎列表。",
             "content": {
                 "application/json": {
-                    "example": ["mineru", "mineru_deploy", "docling"]
+                    "example": ["mineru", "mineru_deploy"]
                 }
             }
         }
@@ -827,8 +826,6 @@ async def service_content(
 )
 async def service_get_engin_list():
     engin_list = ["mineru", "mineru_deploy"]
-    if DOCLING_EXIST:
-        engin_list.append("docling")
     return JSONResponse(content=engin_list)
 
 
@@ -941,12 +938,11 @@ async def service_flat_translate(
         segment_mode: str = Form("line", description="[Txt专用] 分段模式: line(按行), paragraph(按段), none(全文)"),
         translate_regions: Optional[List[str]] = Form(None, description="[Xlsx专用] 翻译区域列表, 如 'Sheet1!A1:B10'"),
         convert_engine: Optional[ConvertEngineType] = Form("mineru",
-                                                           description="[PDF/MD] 解析引擎: mineru, docling, identity,mineru_deploy"),
+                                                           description="[PDF/MD] 解析引擎: mineru, identity,mineru_deploy"),
         mineru_token: Optional[str] = Form("", description="[MinerU Cloud] API Token"),
         model_version: str = Form("vlm", description="[MinerU Cloud] 模型版本: vlm, pipeline"),
         mineru_language: str = Form("ch", description="[MinerU Cloud] 识别语言: ch, ch_server, en, japan, korean, chinese_cht, ta, te, ka, el, th, latin, arabic, cyrillic, east_slavic, devanagari"),
         formula_ocr: bool = Form(True, description="[PDF] 是否启用公式识别"),
-        code_ocr: bool = Form(True, description="[Docling] 是否启用代码块识别"),
         mineru_deploy_base_url: str = Form("http://127.0.0.1:8000", description="[MinerU Local] 服务地址"),
         mineru_deploy_backend: str = Form("hybrid-engine",
                                           description="[MinerU Local] 后端类型: pipeline, vlm-engine, vlm-http-client, hybrid-engine, hybrid-http-client"),
@@ -1029,7 +1025,6 @@ async def service_flat_translate(
         "model_version": model_version,
         "mineru_language": mineru_language,
         "formula_ocr": formula_ocr,
-        "code_ocr": code_ocr,
         "mineru_deploy_base_url": mineru_deploy_base_url,
         "mineru_deploy_backend": mineru_deploy_backend,
         "mineru_deploy_effort": mineru_deploy_effort,

@@ -271,7 +271,6 @@ print(f"导出内容长度: {len(base64_content)}")
 | **translate_regions** | `list` | - | Excel 翻译区域（如 `"Sheet1!A1:B10"`） |
 | **model_version** | `str` | `"vlm"` | MinerU 模型版本：`"pipeline"`、`"vlm"` |
 | **formula_ocr** | `bool` | `True` | PDF 解析启用公式 OCR |
-| **code_ocr** | `bool` | `True` | PDF 解析启用代码 OCR |
 | **mineru_deploy_backend** | `str` | `"hybrid-engine"` | MinerU 本地后端：`"pipeline"`、`"vlm-engine"`、`"vlm-http-client"`、`"hybrid-engine"`、`"hybrid-http-client"` |
 | **mineru_deploy_effort** | `str` | `"medium"` | Hybrid 解析强度：`"medium"`、`"high"` |
 | **mineru_deploy_formula_enable** | `bool` | `True` | 本地 MinerU 启用公式识别 |

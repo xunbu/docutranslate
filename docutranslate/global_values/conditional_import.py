@@ -16,5 +16,3 @@ def conditional_import(packagename,alias=None):
     except ImportError:
         available_packages[packagename]=False
         return False
-
-DOCLING_EXIST=conditional_import("docling")

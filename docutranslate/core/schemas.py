@@ -36,7 +36,7 @@ from docutranslate.config import (
     CUSTOM_PROMPT, FORCE_JSON, RPM, TPM, EXTRA_BODY, GLOSSARY_GENERATE_ENABLE,
     # MarkdownWorkflowParams defaults
     CONVERT_ENGINE, MD2DOCX_ENGINE, MINERU_TOKEN, MINERU_DEPLOY_BASE_URL,
-    MODEL_VERSION, FORMULA_OCR, CODE_OCR, MINERU_LANGUAGE,
+    MODEL_VERSION, FORMULA_OCR, MINERU_LANGUAGE,
     MINERU_DEPLOY_BACKEND, MINERU_DEPLOY_PARSE_METHOD,
     MINERU_DEPLOY_EFFORT, MINERU_DEPLOY_TABLE_ENABLE,
     MINERU_DEPLOY_FORMULA_ENABLE, MINERU_DEPLOY_IMAGE_ANALYSIS,
@@ -304,11 +304,10 @@ class BaseWorkflowParams(BaseModel):
 # 这是必须添加的关键部分，让 Auto 模式能够显式识别这些参数
 class UniversalParamsMixin(BaseModel):
     # Markdown/PDF 相关
-    convert_engine: Optional[Literal["identity", "mineru", "docling", "mineru_deploy"]] = None
+    convert_engine: Optional[Literal["identity", "mineru", "mineru_deploy"]] = None
     mineru_token: Optional[str] = None
     model_version: Optional[Literal["pipeline", "vlm"]] = None
     formula_ocr: Optional[bool] = None
-    code_ocr: Optional[bool] = None
     mineru_language: Optional[Literal[
         "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
         "ta", "te", "ka", "el", "th", "latin", "arabic", "cyrillic",
@@ -356,11 +355,11 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
         ..., description="指定使用基于Markdown的翻译工作流。"
     )
     convert_engine: Literal[
-        "identity", "mineru", "docling", "mineru_deploy"
+        "identity", "mineru", "mineru_deploy"
     ] = Field(
         CONVERT_ENGINE,
         description="选择将文件解析为markdown的引擎。'mineru_deploy' 适用于本地部署的 MinerU 服务。如果输入文件是.md，此项可为`identity`或不传。",
-        examples=["identity", "mineru", "docling", "mineru_deploy"],
+        examples=["identity", "mineru", "mineru_deploy"],
     )
     md2docx_engine: Literal["python", "pandoc", "auto"] | None = Field(
         MD2DOCX_ENGINE,
@@ -381,7 +380,7 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
     )
     formula_ocr: bool = Field(
         FORMULA_OCR,
-        description="[仅当 convert_engine='mineru' 或 'docling'] 是否对公式进行OCR识别。",
+        description="[仅当 convert_engine='mineru'] 是否对公式进行OCR识别。",
     )
     mineru_language: Literal[
         "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
@@ -392,10 +391,6 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
         description="[仅当 convert_engine='mineru'] 识别语言选项，默认 'ch'（中英文）。",
     )
 
-    # -- For "docling" --
-    code_ocr: bool = Field(
-        CODE_OCR, description="[仅当 convert_engine='docling'] 是否对代码块进行OCR识别。"
-    )
 
     # -- For "mineru_deploy" (Local Deployment) --
     mineru_deploy_base_url: Optional[str] = Field(

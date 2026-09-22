@@ -1,14 +1,17 @@
 import { ref, computed } from 'vue';
 import Papa from 'papaparse';
-import jschardet from 'jschardet';
+import { detect } from 'jschardet';
 
 // 编码映射：jschardet 返回的编码名 -> TextDecoder 支持的编码名
 const encodingMap = {
     'ascii': 'utf-8',
     'utf-8': 'utf-8',
+    'utf-8-sig': 'utf-8',
     'utf-16': 'utf-16',
     'utf-16le': 'utf-16le',
     'utf-16be': 'utf-16be',
+    'utf-16-le': 'utf-16le',
+    'utf-16-be': 'utf-16be',
     'big5': 'big5',
     'gb2312': 'gbk',
     'gbk': 'gbk',
@@ -23,17 +26,6 @@ const encodingMap = {
     'windows-1252': 'windows-1252',
 };
 
-// 将 Uint8Array 转换为二进制字符串（jschardet 需要字符串输入）
-function uint8ArrayToBinaryString(uint8Array) {
-    const chunks = [];
-    const chunkSize = 8192; // 分块处理避免调用栈溢出
-    for (let i = 0; i < uint8Array.length; i += chunkSize) {
-        const chunk = uint8Array.subarray(i, i + chunkSize);
-        chunks.push(String.fromCharCode.apply(null, Array.from(chunk)));
-    }
-    return chunks.join('');
-}
-
 // 将文件读取为 ArrayBuffer 并检测编码
 async function detectEncoding(file) {
     const buffer = await file.arrayBuffer();
@@ -45,9 +37,7 @@ async function detectEncoding(file) {
     }
 
     try {
-        // jschardet 需要 Buffer 或 string，在浏览器中将 Uint8Array 转换为二进制字符串
-        const binaryString = uint8ArrayToBinaryString(uint8Array);
-        const result = jschardet.detect(binaryString);
+        const result = detect(uint8Array);
 
         // 检查返回结果是否有效
         if (!result || typeof result.encoding !== 'string') {
@@ -57,13 +47,24 @@ async function detectEncoding(file) {
         const detectedEncoding = result.encoding.toLowerCase();
         const confidence = result.confidence || 0;
 
-        // 如果置信度太低，默认使用 utf-8
+        // v4 对短文本的置信度较低；仅在字节确实是 UTF-8 时回退。
         if (confidence < 0.5) {
-            return { buffer, encoding: 'utf-8', confidence };
+            try {
+                new TextDecoder('utf-8', { fatal: true }).decode(buffer);
+                return { buffer, encoding: 'utf-8', confidence };
+            } catch {
+                // 非 UTF-8 数据继续使用检测结果，避免将有效的旧编码文本解码为乱码。
+            }
         }
 
         // 映射到 TextDecoder 支持的编码名
-        const normalizedEncoding = encodingMap[detectedEncoding] || detectedEncoding;
+        let normalizedEncoding = encodingMap[detectedEncoding] || detectedEncoding;
+        // v4 将带 BOM 的 UTF-16 统一标记为 UTF-16，TextDecoder 需要明确字节序。
+        if (detectedEncoding === 'utf-16') {
+            normalizedEncoding = uint8Array[0] === 0xfe && uint8Array[1] === 0xff
+                ? 'utf-16be'
+                : 'utf-16le';
+        }
 
         return { buffer, encoding: normalizedEncoding, confidence };
     } catch (e) {

@@ -628,12 +628,6 @@
                                                            @change="saveSetting('translator_formula_ocr', form.formula_ocr)">
                                                     <label class="form-check-label">{{ t('formulaOcrLabel') }}</label>
                                                 </div>
-                                                <div class="form-check form-switch mb-2" v-if="ocrOptions.showCode">
-                                                    <input class="form-check-input" type="checkbox" role="switch"
-                                                           v-model="form.code_ocr"
-                                                           @change="saveSetting('translator_code_ocr', form.code_ocr)">
-                                                    <label class="form-check-label">{{ t('codeOcrLabel') }}</label>
-                                                </div>
                                             </div>
 
                                             <!-- Markdown to Docx Engine Selector -->
@@ -1792,7 +1786,6 @@
                 mineru_deploy_lang_list: [],
                 mineru_deploy_server_url: '',
                 formula_ocr: true,
-                code_ocr: true,
                 skip_translate: false,
                 platform: 'https://api.302.ai/v1',
                 base_url: '',
@@ -1891,7 +1884,6 @@
                 const savedLangList = localStorage.getItem('mineru_deploy_lang_list');
                 form.mineru_deploy_lang_list = savedLangList ? JSON.parse(savedLangList) : [];
                 form.formula_ocr = storage.getBool('translator_formula_ocr', true);
-                form.code_ocr = storage.getBool('translator_code_ocr', true);
                 form.skip_translate = storage.getBool('translator_skip_translate', false);
                 form.platform = storage.get(STORAGE.keys.PLATFORM, 'https://api.302.ai/v1');
                 form.system_proxy_enable = storage.getBool('translator_system_proxy_enable', defaults.system_proxy_enable ?? false);
@@ -2013,7 +2005,6 @@
                 storage.set('mineru_deploy_server_url', f.mineru_deploy_server_url);
                 storage.set('mineru_deploy_lang_list', JSON.stringify(f.mineru_deploy_lang_list));
                 storage.set('translator_formula_ocr', f.formula_ocr);
-                storage.set('translator_code_ocr', f.code_ocr);
                 storage.set('translator_skip_translate', f.skip_translate);
                 storage.set(STORAGE.keys.PLATFORM, f.platform);
                 storage.set('translator_system_proxy_enable', f.system_proxy_enable);
@@ -2196,8 +2187,7 @@
             });
 
             const ocrOptions = computed(() => ({
-                showFormula: ['mineru', 'docling'].includes(form.convert_engine),
-                showCode: form.convert_engine === 'docling'
+                showFormula: form.convert_engine === 'mineru',
             }));
             const glossaryCount = computed(() => Object.keys(glossaryData.value).length);
 
@@ -2342,9 +2332,6 @@
                         if (['vlm-http-client', 'hybrid-http-client'].includes(basePayload.mineru_deploy_backend)) {
                             basePayload.mineru_deploy_server_url = emptyToNull(form.mineru_deploy_server_url);
                         }
-                    } else if (form.convert_engine === 'docling') {
-                        basePayload.code_ocr = form.code_ocr;
-                        basePayload.formula_ocr = form.formula_ocr;
                     }
                 } else {
                     const params = {...workflowParams[form.workflow_type]};

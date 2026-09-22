@@ -245,9 +245,6 @@ export function useTasks(settings, glossary, i18n) {
                 if (['vlm-http-client', 'hybrid-http-client'].includes(form.mineru_deploy_backend)) {
                     basePayload.mineru_deploy_server_url = emptyToNull(form.mineru_deploy_server_url);
                 }
-            } else if (form.convert_engine === 'docling') {
-                basePayload.code_ocr = form.code_ocr;
-                basePayload.formula_ocr = form.formula_ocr;
             }
         } else {
             const params = {...workflowParams[form.workflow_type]};

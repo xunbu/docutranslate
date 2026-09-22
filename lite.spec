@@ -27,8 +27,7 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    # 注意：exclude docling 可能导致部分依赖丢失，确保你真的不需要它
-    excludes=["docling", "docutranslate.converter.x2md.converter_docling"],
+    excludes=[],
     noarchive=False,
     optimize=0,
 )

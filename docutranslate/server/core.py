@@ -34,7 +34,6 @@ from docutranslate.agents.glossary_agent import GlossaryAgentConfig
 from docutranslate.core.schemas import TranslatePayload
 from docutranslate.utils.utils import mask_secrets
 from docutranslate.exporter.md.types import ConvertEngineType
-from docutranslate.global_values.conditional_import import DOCLING_EXIST
 from docutranslate.workflow.ass_workflow import AssWorkflow, AssWorkflowConfig
 from docutranslate.workflow.base import Workflow
 from docutranslate.workflow.docx_workflow import DocxWorkflow, DocxWorkflowConfig
@@ -66,8 +65,6 @@ from docutranslate.logger import global_logger
 from docutranslate.progress import ProgressTracker
 from docutranslate.translator import default_params
 
-if DOCLING_EXIST:
-    from docutranslate.converter.x2md.converter_docling import ConverterDoclingConfig
 from docutranslate.converter.x2md.converter_mineru import ConverterMineruConfig
 from docutranslate.converter.x2md.converter_mineru_deploy import ConverterMineruDeployConfig
 from docutranslate.exporter.md.md2html_exporter import MD2HTMLExporterConfig
@@ -367,7 +364,7 @@ class TranslationService:
 
             # 从 UniversalParamsMixin 复制所有字段（关键！）
             universal_fields = [
-                "convert_engine", "mineru_token", "model_version", "formula_ocr", "code_ocr",
+                "convert_engine", "mineru_token", "model_version", "formula_ocr",
                 "mineru_language",
                 "mineru_deploy_base_url", "mineru_deploy_backend", "mineru_deploy_effort",
                 "mineru_deploy_parse_method",
@@ -419,7 +416,7 @@ class TranslationService:
 
             if detected_type == "markdown_based" and not payload_data.get("convert_engine"):
                 if Path(original_filename).suffix.lower() == ".pdf":
-                    payload_data["convert_engine"] = "mineru" if not DOCLING_EXIST else "docling"
+                    payload_data["convert_engine"] = "mineru"
                 else:
                     payload_data["convert_engine"] = "identity"
 
@@ -818,12 +815,6 @@ class TranslationService:
                     end_page_id=payload.mineru_deploy_end_page_id,
                     lang_list=payload.mineru_deploy_lang_list,
                     server_url=payload.mineru_deploy_server_url,
-                )
-            elif payload.convert_engine == "docling" and DOCLING_EXIST:
-                converter_config = ConverterDoclingConfig(
-                    logger=task_logger,
-                    code_ocr=payload.code_ocr,
-                    formula_ocr=payload.formula_ocr,
                 )
             html_exporter_config = MD2HTMLExporterConfig(cdn=True)
             md2docx_exporter_config = MD2DocxExporterConfig(

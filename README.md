@@ -271,7 +271,6 @@ print(f"Exported content length: {len(base64_content)}")
 | **translate_regions** | `list` | - | Excel translation regions (e.g., `"Sheet1!A1:B10"`) |
 | **model_version** | `str` | `"vlm"` | MinerU model version: `"pipeline"`, `"vlm"` |
 | **formula_ocr** | `bool` | `True` | Enable formula OCR for PDF parsing |
-| **code_ocr** | `bool` | `True` | Enable code OCR for PDF parsing |
 | **mineru_deploy_backend** | `str` | `"hybrid-engine"` | MinerU local backend: `"pipeline"`, `"vlm-engine"`, `"vlm-http-client"`, `"hybrid-engine"`, `"hybrid-http-client"` |
 | **mineru_deploy_effort** | `str` | `"medium"` | Hybrid parsing effort: `"medium"`, `"high"` |
 | **mineru_deploy_formula_enable** | `bool` | `True` | Enable formula recognition for local MinerU |

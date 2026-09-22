@@ -1,6 +1,6 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
-from PyInstaller.utils.hooks import collect_all, copy_metadata, collect_submodules
+from PyInstaller.utils.hooks import collect_all, collect_submodules
 import docutranslate
 
 # 初始化列表
@@ -13,17 +13,11 @@ hiddenimports = [
     'pymdownx.superfences',
     'pymdownx.highlight',
     'pygments',
-    'docling_ibm_models',
-    'docling_parse',
-    'cv2',
     *collect_submodules('charset_normalizer'),
 ]
 
 packages_to_collect = [
-    'easyocr',
-    'docling',
     'pygments',
-    'docling_ibm_models',
 ]
 
 for package in packages_to_collect:
@@ -36,16 +30,9 @@ for package in packages_to_collect:
         print(f"Warning: Failed to collect resources for {package}: {e}")
 
 
-try:
-    datas += copy_metadata('docling-ibm-models') # 这里必须用连字符(pip名)
-    datas += copy_metadata('docling-parse')      # 预防性添加
-except Exception as e:
-    print(f"Warning: Failed to copy metadata: {e}")
-
 # 然后添加您的自定义资源（避免重复）
 # 注意：确保 .venv 路径在您当前的构建环境中是存在的
 custom_datas = [
-    ('./.venv/Lib/site-packages/docling_parse/pdf_resources', 'docling_parse/pdf_resources'),
     ('./docutranslate/static', 'docutranslate/static'),
     ('./docutranslate/template', 'docutranslate/template')
 ]

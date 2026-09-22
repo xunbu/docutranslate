@@ -16,7 +16,6 @@ from docutranslate.agents.provider import ProviderType
 from docutranslate.core.schemas import TranslatePayload, GlossaryAgentConfigPayload, WorkflowType, InsertMode
 from docutranslate.core.factory import create_workflow_from_payload
 from docutranslate.translator import default_params
-from docutranslate.global_values.conditional_import import DOCLING_EXIST
 from docutranslate.config import TO_LANG
 
 # --- 映射配置 ---
@@ -163,7 +162,7 @@ class Client:
             retry: int = default_params["retry"],
             thinking: ThinkingMode = default_params["thinking"],
             system_proxy_enable: bool = default_params["system_proxy_enable"],
-            convert_engine: Literal["identity", "mineru", "docling", "mineru_deploy"] = "identity",
+            convert_engine: Literal["identity", "mineru", "mineru_deploy"] = "identity",
             mineru_token: str = "",
             extra_body: Optional[str] = None,
             temperature: Optional[float] = None,
@@ -216,12 +215,11 @@ class Client:
             separator: Optional[str] = None,
             segment_mode: Optional[Literal["line", "paragraph", "none"]] = None,
             translate_regions: Optional[List[str]] = None,
-            convert_engine: Optional[Literal["identity", "mineru", "docling", "mineru_deploy"]] = None,
+            convert_engine: Optional[Literal["identity", "mineru", "mineru_deploy"]] = None,
             mineru_token: Optional[str] = None,
             md2docx_engine: Optional[Literal["python", "pandoc", "auto"]] = None,
             model_version: Optional[Literal["pipeline", "vlm"]] = None,
             formula_ocr: Optional[bool] = None,
-            code_ocr: Optional[bool] = None,
             mineru_language: Optional[Literal[
                 "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
                 "ta", "te", "ka", "el", "th", "latin", "arabic", "cyrillic",
@@ -297,12 +295,11 @@ class Client:
             translate_regions: Optional[List[str]] = None,
 
             # --- 解析引擎 (PDF/OCR) ---
-            convert_engine: Optional[Literal["identity", "mineru", "docling", "mineru_deploy"]] = None,
+            convert_engine: Optional[Literal["identity", "mineru", "mineru_deploy"]] = None,
             mineru_token: Optional[str] = None,
             md2docx_engine: Optional[Literal["python", "pandoc", "auto"]] = None,
             model_version: Optional[Literal["pipeline", "vlm"]] = None,
             formula_ocr: Optional[bool] = None,
-            code_ocr: Optional[bool] = None,
             mineru_language: Optional[Literal[
                 "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
                 "ta", "te", "ka", "el", "th", "latin", "arabic", "cyrillic",
@@ -343,7 +340,7 @@ class Client:
         :param json_paths: [Json专用] JsonPath 列表 (如 '$.data.*')。
         :param translate_regions: [Excel专用] 翻译区域 (如 'Sheet1!A1:B10')。
         :param insert_mode: [Docx/Xlsx/Txt] 译文插入模式 (replace, append, prepend)。
-        :param convert_engine: [PDF/OCR] 解析引擎 (mineru, docling)。
+        :param convert_engine: [PDF/OCR] 解析引擎 (identity, mineru, mineru_deploy)。
         :param mineru_token: [Mineru Cloud] API Token。
         :param mineru_deploy_base_url: [Mineru Local] 本地服务地址。
         :param mineru_deploy_effort: [Mineru Local] Hybrid 解析强度 (medium, high)。
@@ -409,7 +406,7 @@ class Client:
         if wf == "markdown_based" and "convert_engine" not in params:
             ext = path.suffix.lower()
             if ext == ".pdf":
-                params["convert_engine"] = "mineru" if not DOCLING_EXIST else "docling"
+                params["convert_engine"] = "mineru"
             else:
                 params["convert_engine"] = "identity"
 

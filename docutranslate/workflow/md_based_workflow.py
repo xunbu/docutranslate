@@ -8,14 +8,11 @@ from typing import Self, Tuple, Type
 from docutranslate.cacher import md_based_convert_cacher
 from docutranslate.converter.x2md.converter_mineru_deploy import ConverterMineruDeploy, ConverterMineruDeployConfig
 from docutranslate.exporter.base import ExporterConfig
-from docutranslate.global_values.conditional_import import DOCLING_EXIST
 from docutranslate.glossary.glossary import Glossary
 from docutranslate.ir.document import Document
 from docutranslate.ir.markdown_document import MarkdownDocument
 from docutranslate.utils.markdown_utils import embed_inline_image_from_zip
 
-if DOCLING_EXIST:
-    from docutranslate.converter.x2md.converter_docling import ConverterDoclingConfig, ConverterDocling
 from docutranslate.converter.converter_identity import ConverterIdentity
 from docutranslate.converter.x2md.converter_mineru import ConverterMineruConfig, ConverterMineru
 from docutranslate.converter.x2md.base import X2MarkdownConverterConfig, X2MarkdownConverter
@@ -50,8 +47,6 @@ class MarkdownBasedWorkflow(Workflow[MarkdownBasedWorkflowConfig, Document, Mark
         "mineru_deploy": (ConverterMineruDeploy, ConverterMineruDeployConfig)
     }
 
-    if DOCLING_EXIST:
-        _converter_factory["docling"] = (ConverterDocling, ConverterDoclingConfig)
 
     def __init__(self, config: MarkdownBasedWorkflowConfig):
         super().__init__(config=config)

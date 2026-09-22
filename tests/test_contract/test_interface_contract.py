@@ -46,7 +46,6 @@ SDK_INHERITED_DEFAULT_FIELDS = {
     "md2docx_engine",
     "model_version",
     "formula_ocr",
-    "code_ocr",
     "mineru_language",
     "mineru_deploy_base_url",
     "mineru_deploy_backend",
@@ -301,3 +300,16 @@ async def test_deepseek_batch_warms_two_prompts_before_parallel_fanout(
         "translated:p3",
         "translated:p4",
     ]
+
+
+def test_conversion_engine_schema_matches_workflow_registry():
+    from docutranslate.core.schemas import MarkdownWorkflowParams, UniversalParamsMixin
+    from docutranslate.workflow.md_based_workflow import MarkdownBasedWorkflow
+
+    expected = {"identity", "mineru", "mineru_deploy"}
+    schema = MarkdownWorkflowParams.model_json_schema()
+    assert set(schema["properties"]["convert_engine"]["enum"]) == expected
+    universal_schema = UniversalParamsMixin.model_json_schema()
+    choices = universal_schema["properties"]["convert_engine"]["anyOf"]
+    assert set(next(choice["enum"] for choice in choices if "enum" in choice)) == expected
+    assert set(MarkdownBasedWorkflow._converter_factory) == expected

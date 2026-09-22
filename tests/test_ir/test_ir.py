@@ -156,11 +156,11 @@ def test_attachment_manager_multiple_attachments():
     manager = AttachMentManager()
 
     # Add multiple attachments
-    for identifier in ["glossary", "mineru", "docling"]:
+    for identifier in ["glossary", "mineru", "mineru_deploy"]:
         doc = Document(suffix=".txt", content=f"{identifier} content".encode(), stem=identifier)
         manager.add_document(identifier, doc)
 
     assert len(manager.attachment_dict) == 3
     assert "glossary" in manager.attachment_dict
     assert "mineru" in manager.attachment_dict
-    assert "docling" in manager.attachment_dict
+    assert "mineru_deploy" in manager.attachment_dict

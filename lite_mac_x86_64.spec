@@ -27,7 +27,7 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     # 保持原有的排除项
-    excludes=["docling", "docutranslate.converter.x2md.converter_docling"],
+    excludes=[],
     noarchive=False,
     target_arch='x86_64',
     optimize=0,

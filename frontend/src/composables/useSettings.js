@@ -81,7 +81,6 @@ export function useSettings() {
         mineru_deploy_lang_list: [],
         mineru_deploy_server_url: '',
         formula_ocr: true,
-        code_ocr: true,
         skip_translate: false,
         platform: 'custom',
         base_url: '',
@@ -166,7 +165,10 @@ export function useSettings() {
     // ===== 加载配置 - 拆分为子函数 =====
     const loadMainConfig = (defaults) => {
         form.workflow_type = storage.get(STORAGE.keys.WORKFLOW, 'markdown_based');
-        form.convert_engine = storage.get(STORAGE.keys.ENGINE, 'mineru');
+        const savedEngine = storage.get(STORAGE.keys.ENGINE, 'mineru');
+        form.convert_engine = ['identity', 'mineru', 'mineru_deploy'].includes(savedEngine)
+            ? savedEngine
+            : 'mineru';
         const md2docxVal = storage.get(STORAGE.keys.MD2DOCX, 'auto');
         form.md2docx_engine = md2docxVal === 'null' ? null : md2docxVal;
         form.mineru_token = storage.get('translator_mineru_token', '');
@@ -189,7 +191,6 @@ export function useSettings() {
         const savedLangList = localStorage.getItem('mineru_deploy_lang_list');
         form.mineru_deploy_lang_list = savedLangList ? JSON.parse(savedLangList) : [];
         form.formula_ocr = storage.getBool('translator_formula_ocr', true);
-        form.code_ocr = storage.getBool('translator_code_ocr', true);
         form.skip_translate = storage.getBool('translator_skip_translate', false);
         form.platform = storage.get(STORAGE.keys.PLATFORM, 'custom');
         form.system_proxy_enable = storage.getBool('translator_system_proxy_enable', defaults.system_proxy_enable ?? false);
@@ -313,7 +314,6 @@ export function useSettings() {
         storage.set('mineru_deploy_server_url', f.mineru_deploy_server_url);
         storage.set('mineru_deploy_lang_list', JSON.stringify(f.mineru_deploy_lang_list));
         storage.set('translator_formula_ocr', f.formula_ocr);
-        storage.set('translator_code_ocr', f.code_ocr);
         storage.set('translator_skip_translate', f.skip_translate);
         storage.set(STORAGE.keys.PLATFORM, f.platform);
         storage.set('translator_system_proxy_enable', f.system_proxy_enable);
