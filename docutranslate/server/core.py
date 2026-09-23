@@ -32,6 +32,7 @@ from pydantic import TypeAdapter
 from docutranslate import __version__
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig
 from docutranslate.core.schemas import TranslatePayload
+from docutranslate.core.file_types import PARSER_INPUT_SUFFIXES
 from docutranslate.utils.utils import mask_secrets
 from docutranslate.exporter.md.types import ConvertEngineType
 from docutranslate.workflow.ass_workflow import AssWorkflow, AssWorkflowConfig
@@ -190,9 +191,9 @@ class QueueAndHistoryHandler(logging.Handler):
 def get_workflow_type_from_filename(filename: str) -> str:
     """Get workflow type based on file extension."""
     ext = Path(filename).suffix.lower()
-    if ext in [".pdf", ".png", ".jpg"]:
+    if ext in PARSER_INPUT_SUFFIXES:
         return "markdown_based"
-    elif ext in [".md", ".markdown"]:
+    elif ext in [".md", ".markdown", ".zip"]:
         return "markdown_based"
     elif ext in [".docx", ".doc"]:
         return "docx"
@@ -415,7 +416,7 @@ class TranslationService:
                 payload_data["json_paths"] = ["$..*"]
 
             if detected_type == "markdown_based" and not payload_data.get("convert_engine"):
-                if Path(original_filename).suffix.lower() == ".pdf":
+                if Path(original_filename).suffix.lower() in PARSER_INPUT_SUFFIXES:
                     payload_data["convert_engine"] = "mineru"
                 else:
                     payload_data["convert_engine"] = "identity"
@@ -632,6 +633,9 @@ class TranslationService:
                     task_logger.error(
                         f"生成 {file_type} 文件时出错: {export_error}", exc_info=True
                     )
+
+            if not downloadable_files:
+                raise RuntimeError("所有导出格式均失败，未生成可下载文件")
 
             attachment_files = {}
             attachment_object = workflow.get_attachment()
@@ -1373,6 +1377,7 @@ class TranslationService:
             and task_state.get("is_processing")
             and task_state.get("current_task_ref")
         ):
+            task_ref = task_state["current_task_ref"]
             try:
                 global_logger.info("[%s] 任务仍在进行，释放前尝试取消", task_id)
                 self.cancel_task(task_id)
@@ -1382,6 +1387,13 @@ class TranslationService:
                     "[%s] 取消步骤已跳过（任务可能已完成）: %s", task_id, e.detail
                 )
                 message_parts.append(f"任务取消步骤已跳过（可能已完成或取消）。")
+            if task_ref is not asyncio.current_task() and not task_ref.done():
+                # Let the worker run its finally block before deleting the
+                # task state and its temporary output directory.
+                done, pending = await asyncio.wait({task_ref}, timeout=5.0)
+                if pending:
+                    global_logger.warning("[%s] 取消后任务清理仍未完成", task_id)
+                    message_parts.append("任务清理未在 5 秒内完成。")
 
         if task_state:
             temp_dir = task_state.get("temp_dir")

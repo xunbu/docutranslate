@@ -81,8 +81,6 @@ def test_cache_lru_eviction():
     cacher = MDBasedCovertCacher()
 
     # Create 12 items (default CACHE_NUM is 10)
-    # Logic: check length before adding, pop only if > CACHE_NUM
-    # So max size is CACHE_NUM + 1 = 11
     for i in range(12):
         mock_doc = MagicMock()
         mock_doc.suffix = f".{i}"
@@ -96,10 +94,10 @@ def test_cache_lru_eviction():
 
         cacher.cache_result(mock_md, mock_doc, "mineru", mock_config)
 
-    # Should keep 11 items (CACHE_NUM + 1)
-    assert len(cacher.cache_dict) == 11
+    # Must respect the configured capacity
+    assert len(cacher.cache_dict) == 10
 
-    # Add one more, should still be 11
+    # Add one more, capacity must remain 10
     mock_doc = MagicMock()
     mock_doc.suffix = ".12"
     mock_doc.content = b"content12"
@@ -109,7 +107,7 @@ def test_cache_lru_eviction():
     mock_md.copy.return_value = mock_md
     cacher.cache_result(mock_md, mock_doc, "mineru", mock_config)
 
-    assert len(cacher.cache_dict) == 11
+    assert len(cacher.cache_dict) == 10
 
 
 def test_clear_cache():

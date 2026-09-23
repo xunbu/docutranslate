@@ -281,11 +281,11 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 convert_engine: PDF conversion engine (identity, mineru, mineru_deploy)
                 md2docx_engine: Markdown to docx engine (python, pandoc, auto)
                 mineru_token: MinerU Cloud API Token
-                model_version: MinerU Cloud model version (pipeline, vlm)
+                model_version: MinerU Cloud model version (pipeline, vlm, MinerU-HTML)
                 formula_ocr: Enable formula OCR
                 mineru_language: MinerU Cloud language option
                 mineru_deploy_base_url: MinerU local deployment base URL
-                mineru_deploy_backend: MinerU local backend type (pipeline, vlm-engine, vlm-http-client, hybrid-engine, hybrid-http-client)
+                mineru_deploy_backend: MinerU local backend/tier (pipeline, vlm-engine, vlm-http-client, hybrid-engine, hybrid-http-client, flash, basic, standard, advanced)
                 mineru_deploy_effort: Hybrid parsing effort (medium, high)
                 mineru_deploy_parse_method: MinerU parse method (auto, txt, ocr)
                 mineru_deploy_formula_enable: Enable formula parsing
@@ -513,11 +513,11 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 convert_engine: PDF conversion engine (identity, mineru, mineru_deploy)
                 md2docx_engine: Markdown to docx engine (python, pandoc, auto)
                 mineru_token: MinerU Cloud API Token
-                model_version: MinerU Cloud model version (pipeline, vlm)
+                model_version: MinerU Cloud model version (pipeline, vlm, MinerU-HTML)
                 formula_ocr: Enable formula OCR
                 mineru_language: MinerU Cloud language option (ch, ch_server, en, japan, korean, chinese_cht, ta, te, ka, el, th, latin, arabic, cyrillic, east_slavic, devanagari)
                 mineru_deploy_base_url: MinerU local deployment base URL
-                mineru_deploy_backend: MinerU local backend type (pipeline, vlm-engine, vlm-http-client, hybrid-engine, hybrid-http-client)
+                mineru_deploy_backend: MinerU local backend/tier (pipeline, vlm-engine, vlm-http-client, hybrid-engine, hybrid-http-client, flash, basic, standard, advanced)
                 mineru_deploy_effort: Hybrid parsing effort (medium, high)
                 mineru_deploy_parse_method: MinerU parse method (auto, txt, ocr)
                 mineru_deploy_table_enable: Enable table parsing

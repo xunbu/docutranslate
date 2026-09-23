@@ -99,6 +99,10 @@ async def test_latest_task_api_async(monkeypatch):
 
 def test_falls_back_to_legacy_file_parse(monkeypatch):
     class LegacyClient:
+        def request(self, method, url, **kwargs):
+            assert method == "GET" and url.endswith("/v1/health")
+            return httpx.Response(404)
+
         def __init__(self):
             self.posts = []
 

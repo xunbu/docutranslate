@@ -15,6 +15,7 @@ from docutranslate.agents.provider import ProviderType
 
 from docutranslate.core.schemas import TranslatePayload, GlossaryAgentConfigPayload, WorkflowType, InsertMode
 from docutranslate.core.factory import create_workflow_from_payload
+from docutranslate.core.file_types import PARSER_INPUT_SUFFIXES
 from docutranslate.translator import default_params
 from docutranslate.config import TO_LANG
 
@@ -218,7 +219,7 @@ class Client:
             convert_engine: Optional[Literal["identity", "mineru", "mineru_deploy"]] = None,
             mineru_token: Optional[str] = None,
             md2docx_engine: Optional[Literal["python", "pandoc", "auto"]] = None,
-            model_version: Optional[Literal["pipeline", "vlm"]] = None,
+            model_version: Optional[Literal["pipeline", "vlm", "MinerU-HTML"]] = None,
             formula_ocr: Optional[bool] = None,
             mineru_language: Optional[Literal[
                 "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
@@ -226,7 +227,7 @@ class Client:
                 "east_slavic", "devanagari"
             ]] = None,
             mineru_deploy_base_url: Optional[str] = None,
-            mineru_deploy_backend: Optional[Literal["pipeline", "vlm-engine", "vlm-http-client", "hybrid-engine", "hybrid-http-client", "vlm-auto-engine", "hybrid-auto-engine"]] = None,
+            mineru_deploy_backend: Optional[Literal["flash", "basic", "standard", "advanced", "pipeline", "vlm-engine", "vlm-http-client", "hybrid-engine", "hybrid-http-client", "vlm-auto-engine", "hybrid-auto-engine"]] = None,
             mineru_deploy_effort: Optional[Literal["medium", "high"]] = None,
             mineru_deploy_parse_method: Optional[Literal["auto", "txt", "ocr"]] = None,
             mineru_deploy_formula_enable: Optional[bool] = None,
@@ -298,7 +299,7 @@ class Client:
             convert_engine: Optional[Literal["identity", "mineru", "mineru_deploy"]] = None,
             mineru_token: Optional[str] = None,
             md2docx_engine: Optional[Literal["python", "pandoc", "auto"]] = None,
-            model_version: Optional[Literal["pipeline", "vlm"]] = None,
+            model_version: Optional[Literal["pipeline", "vlm", "MinerU-HTML"]] = None,
             formula_ocr: Optional[bool] = None,
             mineru_language: Optional[Literal[
                 "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
@@ -308,7 +309,7 @@ class Client:
 
             # --- Mineru 本地部署参数 ---
             mineru_deploy_base_url: Optional[str] = None,
-            mineru_deploy_backend: Optional[Literal["pipeline", "vlm-engine", "vlm-http-client", "hybrid-engine", "hybrid-http-client", "vlm-auto-engine", "hybrid-auto-engine"]] = None,
+            mineru_deploy_backend: Optional[Literal["flash", "basic", "standard", "advanced", "pipeline", "vlm-engine", "vlm-http-client", "hybrid-engine", "hybrid-http-client", "vlm-auto-engine", "hybrid-auto-engine"]] = None,
             mineru_deploy_effort: Optional[Literal["medium", "high"]] = None,
             mineru_deploy_parse_method: Optional[Literal["auto", "txt", "ocr"]] = None,
             mineru_deploy_formula_enable: Optional[bool] = None,
@@ -367,6 +368,13 @@ class Client:
         # 4. 自动检测 Workflow 类型
         if final_params.get("workflow_type", "auto") == "auto":
             final_params["workflow_type"] = self._detect_workflow(path_obj)
+            # The constructor's historical identity default is only suitable
+            # for Markdown. Auto mode must parse binary PDF/image inputs.
+            # An explicit per-call engine or a configured parser takes priority.
+            if (path_obj.suffix.lower() in PARSER_INPUT_SUFFIXES
+                    and final_params.get("convert_engine") == "identity"
+                    and "convert_engine" not in call_params):
+                final_params.pop("convert_engine")
 
         # 5. 智能补全
         self._patch_defaults(final_params, path_obj)
@@ -383,15 +391,15 @@ class Client:
         # 8. 执行逻辑
         workflow.read_path(str(path_obj))
 
-        # 仅当 skip_translate 为 False 时才执行翻译
-        if not payload.skip_translate:
-            await workflow.translate_async()
+        # Workflows still need to parse and populate document_translated when
+        # translation is skipped; their translator config suppresses LLM calls.
+        await workflow.translate_async()
 
         return TranslationResult(workflow, final_params["workflow_type"], path_obj.name)
 
     def _detect_workflow(self, path: Path) -> str:
         ext = path.suffix.lower().lstrip(".")
-        if ext in ["md", "pdf", "png", "jpg"]: return "markdown_based"
+        if path.suffix.lower() in PARSER_INPUT_SUFFIXES or ext in ["md", "markdown", "zip"]: return "markdown_based"
         if ext in ["xlsx", "csv", "xls"]: return "xlsx"
         if ext in ["docx", "doc"]: return "docx"
         if ext in ["html", "htm"]: return "html"
@@ -405,7 +413,7 @@ class Client:
             params["json_paths"] = ["$..*"]
         if wf == "markdown_based" and "convert_engine" not in params:
             ext = path.suffix.lower()
-            if ext == ".pdf":
+            if ext in PARSER_INPUT_SUFFIXES:
                 params["convert_engine"] = "mineru"
             else:
                 params["convert_engine"] = "identity"

@@ -238,7 +238,8 @@ export function useTasks(settings, glossary, i18n) {
                 basePayload.mineru_deploy_table_enable = form.mineru_deploy_table_enable;
                 basePayload.mineru_deploy_image_analysis = form.mineru_deploy_image_analysis;
                 basePayload.mineru_deploy_start_page_id = parseInt(form.mineru_deploy_start_page) || 0;
-                basePayload.mineru_deploy_end_page_id = parseInt(form.mineru_deploy_end_page) || 99999;
+                const endPage = parseInt(form.mineru_deploy_end_page, 10);
+                basePayload.mineru_deploy_end_page_id = Number.isNaN(endPage) ? 99999 : endPage;
                 if (['pipeline', 'hybrid-engine', 'hybrid-http-client'].includes(form.mineru_deploy_backend)) {
                     basePayload.mineru_deploy_lang_list = form.mineru_deploy_lang_list.length > 0 ? form.mineru_deploy_lang_list : null;
                 }

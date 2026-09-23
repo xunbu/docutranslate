@@ -94,6 +94,8 @@ async def test_sdk_constructor_values_are_not_overwritten_by_call_defaults(
     class DummyWorkflow:
         def read_path(self, path):
             self.path = path
+        async def translate_async(self):
+            pass
 
     def create_workflow(payload):
         captured["payload"] = payload

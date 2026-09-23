@@ -7,11 +7,13 @@ import zipfile
 import io
 from dataclasses import dataclass
 from typing import Hashable, Literal, List, Tuple
+from urllib.parse import quote
 
 import httpx
 
 from docutranslate.config import (
     MINERU_CONNECT_TIMEOUT,
+    MINERU_TASK_TIMEOUT,
     MINERU_POOL_TIMEOUT,
     MINERU_READ_TIMEOUT,
     MINERU_WRITE_TIMEOUT,
@@ -38,7 +40,7 @@ URL = 'https://mineru.net/api/v4/file-urls/batch'
 class ConverterMineruConfig(X2MarkdownConverterConfig):
     mineru_token: str
     formula_ocr: bool = True
-    model_version: Literal["pipeline", "vlm"] = "vlm"
+    model_version: Literal["pipeline", "vlm", "MinerU-HTML"] = "vlm"
     language: Literal[
         "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
         "ta", "te", "ka", "el", "th", "latin", "arabic", "cyrillic",
@@ -69,7 +71,8 @@ class ConverterMineru(X2MarkdownConverter):
         self.formula = config.formula_ocr
         self.model_version = config.model_version
         self.attachments: list[AttachMent] = []
-        self.max_pages = 150  # 每个切片最大页数
+        self.max_pages = 200  # 每个切片最大页数
+        self.task_timeout = max(MINERU_TASK_TIMEOUT, 0.1)
         self.max_size_mb = 200  # 每个切片最大文件大小 (MB)
 
     def _get_header(self):
@@ -83,7 +86,7 @@ class ConverterMineru(X2MarkdownConverter):
             "enable_formula": self.formula,
             "language": self.config.language,
             "enable_table": True,
-            "model_version": self.model_version,
+            "model_version": "MinerU-HTML" if document.suffix.lower() in {".html", ".htm"} else self.model_version,
             "files": [
                 {"name": f"{document.name}", "is_ocr": True}
             ]
@@ -92,7 +95,7 @@ class ConverterMineru(X2MarkdownConverter):
     def _split_pdf(self, content: bytes) -> List[bytes]:
         """
         检查 PDF 页数和文件大小，如果超过限制则进行拆分。
-        每个切片 <= 150页 且 <= 200MB。
+        每个切片 <= 200页 且 <= 200MB。
         返回拆分后的 bytes 列表。如果不超限，返回包含原内容的单元素列表。
         """
         if not HAS_PYPDF:
@@ -164,67 +167,102 @@ class ConverterMineru(X2MarkdownConverter):
             # 如果拆分出错，尝试按原文件上传（兜底）
             return [content]
 
+    @staticmethod
+    def _api_data(payload):
+        if not isinstance(payload, dict) or payload.get("code") != 0:
+            if isinstance(payload, dict):
+                raise RuntimeError(f"MinerU API error: code={payload.get('code')}, "
+                                   f"message={payload.get('msg')}, trace_id={payload.get('trace_id')}")
+            raise RuntimeError("MinerU API returned invalid JSON")
+        data = payload.get("data")
+        if not isinstance(data, dict):
+            raise RuntimeError("MinerU API response missing data")
+        return data
+
+    @classmethod
+    def _batch_result(cls, payload):
+        results = cls._api_data(payload).get("extract_result")
+        if results == []:
+            return None  # The batch can briefly be empty after uploading.
+        if not isinstance(results, list) or not results or not isinstance(results[0], dict):
+            raise RuntimeError("MinerU API response missing extract_result")
+        return results[0]
+
+    @classmethod
+    def _upload_target(cls, payload):
+        data = cls._api_data(payload)
+        batch_id, urls = data.get("batch_id"), data.get("file_urls")
+        if not isinstance(batch_id, str) or not batch_id:
+            raise RuntimeError("MinerU 上传响应缺少 batch_id")
+        if not isinstance(urls, list) or not urls or not isinstance(urls[0], str) or not urls[0]:
+            raise RuntimeError("MinerU 上传响应缺少 file_urls")
+        return batch_id, urls[0]
+
     def upload(self, document: Document):
-        # 获取上传链接
         response = client.post(URL, headers=self._get_header(), json=self._get_upload_data(document))
         response.raise_for_status()
-        result = response.json()
-        if result["code"] == 0:
-            batch_id = result["data"]["batch_id"]
-            urls = result["data"]["file_urls"]
-            # 获取
-            res_upload = client.put(urls[0], content=document.content)
-            res_upload.raise_for_status()
-            return batch_id
-        else:
-            raise Exception('apply upload url failed,reason:{}'.format(result))
+        batch_id, upload_url = self._upload_target(response.json())
+        # Signed object-store uploads must not receive the API bearer token.
+        res_upload = client.put(upload_url, content=document.content)
+        res_upload.raise_for_status()
+        return batch_id
 
     async def upload_async(self, document: Document):
-        # 获取上传链接
         response = await client_async.post(URL, headers=self._get_header(), json=self._get_upload_data(document))
         response.raise_for_status()
-        result = response.json()
-        if result["code"] == 0:
-            batch_id = result["data"]["batch_id"]
-            urls = result["data"]["file_urls"]
-            # 获取
-            res_upload = await client_async.put(urls[0], content=document.content)
-            res_upload.raise_for_status()
-            return batch_id
-        else:
-            raise Exception('apply upload url failed,reason:{}'.format(result))
+        batch_id, upload_url = self._upload_target(response.json())
+        res_upload = await client_async.put(upload_url, content=document.content)
+        res_upload.raise_for_status()
+        return batch_id
+
+    @classmethod
+    def _completed_url(cls, payload):
+        fileinfo = cls._batch_result(payload)
+        if fileinfo is None:
+            return None
+        state = fileinfo.get("state")
+        if state == "done":
+            url = fileinfo.get("full_zip_url")
+            if not isinstance(url, str) or not url:
+                raise RuntimeError("MinerU 任务已完成但缺少 full_zip_url")
+            return url
+        if state == "failed":
+            message = fileinfo.get("err_msg") or fileinfo.get("message") or "Unknown error"
+            raise RuntimeError(f"MinerU 处理失败: {message}")
+        if state not in {"waiting-file", "pending", "running", "converting"}:
+            raise RuntimeError(f"MinerU 返回了未知任务状态: {state!r}")
+        return None
+
+    @staticmethod
+    def _poll_timeout(remaining):
+        return httpx.Timeout(**{
+            phase: min(value, remaining) if value is not None else remaining
+            for phase, value in timeout.as_dict().items()
+        })
 
     def get_file_url(self, batch_id: str) -> str:
-        while True:
-            url = f'https://mineru.net/api/v4/extract-results/batch/{batch_id}'
-            header = self._get_header()
-            res = client.get(url, headers=header)
+        deadline = time.monotonic() + self.task_timeout
+        url = f'https://mineru.net/api/v4/extract-results/batch/{quote(batch_id, safe="")}'
+        while (remaining := deadline - time.monotonic()) > 0:
+            res = client.get(url, headers=self._get_header(), timeout=self._poll_timeout(remaining))
             res.raise_for_status()
-            fileinfo = res.json()["data"]["extract_result"][0]
-            if fileinfo["state"] == "done":
-                file_url = fileinfo["full_zip_url"]
+            file_url = self._completed_url(res.json())
+            if file_url is not None:
                 return file_url
-            elif fileinfo["state"] == "failed":
-                error_msg = fileinfo.get('err_msg') or fileinfo.get('message') or 'Unknown error'
-                raise Exception(f"Mineru 处理失败: {error_msg}")
-            else:
-                time.sleep(3)
+            time.sleep(min(3, max(0, deadline - time.monotonic())))
+        raise TimeoutError(f"MinerU 任务 {batch_id} 超过总等待时间 {self.task_timeout} 秒")
 
     async def get_file_url_async(self, batch_id: str) -> str:
-        while True:
-            url = f'https://mineru.net/api/v4/extract-results/batch/{batch_id}'
-            header = self._get_header()
-            res = await client_async.get(url, headers=header)
+        deadline = time.monotonic() + self.task_timeout
+        url = f'https://mineru.net/api/v4/extract-results/batch/{quote(batch_id, safe="")}'
+        while (remaining := deadline - time.monotonic()) > 0:
+            res = await client_async.get(url, headers=self._get_header(), timeout=self._poll_timeout(remaining))
             res.raise_for_status()
-            fileinfo = res.json()["data"]["extract_result"][0]
-            if fileinfo["state"] == "done":
-                file_url = fileinfo["full_zip_url"]
+            file_url = self._completed_url(res.json())
+            if file_url is not None:
                 return file_url
-            elif fileinfo["state"] == "failed":
-                error_msg = fileinfo.get('err_msg') or fileinfo.get('message') or 'Unknown error'
-                raise Exception(f"Mineru 处理失败: {error_msg}")
-            else:
-                await asyncio.sleep(3)
+            await asyncio.sleep(min(3, max(0, deadline - time.monotonic())))
+        raise TimeoutError(f"MinerU 任务 {batch_id} 超过总等待时间 {self.task_timeout} 秒")
 
     def _process_single_chunk(self, content: bytes, original_doc: Document, index: int = 0) -> Tuple[str, bytes]:
         """
@@ -339,7 +377,8 @@ class ConverterMineru(X2MarkdownConverter):
         return md_document
 
     def support_format(self) -> list[str]:
-        return [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".png", ".jpg", ".jpeg"]
+        return [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".png", ".jpg", ".jpeg", ".jp2", ".webp", ".gif", ".bmp",
+                ".xls", ".xlsx", ".html", ".htm"]
 
 
 def get_md_from_zip_url_with_inline_images(
@@ -353,7 +392,7 @@ def get_md_from_zip_url_with_inline_images(
     """
     try:
         # print(f"正在从 {zip_url} 下载ZIP文件 (使用 httpx.get)...")
-        response = client.get(zip_url)  # 增加超时
+        response = client.get(zip_url, follow_redirects=True)  # 增加超时
         response.raise_for_status()
         # print("ZIP文件下载完成。")
         md_content = embed_inline_image_from_zip(response.content, filename_in_zip=filename_in_zip,
@@ -392,7 +431,7 @@ async def get_md_from_zip_url_with_inline_images_async(
     """
     try:
         # print(f"正在从 {zip_url} 下载ZIP文件 (使用 httpx.get)...")
-        response = await client_async.get(zip_url)  # 增加超时
+        response = await client_async.get(zip_url, follow_redirects=True)  # 增加超时
         response.raise_for_status()
         # print("ZIP文件下载完成。")
         md_content = await asyncio.to_thread(embed_inline_image_from_zip, response.content, filename_in_zip=filename_in_zip,

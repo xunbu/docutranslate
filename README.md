@@ -550,3 +550,5 @@ Welcome to support the author. Please specify the reason for the donation in the
 <p align="center">
   <img src="./images/赞赏码.jpg" alt="Donation Code" style="width: 250px;">
 </p>
+
+MinerU Cloud and self-hosted 2.x/3.x/4.x compatibility notes (Chinese): [MinerU compatibility](docs/mineru-compatibility.md).

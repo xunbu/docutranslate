@@ -320,7 +320,8 @@ async def service_translate(
     task_id = uuid.uuid4().hex[:8]
 
     try:
-        file_contents = base64.b64decode(request.file_content)
+        # Accept line-wrapped Base64, but reject other ignored characters.
+        file_contents = base64.b64decode("".join(request.file_content.split()), validate=True)
     except (binascii.Error, TypeError) as e:
         raise HTTPException(status_code=400, detail=f"无效的Base64文件内容: {mask_secrets(str(e))}")
 
@@ -940,7 +941,7 @@ async def service_flat_translate(
         convert_engine: Optional[ConvertEngineType] = Form("mineru",
                                                            description="[PDF/MD] 解析引擎: mineru, identity,mineru_deploy"),
         mineru_token: Optional[str] = Form("", description="[MinerU Cloud] API Token"),
-        model_version: str = Form("vlm", description="[MinerU Cloud] 模型版本: vlm, pipeline"),
+        model_version: str = Form("vlm", description="[MinerU Cloud] 模型版本: vlm, pipeline, MinerU-HTML"),
         mineru_language: str = Form("ch", description="[MinerU Cloud] 识别语言: ch, ch_server, en, japan, korean, chinese_cht, ta, te, ka, el, th, latin, arabic, cyrillic, east_slavic, devanagari"),
         formula_ocr: bool = Form(True, description="[PDF] 是否启用公式识别"),
         mineru_deploy_base_url: str = Form("http://127.0.0.1:8000", description="[MinerU Local] 服务地址"),

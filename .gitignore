@@ -11,6 +11,8 @@ tests/*
 !tests/test_contract/
 tests/test_contract/*
 !tests/test_contract/test_interface_contract.py
+!tests/test_contract/test_mineru_compatibility.py
+!tests/test_contract/test_project_regressions.py
 !tests/test_agents/
 tests/test_agents/*
 !tests/test_agents/test_reasoning_compatibility.py

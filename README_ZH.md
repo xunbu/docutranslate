@@ -551,3 +551,5 @@ A: 在 TranslatorConfig 中设置 `system_proxy_enable=True`。
 <p align="center">
   <img src="./images/赞赏码.jpg" alt="赞赏码" style="width: 250px;">
 </p>
+
+MinerU 在线 / 本地 2.x、3.x、4.x 的参数兼容与迁移说明：[MinerU compatibility](docs/mineru-compatibility.md).

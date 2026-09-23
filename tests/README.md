@@ -32,6 +32,23 @@ uv run pytest tests/ -v
 uv run pytest tests/test_global_values/ -v
 ```
 
+### 接口兼容和已修复问题的回归测试
+```bash
+uv run pytest tests/test_contract/ tests/test_cacher/ tests/test_converter/test_converter_mineru_deploy.py -q
+```
+
+MinerU 协议使用 MockTransport 验证，不需要在线 Token 或本地模型服务。
+
+### 前端测试与生产构建
+```bash
+cd frontend
+npm ci
+npm test
+npm run build
+```
+
+前端测试覆盖术语表编码识别和任务参数（包括结束页为 0 的边界）。
+
 ### 运行单个测试文件
 ```bash
 uv run pytest tests/test_global_values/test_global_values.py -v

@@ -1,6 +1,7 @@
 # SPDX-FileCopyrightText: 2025 QinHan
 # SPDX-License-Identifier: MPL-2.0
 import asyncio
+import hashlib
 import time
 from dataclasses import dataclass
 from typing import Literal, Hashable, List
@@ -10,6 +11,7 @@ import httpx
 
 from docutranslate.config import (
     MINERU_DEPLOY_CONNECT_TIMEOUT,
+    MINERU_DEPLOY_API_KEY,
     MINERU_DEPLOY_POOL_TIMEOUT,
     MINERU_DEPLOY_POLL_INTERVAL,
     MINERU_DEPLOY_READ_TIMEOUT,
@@ -22,6 +24,7 @@ from docutranslate.config import (
 )
 
 from docutranslate.converter.x2md.base import X2MarkdownConverter, X2MarkdownConverterConfig
+from docutranslate.converter.x2md.mineru_v1 import MineruV1, TIERS, _origin
 from docutranslate.ir.attachment_manager import AttachMent
 from docutranslate.ir.document import Document
 from docutranslate.ir.markdown_document import MarkdownDocument
@@ -29,6 +32,7 @@ from docutranslate.utils.markdown_utils import embed_inline_image_from_zip
 
 
 MineruDeployBackend = Literal[
+    "flash", "basic", "standard", "advanced",
     "pipeline",
     "vlm-engine",
     "vlm-http-client",
@@ -54,6 +58,7 @@ LEGACY_BACKEND_NAMES = {
 class ConverterMineruDeployConfig(X2MarkdownConverterConfig):
     base_url: str = "http://127.0.0.1:8000"
     output_dir: str = "./output"
+    api_key: str = MINERU_DEPLOY_API_KEY
     # 支持的语言列表 (来自 MinerU API)
     lang_list: List[str] | None = None  # 默认值在 API 侧处理，这里 None 即可
 
@@ -85,6 +90,8 @@ class ConverterMineruDeployConfig(X2MarkdownConverterConfig):
 
     def gethash(self) -> Hashable:
         return (
+            self.base_url.rstrip('/'),
+            hashlib.sha256(self.api_key.encode()).hexdigest(),
             self.backend,
             self.effort,
             self.formula_enable,
@@ -164,6 +171,8 @@ class ConverterMineruDeploy(X2MarkdownConverter):
     def _build_form_data(self, *, legacy: bool = False) -> dict:
         """构造 MinerU 公共 API 的 multipart 表单。"""
         backend = self._canonical_backend(self.config.backend)
+        if backend in TIERS:
+            backend = "pipeline" if backend in {"flash", "basic"} else "hybrid-engine"
         if legacy:
             backend = LEGACY_BACKEND_NAMES.get(backend, backend)
 
@@ -187,7 +196,7 @@ class ConverterMineruDeploy(X2MarkdownConverter):
             # 回退时不发送，避免旧版或严格代理拒绝未知表单字段。
             data.update(
                 {
-                    "effort": self.config.effort,
+                    "effort": "high" if self.config.backend == "advanced" else self.config.effort,
                     "image_analysis": str(self.config.image_analysis).lower(),
                     "return_original_file": str(
                         self.config.return_original_file
@@ -239,6 +248,11 @@ class ConverterMineruDeploy(X2MarkdownConverter):
             return fallback
         return urljoin(f"{self.base_url}/", value)
 
+    def _auth_kwargs(self, url: str) -> dict:
+        if self.config.api_key and _origin(url) == _origin(self.base_url):
+            return {"headers": {"Authorization": f"Bearer {self.config.api_key}"}}
+        return {}
+
     def _task_urls(self, payload: object) -> tuple[str, str, str]:
         if not isinstance(payload, dict):
             raise RuntimeError("MinerU Deploy 返回了无效的任务提交结果")
@@ -267,6 +281,7 @@ class ConverterMineruDeploy(X2MarkdownConverter):
             self._tasks_url,
             files=self._files(d),
             data=self._build_form_data(),
+            **self._auth_kwargs(self._tasks_url),
             timeout=upload_timeout,
         )
         if response.status_code in {404, 405}:
@@ -283,6 +298,7 @@ class ConverterMineruDeploy(X2MarkdownConverter):
             self._tasks_url,
             files=self._files(d),
             data=self._build_form_data(),
+            **self._auth_kwargs(self._tasks_url),
             timeout=upload_timeout,
         )
         if response.status_code in {404, 405}:
@@ -298,7 +314,7 @@ class ConverterMineruDeploy(X2MarkdownConverter):
         task_id, status_url, result_url = task
         deadline = time.monotonic() + self.task_timeout
         while time.monotonic() < deadline:
-            response = client.get(status_url)
+            response = client.get(status_url, **self._auth_kwargs(status_url))
             self._raise_for_status(response, "查询任务状态")
             payload = response.json()
             status = payload.get("status") if isinstance(payload, dict) else None
@@ -307,7 +323,7 @@ class ConverterMineruDeploy(X2MarkdownConverter):
                 continue
             if status == "completed":
                 return self._result_bytes(
-                    client.get(result_url, timeout=upload_timeout)
+                    client.get(result_url, timeout=upload_timeout, **self._auth_kwargs(result_url))
                 )
             detail = self._response_detail(response)
             raise RuntimeError(
@@ -322,7 +338,7 @@ class ConverterMineruDeploy(X2MarkdownConverter):
         loop = asyncio.get_running_loop()
         deadline = loop.time() + self.task_timeout
         while loop.time() < deadline:
-            response = await client_async.get(status_url)
+            response = await client_async.get(status_url, **self._auth_kwargs(status_url))
             self._raise_for_status(response, "查询任务状态")
             payload = response.json()
             status = payload.get("status") if isinstance(payload, dict) else None
@@ -331,7 +347,7 @@ class ConverterMineruDeploy(X2MarkdownConverter):
                 continue
             if status == "completed":
                 result_response = await client_async.get(
-                    result_url, timeout=upload_timeout
+                    result_url, timeout=upload_timeout, **self._auth_kwargs(result_url)
                 )
                 return self._result_bytes(result_response)
             detail = self._response_detail(response)
@@ -342,22 +358,34 @@ class ConverterMineruDeploy(X2MarkdownConverter):
             f"MinerU Deploy 任务 {task_id} 超过总等待时间 {self.task_timeout} 秒"
         )
 
+    def _v1_adapter(self):
+        return MineruV1(self.base_url, self.config, task_timeout=self.task_timeout,
+                        poll_interval=self.poll_interval, transfer_timeout=upload_timeout, logger=self.logger)
+
     def _legacy_request(self, d: Document) -> bytes:
+        result = self._v1_adapter().run(client, d)
+        if result is not None:
+            return result
         self.logger.warning("MinerU 服务不支持 /tasks，回退到兼容接口 /file_parse")
         response = client.post(
             self._legacy_api_url,
             files=self._files(d),
             data=self._build_form_data(legacy=True),
+            **self._auth_kwargs(self._legacy_api_url),
             timeout=upload_timeout,
         )
         return self._result_bytes(response)
 
     async def _legacy_request_async(self, d: Document) -> bytes:
+        result = await self._v1_adapter().run_async(client_async, d)
+        if result is not None:
+            return result
         self.logger.warning("MinerU 服务不支持 /tasks，回退到兼容接口 /file_parse")
         response = await client_async.post(
             self._legacy_api_url,
             files=self._files(d),
             data=self._build_form_data(legacy=True),
+            **self._auth_kwargs(self._legacy_api_url),
             timeout=upload_timeout,
         )
         return self._result_bytes(response)
@@ -399,4 +427,6 @@ class ConverterMineruDeploy(X2MarkdownConverter):
         return self._build_result(d, content, md)
 
     def support_format(self) -> list[str]:
-        return [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".png", ".jpg", ".jpeg"]
+        return [".pdf", ".doc", ".docx", ".ppt", ".pptx", ".png", ".jpg", ".jpeg", ".jp2", ".webp", ".gif", ".bmp",
+                ".xls", ".xlsx", ".rtf", ".odt", ".ods", ".odp", ".epub", ".ofd",
+                ".html", ".htm", ".csv", ".tsv"]

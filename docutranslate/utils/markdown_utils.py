@@ -225,6 +225,11 @@ def embed_inline_image_from_zip(zip_bytes: bytes, filename_in_zip: str | None = 
 
 
 def unembed_base64_images_to_zip(markdown: str, markdown_name: str, image_folder_name="images") -> bytes:
+    # A document name can come from an SDK caller. Keep its ZIP member and
+    # temporary file inside the working directory even if it contains a path.
+    markdown_name = Path(markdown_name).name
+    if not markdown_name or markdown_name in {".", ".."}:
+        markdown_name = "document.md"
     with tempfile.TemporaryDirectory() as temp_dir:
         image_folder = os.path.join(temp_dir, image_folder_name)
         os.makedirs(image_folder, exist_ok=True)

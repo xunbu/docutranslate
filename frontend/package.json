@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "test": "node --test src/composables/*.test.js",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"

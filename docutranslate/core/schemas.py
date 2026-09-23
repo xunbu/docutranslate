@@ -306,7 +306,7 @@ class UniversalParamsMixin(BaseModel):
     # Markdown/PDF 相关
     convert_engine: Optional[Literal["identity", "mineru", "mineru_deploy"]] = None
     mineru_token: Optional[str] = None
-    model_version: Optional[Literal["pipeline", "vlm"]] = None
+    model_version: Optional[Literal["pipeline", "vlm", "MinerU-HTML"]] = None
     formula_ocr: Optional[bool] = None
     mineru_language: Optional[Literal[
         "ch", "ch_server", "en", "japan", "korean", "chinese_cht",
@@ -317,7 +317,7 @@ class UniversalParamsMixin(BaseModel):
     # MinerU Deploy 相关 - 设置默认值避免 None 导致的验证错误
     mineru_deploy_base_url: Optional[str] = None
     mineru_deploy_backend: Optional[Literal[
-        "pipeline", "vlm-engine", "vlm-http-client",
+        "flash", "basic", "standard", "advanced", "pipeline", "vlm-engine", "vlm-http-client",
         "hybrid-engine", "hybrid-http-client",
         "vlm-auto-engine", "hybrid-auto-engine"
     ]] = None
@@ -375,7 +375,7 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
         default=MINERU_TOKEN or "",
         description="[仅当 convert_engine='mineru'] 必填的API令牌。",
     )
-    model_version: Literal["pipeline", "vlm"] = Field(
+    model_version: Literal["pipeline", "vlm", "MinerU-HTML"] = Field(
         MODEL_VERSION, description="[仅当 convert_engine='mineru'] Mineru Cloud模型的版本。"
     )
     formula_ocr: bool = Field(
@@ -399,6 +399,7 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
     )
     # --- UPDATED BACKEND LIST ---
     mineru_deploy_backend: Literal[
+        "flash", "basic", "standard", "advanced",
         "pipeline",
         "vlm-engine",
         "vlm-auto-engine",
