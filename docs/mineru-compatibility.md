@@ -32,4 +32,4 @@ SDK 的 `Client.translate/translate_async`、HTTP JSON/表单接口、MCP 和前
 
 在线任务轮询默认最多等待 3600 秒，可通过 `DOCUTRANSLATE_MINERU_TASK_TIMEOUT` 调整。连接、读写超时仍由原来的超时配置控制；该上限按每个解析切片的轮询计算，不包含上传、下载或翻译时间。任务失败、未知状态或成功响应缺少下载地址会明确报错。
 
-测试使用 `httpx.MockTransport` 覆盖在线 API 和本地 2.x/3.x/4.x 的同步、异步流程、页码、别名、上传去重、图片内联、错误状态和凭证隔离。对外契约测试校验 SDK 参数继承及工作流 schema。没有使用用户 Token、上传用户文档或连接实际模型服务；上线前仍需在目标服务上核对鉴权、可用档位及解析质量。
+测试使用 `httpx.MockTransport` 覆盖在线 API 和本地 2.x/3.x/4.x 的同步、异步流程、页码、别名、上传去重、图片内联、错误状态和凭证隔离。对外契约测试校验 SDK 参数继承及工作流 schema。另用自制单页 PDF 做了一次在线 MinerU 及 DeepSeek 小样本调用，结果见 `test-audit.md`；没有上传用户文档。本地 4.x 仍需在目标服务上核对鉴权、可用档位及解析质量。
