@@ -3,9 +3,9 @@ name: Build macOS Application
 on:
   # 允许手动触发工作流
   workflow_dispatch:
-  # 当在 GitHub 上创建新的 release 时自动触发
+  # 发布正式版或预发布版时自动触发
   release:
-    types: [created]
+    types: [published]
 
 jobs:
   build-macos:

@@ -3,7 +3,7 @@ name: Build Windows Application
 on:
   workflow_dispatch:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
   build-windows:
@@ -49,3 +49,30 @@ jobs:
           name: DocuTranslate-Windows
           path: dist/*.exe
           if-no-files-found: error
+
+  publish-windows:
+    if: github.event_name == 'release'
+    needs: build-windows
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Download Windows executable
+        uses: actions/download-artifact@v4
+        with:
+          name: DocuTranslate-Windows
+          path: release-assets
+      - name: Attach executable to Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          shopt -s nullglob
+          files=(release-assets/*.exe)
+          if [ "${#files[@]}" -ne 1 ]; then
+            echo "Expected one Windows executable, found ${#files[@]}" >&2
+            exit 1
+          fi
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
