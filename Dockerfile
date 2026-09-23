@@ -9,12 +9,12 @@ ENV UV_HTTP_TIMEOUT=300 \
 WORKDIR /app
 
 # 安装 uv
-RUN pip install --no-cache-dir uv
+RUN pip install --no-cache-dir uv==0.6.14
 
 # 创建虚拟环境并安装依赖
-COPY pyproject.toml uv.lock ./
+COPY pyproject.toml uv.lock README.md ./
 COPY docutranslate ./docutranslate
-RUN uv venv && uv sync --frozen --extra mcp
+RUN uv sync --locked --no-dev --extra mcp
 
 # 阶段2: 运行阶段
 FROM python:3.11-slim
@@ -47,7 +47,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${DOCUTRANSLATE_PORT}/service/meta || exit 1
 
 # 启动命令
-ENTRYPOINT ["docutranslate", "-i", "--with-mcp"]
+ENTRYPOINT ["docutranslate", "-i", "--host", "0.0.0.0", "--with-mcp"]
 
 # docker build -t xunbu/docutranslate:latest .
 # docker push xunbu/docutranslate:latest

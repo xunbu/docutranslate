@@ -40,11 +40,19 @@
 - 将该 Markdown 交给 SDK 的翻译流程，调用 DeepSeek `deepseek-flash` 一次；输出含中文，应用统计共 211 tokens。请求限制最多一次、最多输出 128 tokens，没有重试。按[官方模型与价格](https://api-docs.deepseek.com/quick_start/pricing/)的峰时最高输出单价粗略上界，211 tokens 对应费用低于 0.0003 美元；实际账单以供应商为准。
 - 测试密钥只通过交互进程输入，未写入仓库。该验证覆盖在线 MinerU 与模型服务；本地 MinerU 2.x/3.x/4.x 仍只有模拟协议测试。
 
+## 多页在线验证与构建检查（2026-09-23）
+
+- 用可渲染的自制 8 页 PDF（31,959 字节）调用在线 MinerU `vlm`。SDK 导出 27,346 字符 Markdown，8 页各自的末尾标记均出现。随后将完整 Markdown 交给 DeepSeek `deepseek-flash`，12 次请求生成 10,574 字符译文，其中有 6,765 个汉字。本次不记录或保存服务密钥。
+- 重新执行当前测试命令：Python 310 项通过、前端 13 项通过；前端生产构建通过。首次本机 Python 测试的 12 个 setup 错误来自沙箱拒绝默认临时目录；指定工作区内临时目录后全部通过。前端构建也在允许读取配置文件的环境下通过。
+- 静态核对 Docker 构建上下文、锁文件、启动命令和健康检查。已修正 README 被 `.dockerignore` 排除、服务只监听容器回环地址的问题。依用户要求，**没有在这台电脑上构建或运行 Docker 镜像**，容器内运行状态尚未验证。
+- 静态核对 GitHub Actions YAML、macOS 两种架构的运行器与产物名、Windows 构建命令；增加 Python/前端检查工作流，移除 Windows full 构建工作流及 `full.spec`。`uv lock --check --offline` 通过。新工作流需在 GitHub 运行后才能确认托管运行器上的打包结果。
+
 ## 尚存风险
 
 1. **HTTPS 证书校验被关闭。** `converter_mineru.py`、`converter_mineru_deploy.py` 及 `agents/agent.py` 的 HTTP 客户端存在 `verify=False`。这会降低 Token 与文档传输的安全性。本轮未直接改变该历史行为，以免中断使用自签名证书的既有部署；后续宜提供可信证书配置并逐步启用校验。
 2. **离线导出资源需要随发布包检查。** `docutranslate/static/pico.css` 已纳入本次提交；Markdown、JSON、SRT 离线 HTML 导出均引用它。发布构建仍需核对该资源确实进入安装包。
-3. **覆盖率及实际部署验证有限。** 单页在线测试无法覆盖复杂排版、较大文件或目标本地服务的可用档位、鉴权配置和解析质量；尤其需在本地环境验证 4.x 对旧版选项的映射结果，详见 `mineru-compatibility.md`。
+3. **覆盖率及实际部署验证有限。** 多页在线测试仍不能覆盖复杂排版、超大文件或目标本地服务的可用档位、鉴权配置和解析质量；尤其需在本地环境验证 4.x 对旧版选项的映射结果，详见 `mineru-compatibility.md`。Docker 和 GitHub 托管运行器的打包结果目前只有静态检查。
 4. **长时间运行的任务取消。** 释放任务时最多等待 5 秒执行取消后的清理。如果插件或外部调用忽略取消并继续运行，仍可能需要进程结束时的兜底清理。
+5. **Release 附件仍需手动处理。** 现有 macOS/Windows 工作流在 Release 事件后上传的是 GitHub Actions 构建产物，不会自动把 DMG/EXE 附加到 Release 页面；发布时需手动上传或另加发布步骤。
 
-本记录同时列出模拟测试和一次受请求量限制的真实服务验证。
+本记录同时列出模拟测试、单页及多页真实服务验证，并区分本机测试与尚未运行的托管构建。

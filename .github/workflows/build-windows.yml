@@ -22,14 +22,14 @@ jobs:
 
       # 第 3 步: 安装 uv
       - name: Install uv
-        run: powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-      - name: Add uv to PATH
-        run: echo "$env:APPDATA\uv\bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+        uses: astral-sh/setup-uv@v9
+        with:
+          version: '0.6.14'
 
       # 第 4 步: 安装依赖
       - name: Install dependencies with uv
         run: |
-          uv sync --no-dev --extra mcp
+          uv sync --locked --no-dev --extra mcp
 
       # 第 5 步: 安装 UPX (简化版本)
       - name: Install UPX
@@ -39,8 +39,8 @@ jobs:
       # 第 6 步: 运行 PyInstaller
       - name: Build the application with PyInstaller
         run: |
-          uv pip install pyinstaller
-          uv run --no-dev pyinstaller lite.spec --noconfirm --clean -y
+          uv pip install pyinstaller==6.22.2
+          uv run --no-sync pyinstaller lite.spec --noconfirm --clean
 
       # 第 7 步: 上传 exe 文件作为构建产物
       - name: Upload Windows executable
@@ -48,3 +48,4 @@ jobs:
         with:
           name: DocuTranslate-Windows
           path: dist/*.exe
+          if-no-files-found: error

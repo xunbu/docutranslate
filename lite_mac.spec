@@ -29,7 +29,7 @@ a = Analysis(
     # 保持原有的排除项
     excludes=[],
     noarchive=False,
-    target_arch='universal2', # 保留 Mac 通用架构设置
+    target_arch='arm64',
     optimize=0,
 )
 
@@ -45,7 +45,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,
+    upx=False,
     runtime_tmpdir=None,
     console=True,
     disable_windowed_traceback=False,

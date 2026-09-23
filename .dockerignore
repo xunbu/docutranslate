@@ -28,6 +28,7 @@ tests
 
 # Docs & artifacts
 *.md
+!README.md
 images
 *.spec
 DocuTranslate.*
