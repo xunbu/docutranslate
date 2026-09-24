@@ -132,6 +132,8 @@ Configure the SSE endpoint in your client: `http://127.0.0.1:8000/mcp/sse`
 docutranslate --mcp --transport streamable-http --mcp-host 127.0.0.1 --mcp-port 8000
 ```
 
+Configure the Streamable HTTP endpoint in your client: `http://127.0.0.1:8000/mcp`
+
 #### Method 4: Combined Mode with Web UI (Recommended!)
 
 Run both Web UI and MCP server together, sharing the same task queue:

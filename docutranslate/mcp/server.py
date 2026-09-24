@@ -404,28 +404,22 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             if masked_config.get("mineru_token"):
                 token = masked_config["mineru_token"]
                 masked_config["mineru_token"] = token[:4] + "..." + token[-4:] if len(token) > 8 else "****"
-            # Mask base_url (partial)
-            if masked_config.get("base_url"):
-                url = masked_config["base_url"]
-                # Only show protocol and domain, hide path
-                from urllib.parse import urlparse
+            # Extra body may contain provider-specific credentials.
+            if masked_config.get("extra_body"):
+                masked_config["extra_body"] = "****"
+
+            from urllib.parse import urlparse
+
+            for field_name in ("base_url", "mineru_deploy_base_url", "mineru_deploy_server_url"):
+                url = masked_config.get(field_name)
+                if not url:
+                    continue
                 parsed = urlparse(url)
-                if parsed.netloc:
-                    masked_config["base_url"] = f"{parsed.scheme}://{parsed.netloc}/..."
-            # Mask mineru_deploy_base_url
-            if masked_config.get("mineru_deploy_base_url"):
-                url = masked_config["mineru_deploy_base_url"]
-                from urllib.parse import urlparse
-                parsed = urlparse(url)
-                if parsed.netloc:
-                    masked_config["mineru_deploy_base_url"] = f"{parsed.scheme}://{parsed.netloc}/..."
-            # Mask mineru_deploy_server_url
-            if masked_config.get("mineru_deploy_server_url"):
-                url = masked_config["mineru_deploy_server_url"]
-                from urllib.parse import urlparse
-                parsed = urlparse(url)
-                if parsed.netloc:
-                    masked_config["mineru_deploy_server_url"] = f"{parsed.scheme}://{parsed.netloc}/..."
+                # netloc can include user:password@host; retain only the host/port.
+                masked_config[field_name] = (
+                    f"{parsed.scheme}://{parsed.netloc.rsplit('@', 1)[-1]}/..."
+                    if parsed.netloc else "****"
+                )
             return f"Current Client Configuration:\n{_format_json(masked_config)}"
 
         @mcp.tool()
@@ -437,7 +431,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 to_lang: Optional[str] = None,
                 workflow_type: str = "auto",
                 skip_translate: bool = False,
-                glossary_generate_enable: bool = False,
+                glossary_generate_enable: Optional[bool] = None,
                 glossary_dict_json: str = "",
                 glossary_agent_config_json: str = "",
                 extra_body_json: str = "",
@@ -612,7 +606,6 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 "workflow_type": workflow_type,
                 "to_lang": to_lang or client_config["to_lang"] or "中文",
                 "skip_translate": skip_translate,
-                "glossary_generate_enable": glossary_generate_enable,
                 "glossary_dict": parsed_glossary_dict,
                 "glossary_agent_config": parsed_glossary_agent,
             }
@@ -1117,8 +1110,13 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
 
         mcp = create_mcp_server(host=host, port=port, translation_service=service)
 
-        # For SSE transport, mount at /mcp prefix
-        if transport in ("sse", "streamable-http"):
+        # Streamable HTTP has its own MCP endpoint and session lifecycle.
+        if transport == "streamable-http":
+            global_logger.info(
+                "Starting MCP Streamable HTTP server at http://%s:%s/mcp", host, port
+            )
+            mcp.run(transport="streamable-http")
+        elif transport == "sse":
             # Create a wrapper app with /mcp prefix
             from starlette.applications import Starlette
 

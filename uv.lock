@@ -479,7 +479,7 @@ requires-dist = [
     { name = "lxml", specifier = ">=5.4.0" },
     { name = "mammoth", specifier = ">=1.10.0" },
     { name = "markdown", specifier = ">=3.8.2" },
-    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.6.0" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.8.0" },
     { name = "msoffcrypto-tool", specifier = ">=4.12.0" },
     { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pymdown-extensions", specifier = ">=10.16.1" },

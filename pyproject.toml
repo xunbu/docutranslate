@@ -29,7 +29,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-mcp = ["mcp>=1.6.0", "python-dotenv>=1.0.0"]
+mcp = ["mcp>=1.8.0", "python-dotenv>=1.0.0"]
 
 [dependency-groups]
 dev = [

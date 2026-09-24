@@ -15,6 +15,7 @@ from docutranslate.exporter.docx.docx2html_exporter import Docx2HTMLExporterConf
 from docutranslate.exporter.epub.epub2html_exporter import Epub2HTMLExporterConfig
 from docutranslate.exporter.js.json2html_exporter import Json2HTMLExporterConfig
 from docutranslate.exporter.md.md2html_exporter import MD2HTMLExporterConfig
+from docutranslate.exporter.md.md2docx_exporter import MD2DocxExporterConfig
 from docutranslate.exporter.pptx.pptx2html_exporter import PPTX2HTMLExporterConfig
 from docutranslate.exporter.srt.srt2html_exporter import Srt2HTMLExporterConfig
 from docutranslate.exporter.txt.txt2html_exporter import TXT2HTMLExporterConfig
@@ -95,7 +96,10 @@ def create_workflow_from_payload(payload: TranslatePayload, logger: logging.Logg
             converter_config=converter_config,
             translator_config=translator_config,
             html_exporter_config=html_exporter_config,
-            md2docx_exporter_config=None,
+            md2docx_exporter_config=(
+                MD2DocxExporterConfig(engine=payload.md2docx_engine)
+                if payload.md2docx_engine is not None else None
+            ),
             logger=logger,
         )
         return MarkdownBasedWorkflow(config=workflow_config)

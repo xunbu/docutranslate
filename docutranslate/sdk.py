@@ -27,21 +27,21 @@ _WORKFLOW_MAPPINGS = {
         "markdown": ("save_as_markdown", "md"),  # 默认格式: 内嵌 base64 图片
         "markdown_zip": ("save_as_markdown_zip", "zip"),  # 非内嵌图片，分离存储
         "html": ("save_as_html", "html"),
+        "docx": ("save_as_docx", "docx"),
     },
-    "docx": {"docx": ("save_as_docx", "docx")},
-    "xlsx": {"xlsx": ("save_as_xlsx", "xlsx")},
-    "pptx": {"pptx": ("save_as_pptx", "pptx")},
-    "epub": {"epub": ("save_as_epub", "epub")},
-    "txt": {"txt": ("save_as_txt", "txt")},
-    "json": {"json": ("save_as_json", "json")},
-    "srt": {"srt": ("save_as_srt", "srt")},
-    "ass": {"ass": ("save_as_ass", "ass")},
+    "docx": {"docx": ("save_as_docx", "docx"), "html": ("save_as_html", "html")},
+    "xlsx": {
+        "xlsx": ("save_as_xlsx", "xlsx"),
+        "csv": ("save_as_csv", "csv"),
+        "html": ("save_as_html", "html"),
+    },
+    "pptx": {"pptx": ("save_as_pptx", "pptx"), "html": ("save_as_html", "html")},
+    "epub": {"epub": ("save_as_epub", "epub"), "html": ("save_as_html", "html")},
+    "txt": {"txt": ("save_as_txt", "txt"), "html": ("save_as_html", "html")},
+    "json": {"json": ("save_as_json", "json"), "html": ("save_as_html", "html")},
+    "srt": {"srt": ("save_as_srt", "srt"), "html": ("save_as_html", "html")},
+    "ass": {"ass": ("save_as_ass", "ass"), "html": ("save_as_html", "html")},
     "html": {"html": ("save_as_html", "html")},
-}
-
-# 每种工作流支持的输出格式列表
-_WORKFLOW_SUPPORTED_FORMATS = {
-    wf: list(formats.keys()) for wf, formats in _WORKFLOW_MAPPINGS.items()
 }
 
 
@@ -55,7 +55,10 @@ class TranslationResult:
         self._workflow_type = workflow_type
         self._original_filename = original_filename
         self._mapping = _WORKFLOW_MAPPINGS.get(workflow_type)
-        self._supported_formats = _WORKFLOW_SUPPORTED_FORMATS.get(workflow_type, [])
+        md2docx_config = getattr(getattr(workflow, "config", None), "md2docx_exporter_config", None)
+        if workflow_type == "markdown_based" and self._mapping and md2docx_config is None:
+            self._mapping = {fmt: method for fmt, method in self._mapping.items() if fmt != "docx"}
+        self._supported_formats = list(self._mapping) if self._mapping else []
 
     @property
     def supported_formats(self) -> List[str]:
