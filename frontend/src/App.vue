@@ -60,7 +60,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, provide, watch } from 'vue';
+import { ref, reactive, onMounted, provide, watch } from 'vue';
 import TutorialModal from './components/modals/TutorialModal.vue';
 import ContributorsModal from './components/modals/ContributorsModal.vue';
 import QueueSettingsModal from './components/modals/QueueSettingsModal.vue';
@@ -83,7 +83,7 @@ const settings = useSettings();
 const i18n = useI18n();
 const glossary = useGlossary();
 const tasksComposable = useTasks(settings, glossary, i18n);
-const preview = usePreview(i18n);
+const preview = usePreview();
 
 // Destructure from composables
 const { form, workflowParams, errors, defaultParams, default_workflows, queue_concurrent, webSkipValidation, envForceOverride,
@@ -222,7 +222,13 @@ onMounted(async () => {
             if (ids) ids.reverse().forEach(id => createNewTask(id));
         } catch (e) {}
     } else {
-        const savedIds = JSON.parse(localStorage.getItem('active_task_ids') || '[]');
+        let savedIds = [];
+        try {
+            const stored = JSON.parse(localStorage.getItem('active_task_ids') || '[]');
+            if (Array.isArray(stored)) savedIds = stored.filter(id => typeof id === 'string');
+        } catch {
+            localStorage.removeItem('active_task_ids');
+        }
         if (savedIds.length) savedIds.forEach(id => {
             const task = reactive({
                 uiId: 'card_' + Math.random().toString(36).substring(2, 9),
@@ -237,11 +243,5 @@ onMounted(async () => {
         else createNewTask();
     }
 
-    // Global resize handler for preview
-    window.addEventListener('resize', () => {
-        if (isOpen.value) {
-            initSplit();
-        }
-    });
 });
 </script>

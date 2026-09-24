@@ -1,7 +1,7 @@
 <template>
     <div>
         <!-- Preview Offcanvas -->
-        <div class="offcanvas-overlay" v-if="isOpen" @click="isOpen = false"></div>
+        <div class="offcanvas-overlay" v-if="isOpen" @click="closePreview"></div>
         <div class="offcanvas-panel" :class="{ 'offcanvas-open': isOpen }">
             <!-- Header -->
             <div class="offcanvas-header">
@@ -43,7 +43,7 @@
                     </ul>
                 </div>
 
-                <button type="button" class="btn-close ms-2" @click="isOpen = false"></button>
+                <button type="button" class="btn-close ms-2" @click="closePreview"></button>
             </div>
 
             <!-- Body -->
@@ -53,10 +53,10 @@
                         <h6 class="preview-label">{{ t('previewOriginal') }}</h6>
                         <div class="preview-pane" ref="originalPane"></div>
                     </div>
-                    <div id="translatedPreviewContainer" class="preview-pane-wrapper">
+                    <div id="translatedPreviewContainer" class="preview-pane-wrapper" :class="{ 'translated-only': previewMode === 'translatedOnly' }">
                         <h6 class="preview-label">{{ t('previewTranslated') }}</h6>
                         <div class="preview-pane">
-                            <iframe ref="translatedFrame" src="about:blank"></iframe>
+                            <iframe ref="translatedFrame" src="about:blank" sandbox="allow-scripts"></iframe>
                         </div>
                     </div>
                 </div>
@@ -68,6 +68,7 @@
 <script setup>
 import { ref, inject, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { getDownloadIcon } from '../../utils/helpers';
+import { withPreviewBridge } from '../../utils/previewFrame.js';
 import Heroicon from '../ui/Heroicon.vue';
 
 const props = defineProps({
@@ -83,22 +84,45 @@ const setPreviewMode = inject('setPreviewMode');
 const toggleSyncScroll = inject('toggleSyncScroll');
 const printPdf = inject('printPdf');
 const initSplit = inject('initSplit');
+const closePreview = inject('closePreview');
 
 // Local state
 const splitContainer = ref(null);
 const originalPane = ref(null);
 const translatedFrame = ref(null);
 const showDownloadMenu = ref(false);
+let pdfObjectUrl = null;
+let loadGeneration = 0;
+let openTimer = null;
 
-const loadContent = (task) => {
+const clearContent = () => {
+    if (pdfObjectUrl) {
+        URL.revokeObjectURL(pdfObjectUrl);
+        pdfObjectUrl = null;
+    }
+    if (originalPane.value) originalPane.value.textContent = '';
+    if (translatedFrame.value) {
+        translatedFrame.value.removeAttribute('srcdoc');
+        translatedFrame.value.src = 'about:blank';
+    }
+};
+
+const showOriginalMessage = (message) => {
+    const p = document.createElement('p');
+    p.className = 'p-3 text-muted';
+    p.textContent = message;
+    originalPane.value.appendChild(p);
+};
+
+const loadContent = (task, generation) => {
     if (!originalPane.value || !translatedFrame.value) return;
 
-    // Load Original
-    originalPane.value.innerHTML = '';
+    clearContent();
     if (task.file) {
         const ext = task.file.name.split('.').pop().toLowerCase();
         if (['txt', 'md', 'json', 'html', 'js', 'py', 'css', 'java', 'c', 'cpp'].includes(ext) || task.file.type.startsWith('text/')) {
             task.file.text().then(txt => {
+                if (generation !== loadGeneration || !isOpen.value) return;
                 const pre = document.createElement('pre');
                 pre.style.cssText = 'margin:0;padding:1rem;white-space:pre;';
                 pre.textContent = txt;
@@ -106,24 +130,29 @@ const loadContent = (task) => {
             });
         } else if (['pdf'].includes(ext) || task.file.type === 'application/pdf') {
             const iframe = document.createElement('iframe');
-            iframe.src = URL.createObjectURL(task.file);
+            pdfObjectUrl = URL.createObjectURL(task.file);
+            iframe.src = pdfObjectUrl;
             iframe.style.cssText = 'width:100%;height:100%;border:none;';
             originalPane.value.appendChild(iframe);
         } else {
-            originalPane.value.innerHTML = `<p class="p-3 text-muted">${props.t('preview_cantPreviewType') || '无法预览此文件类型'} (${ext})</p>`;
+            showOriginalMessage(`${props.t('preview_cantPreviewType')} (${ext})`);
         }
     } else {
-        originalPane.value.innerHTML = `<p class="p-3 text-muted">${props.t('preview_noOriginalCache') || '无原始文件缓存'}</p>`;
+        showOriginalMessage(props.t('preview_noOriginalCache'));
     }
 
-    // Load Translated
-    translatedFrame.value.src = 'about:blank';
-    if (task.downloads && task.downloads.html) {
+    if (task.downloads?.html) {
         fetch(task.downloads.html)
-            .then(r => r.text())
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.text();
+            })
             .then(h => {
-                translatedFrame.value.srcdoc = h;
-            });
+                if (generation === loadGeneration && isOpen.value) {
+                    translatedFrame.value.srcdoc = withPreviewBridge(h);
+                }
+            })
+            .catch(e => console.error('Failed to load translated content:', e));
     }
 };
 
@@ -132,16 +161,21 @@ const handlePrintPdf = (url) => {
     printPdf(url);
 };
 
-// Watch for open
-watch(isOpen, (open) => {
-    if (open && previewTask.value) {
-        nextTick(() => {
-            setTimeout(() => {
-                loadContent(previewTask.value);
-                initSplit();
-            }, 300);
-        });
+watch([isOpen, previewTask], ([open, task]) => {
+    const generation = ++loadGeneration;
+    clearTimeout(openTimer);
+    clearContent();
+    if (!open || !task) {
+        showDownloadMenu.value = false;
+        return;
     }
+    nextTick(() => {
+        openTimer = setTimeout(() => {
+            if (generation !== loadGeneration || !isOpen.value) return;
+            loadContent(task, generation);
+            initSplit();
+        }, 300);
+    });
 });
 
 // Close dropdown when clicking outside
@@ -168,6 +202,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+    clearTimeout(openTimer);
+    clearContent();
     window.removeEventListener('resize', handleResize);
 });
 </script>
@@ -248,6 +284,10 @@ onUnmounted(() => {
 @media (min-width: 992px) {
     .preview-pane-wrapper {
         width: 50%;
+    }
+
+    .preview-pane-wrapper.translated-only {
+        width: 100%;
     }
 }
 

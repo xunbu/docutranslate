@@ -1,46 +1,63 @@
-import { ref, nextTick, watch } from 'vue';
+import { ref, nextTick, onUnmounted } from 'vue';
 import Split from 'split.js';
+import { PREVIEW_MESSAGE_SOURCE, withPreviewBridge } from '../utils/previewFrame.js';
 
-export function usePreview(i18n) {
-    const { t } = i18n;
-
+export function usePreview() {
     const previewMode = ref('bilingual');
     const syncScrollEnabled = ref(localStorage.getItem('ui_sync_scroll_enabled') === 'true');
     const previewTask = ref(null);
     const isOpen = ref(false);
-
-    // Split.js refs
     const splitInstance = ref(null);
     const previewOffcanvasComponent = ref(null);
+    let syncingScroll = false;
 
     const destroySplit = () => {
-        if (splitInstance.value) {
-            try {
-                splitInstance.value.destroy();
-            } catch (e) {
-                console.error('Error destroying split:', e);
-            }
-            splitInstance.value = null;
+        if (!splitInstance.value) return;
+        try {
+            splitInstance.value.destroy();
+        } catch (error) {
+            console.error('Error destroying preview split:', error);
         }
+        splitInstance.value = null;
     };
+
+    const setupSyncScroll = () => {
+        const originalPane = document.querySelector('#originalPreviewContainer .preview-pane');
+        const translatedFrame = document.querySelector('#translatedPreviewContainer iframe');
+        if (!originalPane) return;
+        originalPane.onscroll = () => {
+            if (!isOpen.value || !syncScrollEnabled.value || syncingScroll || !translatedFrame?.contentWindow) return;
+            const max = originalPane.scrollHeight - originalPane.clientHeight;
+            translatedFrame.contentWindow.postMessage({
+                source: PREVIEW_MESSAGE_SOURCE,
+                type: 'scroll',
+                progress: max > 0 ? originalPane.scrollTop / max : 0
+            }, '*');
+            syncingScroll = true;
+            requestAnimationFrame(() => { syncingScroll = false; });
+        };
+    };
+
+    const handlePreviewMessage = (event) => {
+        const frame = document.querySelector('#translatedPreviewContainer iframe');
+        if (event.source !== frame?.contentWindow || event.data?.source !== PREVIEW_MESSAGE_SOURCE || event.data.type !== 'scroll') return;
+        if (!isOpen.value || !syncScrollEnabled.value || previewMode.value !== 'bilingual' || syncingScroll) return;
+        const progress = Number(event.data.progress);
+        if (!Number.isFinite(progress)) return;
+        const originalPane = document.querySelector('#originalPreviewContainer .preview-pane');
+        if (!originalPane) return;
+        syncingScroll = true;
+        originalPane.scrollTop = Math.max(0, Math.min(1, progress)) * (originalPane.scrollHeight - originalPane.clientHeight);
+        requestAnimationFrame(() => { syncingScroll = false; });
+    };
+    window.addEventListener('message', handlePreviewMessage);
+    onUnmounted(() => window.removeEventListener('message', handlePreviewMessage));
 
     const initSplit = () => {
         destroySplit();
-
-        if (previewMode.value !== 'bilingual') {
-            return;
-        }
-
-        const el1 = document.getElementById('originalPreviewContainer');
-        const el2 = document.getElementById('translatedPreviewContainer');
-
-        if (!el1 || !el2) {
-            console.warn('Split elements not found');
-            return;
-        }
-
+        if (!isOpen.value || previewMode.value !== 'bilingual') return;
+        if (!document.getElementById('originalPreviewContainer') || !document.getElementById('translatedPreviewContainer')) return;
         const isMobile = window.innerWidth < 992;
-
         splitInstance.value = Split(['#originalPreviewContainer', '#translatedPreviewContainer'], {
             sizes: [50, 50],
             minSize: 100,
@@ -48,111 +65,23 @@ export function usePreview(i18n) {
             direction: isMobile ? 'vertical' : 'horizontal',
             cursor: isMobile ? 'row-resize' : 'col-resize'
         });
-
         setupSyncScroll();
-    };
-
-    const setupSyncScroll = () => {
-        let isScrolling = false;
-
-        const onScroll = (src, tgt) => {
-            if (!syncScrollEnabled.value || isScrolling) return;
-            if (!src || !tgt) return;
-
-            const srcScrollHeight = src.scrollHeight - src.clientHeight;
-            if (srcScrollHeight <= 0) return;
-
-            const pct = src.scrollTop / srcScrollHeight;
-            const tgtScrollHeight = tgt.scrollHeight - tgt.clientHeight;
-            if (tgtScrollHeight > 0) {
-                tgt.scrollTop = pct * tgtScrollHeight;
-            }
-            isScrolling = true;
-            requestAnimationFrame(() => isScrolling = false);
-        };
-
-        const originalPane = document.querySelector('#originalPreviewContainer .preview-pane');
-        const translatedFrame = document.querySelector('#translatedPreviewContainer iframe');
-
-        if (originalPane) {
-            originalPane.onscroll = () => {
-                if (translatedFrame && translatedFrame.contentWindow && translatedFrame.contentWindow.document.documentElement) {
-                    onScroll(originalPane, translatedFrame.contentWindow.document.documentElement);
-                }
-            };
-        }
-
-        if (translatedFrame) {
-            translatedFrame.onload = () => {
-                const win = translatedFrame.contentWindow;
-                if (win && win.document && win.document.documentElement) {
-                    win.onscroll = () => onScroll(win.document.documentElement, originalPane);
-                }
-            };
-        }
     };
 
     const openPreview = (task) => {
         previewTask.value = task;
         isOpen.value = true;
-        // Content loading and split init handled by PreviewOffcanvas.vue watch
-    };
-
-    const loadPreviewContent = (task) => {
-        const originalPane = document.querySelector('#originalPreviewContainer .preview-pane');
-        const translatedFrame = document.querySelector('#translatedPreviewContainer iframe');
-
-        if (!originalPane || !translatedFrame) return;
-
-        // Load Original Content
-        originalPane.innerHTML = '';
-        if (task.file) {
-            const ext = task.file.name.split('.').pop().toLowerCase();
-            if (['txt', 'md', 'json', 'html', 'js', 'py', 'css', 'java', 'c', 'cpp'].includes(ext) || task.file.type.startsWith('text/')) {
-                task.file.text().then(txt => {
-                    originalPane.innerHTML = `<pre style="margin:0;padding:1rem;white-space:pre;">${escapeHtml(txt)}</pre>`;
-                });
-            } else if (['pdf'].includes(ext) || task.file.type === 'application/pdf') {
-                const iframe = document.createElement('iframe');
-                iframe.src = URL.createObjectURL(task.file);
-                iframe.style.cssText = 'width:100%;height:100%;border:none;';
-                originalPane.appendChild(iframe);
-            } else {
-                originalPane.innerHTML = `<p class="p-3 text-gray-500">${t('preview_cantPreviewType') || '无法预览此文件类型'} (${ext})</p>`;
-            }
-        } else {
-            originalPane.innerHTML = `<p class="p-3 text-gray-500">${t('preview_noOriginalCache') || '无原始文件缓存'}</p>`;
-        }
-
-        // Load Translated Content
-        translatedFrame.src = 'about:blank';
-        if (task.downloads && task.downloads.html) {
-            fetch(task.downloads.html)
-                .then(r => r.text())
-                .then(h => {
-                    translatedFrame.srcdoc = h;
-                })
-                .catch(e => console.error('Failed to load translated content:', e));
-        }
-    };
-
-    const escapeHtml = (text) => {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
     };
 
     const closePreview = () => {
-        destroySplit();
         isOpen.value = false;
         previewTask.value = null;
+        destroySplit();
     };
 
-    const setPreviewMode = (m) => {
-        previewMode.value = m;
-        nextTick(() => {
-            setTimeout(() => initSplit(), 100);
-        });
+    const setPreviewMode = (mode) => {
+        previewMode.value = mode;
+        nextTick(() => setTimeout(initSplit, 100));
     };
 
     const toggleSyncScroll = () => {
@@ -160,63 +89,30 @@ export function usePreview(i18n) {
         localStorage.setItem('ui_sync_scroll_enabled', String(syncScrollEnabled.value));
     };
 
-    const printPdf = (url) => {
-        // 优先使用预览 iframe（如果已有内容且已渲染）
-        // 否则使用独立的打印 iframe（视觉隐藏但保持可见，以便 mermaid 渲染）
-        const translatedFrame = document.querySelector('#translatedPreviewContainer iframe');
-        let printFrame = document.getElementById('printFrame');
-
-        // 检查预览 iframe 是否已有渲染好的内容
-        const hasRenderedContent = (frame) => {
-            try {
-                const doc = frame.contentDocument || frame.contentWindow.document;
-                if (!doc || !doc.body) return false;
-                // 检查是否有 mermaid 图表且已渲染（svg 元素存在）
-                const mermaidDivs = doc.querySelectorAll('.mermaid');
-                if (mermaidDivs.length > 0) {
-                    // 有 mermaid，检查是否已渲染
-                    return doc.querySelectorAll('svg').length > 0;
-                }
-                return doc.body.innerHTML.trim().length > 0;
-            } catch (e) {
-                return false;
+    const printPdf = async (url) => {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const html = await response.text();
+            let printFrame = document.getElementById('printFrame');
+            const isNewFrame = !printFrame;
+            if (isNewFrame) {
+                printFrame = document.createElement('iframe');
+                printFrame.id = 'printFrame';
+                printFrame.setAttribute('sandbox', 'allow-scripts allow-modals');
+                printFrame.style.cssText = 'position: fixed; left: -9999px; top: 0; width: 100%; height: 100%;';
             }
-        };
-
-        // 打印指定 iframe
-        const doPrint = (frame) => {
-            frame.contentWindow.focus();
-            frame.contentWindow.print();
-        };
-
-        // 如果预览 iframe 有渲染好的内容，直接使用
-        if (translatedFrame && hasRenderedContent(translatedFrame)) {
-            doPrint(translatedFrame);
-            return;
-        }
-
-        // 否则使用独立的打印 iframe
-        if (!printFrame) {
-            printFrame = document.createElement('iframe');
-            printFrame.id = 'printFrame';
-            // 使用 position 移出视口，而不是 display: none
-            // 这样 iframe 仍然"可见"，mermaid 可以正常渲染
-            printFrame.style.cssText = 'position: fixed; left: -9999px; top: 0; width: 100%; height: 100%;';
-            document.body.appendChild(printFrame);
-        }
-
-        // 加载内容到打印 iframe
-        fetch(url).then(r => r.text()).then(h => {
-            printFrame.srcdoc = h;
             printFrame.onload = () => {
-                // 等待 mermaid 渲染完成
+                printFrame.onload = null;
                 setTimeout(() => {
-                    doPrint(printFrame);
+                    printFrame.contentWindow?.postMessage({ source: PREVIEW_MESSAGE_SOURCE, type: 'print' }, '*');
                 }, 1000);
             };
-        }).catch(e => {
-            console.error('Failed to load content for printing:', e);
-        });
+            printFrame.srcdoc = withPreviewBridge(html);
+            if (isNewFrame) document.body.appendChild(printFrame);
+        } catch (error) {
+            console.error('Failed to load content for printing:', error);
+        }
     };
 
     return {

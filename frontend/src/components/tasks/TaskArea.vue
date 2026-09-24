@@ -65,16 +65,13 @@
                 @toggleTaskState="handleToggleTaskState" />
         </div>
 
-        <!-- Queue Settings Modal -->
-        <QueueSettingsModal ref="queueSettingsModal" :t="t" @save="val => {}" />
     </div>
 </template>
 
 <script setup>
-import { ref, inject } from 'vue';
+import { inject } from 'vue';
 import TaskCard from './TaskCard.vue';
 import Tooltip from '../ui/Tooltip.vue';
-import QueueSettingsModal from '../modals/QueueSettingsModal.vue';
 import Heroicon from '../ui/Heroicon.vue';
 
 defineProps({
@@ -98,10 +95,6 @@ const toggleTaskState = inject('toggleTaskState');
 const copyLog = inject('copyLog');
 const openPreview = inject('openPreview');
 const printPdf = inject('printPdf');
-
-const folderInput = ref(null);
-const queueSettingsModal = ref(null);
-const showQueueSettings = ref(false);
 
 // Inject openQueueSettings from parent
 const openQueueSettings = inject('openQueueSettings');

@@ -43,10 +43,24 @@ export function useTasks(settings, glossary, i18n) {
 
     // Pending queue for batch processing
     const pendingQueue = [];
+    const batchTasks = new Set();
 
     const hasPendingTasks = computed(() =>
-        tasks.value.some(task => task.file && !task.isTranslating && !task.isFinished)
+        tasks.value.some(task => task.file && !task.initializing && !task.isTranslating && !task.isFinished && !task.queuePosition)
     );
+
+    const removeFromPendingQueue = (task) => {
+        const index = pendingQueue.indexOf(task);
+        if (index !== -1) pendingQueue.splice(index, 1);
+        task.queuePosition = null;
+        task.queueTotal = null;
+    };
+
+    const releaseBatchSlot = (task) => {
+        if (!batchTasks.delete(task)) return;
+        runningCount.value = batchTasks.size;
+        startNextPendingTask();
+    };
 
     // ===== Task Creation =====
     const createNewTask = (backendId = null) => {
@@ -74,24 +88,35 @@ export function useTasks(settings, glossary, i18n) {
     const removeTask = async (task) => {
         if (task.isTranslating) {
             if (!confirm(t('confirmRemoveTranslatingTask'))) return;
-            try { await toggleTaskState(task, errors); } catch (e) {}
         }
-        if (task.backendId) try {
-            await fetch(`/service/release/${task.backendId}`, {method: 'POST'});
-        } catch (e) {}
+        task.removed = true;
+        removeFromPendingQueue(task);
         tasks.value = tasks.value.filter(t => t.uiId !== task.uiId);
         saveActiveTasks();
+        try {
+            if (task.backendId) await fetch(`/service/release/${task.backendId}`, {method: 'POST'});
+        } catch (e) {
+            console.error('Failed to release task:', e);
+        } finally {
+            releaseBatchSlot(task);
+        }
     };
 
     const clearAllTasks = async () => {
         if (!confirm(t('confirmClearAllTasks'))) return;
-        for (const task of [...tasks.value]) {
+        const removedTasks = [...tasks.value];
+        pendingQueue.length = 0;
+        tasks.value = [];
+        saveActiveTasks();
+        for (const task of removedTasks) {
+            task.removed = true;
+            task.queuePosition = null;
+            task.queueTotal = null;
+            releaseBatchSlot(task);
             if (task.backendId) try {
                 await fetch(`/service/release/${task.backendId}`, {method: 'POST'});
             } catch (e) {}
         }
-        tasks.value = [];
-        saveActiveTasks();
     };
 
     // ===== File Handling =====
@@ -150,18 +175,23 @@ export function useTasks(settings, glossary, i18n) {
 
     // ===== Batch Run =====
     const startNextPendingTask = () => {
-        const maxConcurrent = Math.max(1, queue_concurrent.value);
+        const maxConcurrent = Math.max(1, Number(queue_concurrent.value) || 1);
         while (pendingQueue.length > 0 && runningCount.value < maxConcurrent) {
             const task = pendingQueue.shift();
-            if (task.file && !task.isTranslating && !task.isFinished) {
-                runningCount.value++;
-                toggleTaskState(task, errors).finally(() => { startNextPendingTask(); });
+            task.queuePosition = null;
+            task.queueTotal = null;
+            if (tasks.value.includes(task) && task.file && !task.removed && !task.initializing && !task.isTranslating && !task.isFinished) {
+                batchTasks.add(task);
+                runningCount.value = batchTasks.size;
+                toggleTaskState(task, errors).finally(() => {
+                    if (!task.isTranslating) releaseBatchSlot(task);
+                });
             }
         }
     };
 
     const runAllPendingTasks = () => {
-        const pending = tasks.value.filter(t => t.file && !t.isTranslating && !t.isFinished);
+        const pending = tasks.value.filter(t => t.file && !t.initializing && !t.isTranslating && !t.isFinished);
         pendingQueue.length = 0;
         pending.forEach((task, i) => {
             task.queuePosition = i + 1;
@@ -172,7 +202,7 @@ export function useTasks(settings, glossary, i18n) {
     };
 
     // ===== Translation Logic =====
-    const buildPayload = () => {
+    const buildPayload = (workflowType = form.workflow_type) => {
         const basePayload = {
             skip_translate: form.skip_translate,
             base_url: emptyToNull(form.base_url),
@@ -191,7 +221,7 @@ export function useTasks(settings, glossary, i18n) {
             system_proxy_enable: form.system_proxy_enable,
             force_json: form.force_json,
             glossary_generate_enable: form.glossary_generate_enable,
-            workflow_type: form.workflow_type,
+            workflow_type: workflowType,
             rpm: emptyToNull(form.rpm),
             tpm: emptyToNull(form.tpm),
             extra_body: emptyToNull(form.extra_body)
@@ -221,7 +251,7 @@ export function useTasks(settings, glossary, i18n) {
         }
 
         // Workflow-specific params
-        if (form.workflow_type === 'markdown_based') {
+        if (workflowType === 'markdown_based') {
             basePayload.convert_engine = form.convert_engine;
             basePayload.md2docx_engine = form.md2docx_engine === 'null' ? null : form.md2docx_engine;
             if (form.convert_engine === 'mineru') {
@@ -248,13 +278,13 @@ export function useTasks(settings, glossary, i18n) {
                 }
             }
         } else {
-            const params = {...workflowParams[form.workflow_type]};
+            const params = {...workflowParams[workflowType]};
             if (params.separator) {
                 params.separator = params.separator.replace(/\\n/g, '\n');
             }
-            if (form.workflow_type === 'json') {
+            if (workflowType === 'json') {
                 params.json_paths = params.json_paths.split('\n').map(p => p.trim()).filter(p => p);
-            } else if (form.workflow_type === 'xlsx') {
+            } else if (workflowType === 'xlsx') {
                 if (params.translate_regions && typeof params.translate_regions === 'string' && params.translate_regions.trim()) {
                     params.translate_regions = params.translate_regions.split('\n').map(p => p.trim()).filter(p => p);
                     if (params.translate_regions.length === 0) delete params.translate_regions;
@@ -268,7 +298,7 @@ export function useTasks(settings, glossary, i18n) {
         return basePayload;
     };
 
-    const validateForm = (errors) => {
+    const validateForm = (errors, workflowType = form.workflow_type) => {
         let isValid = true;
         if (errors) Object.keys(errors).forEach(k => errors[k] = false);
 
@@ -283,10 +313,10 @@ export function useTasks(settings, glossary, i18n) {
             if (form.to_lang === 'custom' && !form.custom_to_lang) { if (errors) errors.custom_to_lang = true; isValid = false; }
         }
 
-        if (form.workflow_type === 'markdown_based') {
+        if (workflowType === 'markdown_based') {
             if (form.convert_engine === 'mineru' && !form.mineru_token) { if (errors) errors.mineru_token = true; isValid = false; }
             if (form.convert_engine === 'mineru_deploy' && !form.mineru_deploy_base_url) { if (errors) errors.mineru_deploy_base_url = true; isValid = false; }
-        } else if (form.workflow_type === 'json') {
+        } else if (workflowType === 'json') {
             if (!workflowParams.json.json_paths || !workflowParams.json.json_paths.trim()) {
                 if (errors) errors.json_paths = true; isValid = false;
             }
@@ -328,18 +358,20 @@ export function useTasks(settings, glossary, i18n) {
     };
 
     const toggleTaskState = async (task, errors) => {
-        if (task.initializing) return;
+        if (task.removed || task.initializing) return;
         if (task.isTranslating) {
+            task.initializing = true;
+            task.isTranslating = false;
             task.statusMessage = t('status_cancelling');
             task.isProcessing = false;
             if (task.backendId) {
                 try { await fetch(`/service/cancel/${task.backendId}`, {method: 'POST'}); } catch (e) {}
             }
-            runningCount.value = Math.max(0, runningCount.value - 1);
-            task.isTranslating = false;
+            task.initializing = false;
             task.isFinished = false;
             task.statusMessage = t('taskCardStatusCancelled');
             task.statusClass = 'text-warning';
+            releaseBatchSlot(task);
             return;
         }
 
@@ -369,7 +401,9 @@ export function useTasks(settings, glossary, i18n) {
             return;
         }
 
-        if (!validateForm(errors)) {
+        removeFromPendingQueue(task);
+        const workflowType = task.detectedWorkflow || form.workflow_type;
+        if (!validateForm(errors, workflowType)) {
             task.statusMessage = t('status_fillRequired') || "请检查左侧配置项 (Please check settings)";
             task.statusClass = 'text-danger';
             return;
@@ -377,20 +411,19 @@ export function useTasks(settings, glossary, i18n) {
 
         task.initializing = true;
         try {
-            const savedWorkflow = form.workflow_type;
-            if (task.detectedWorkflow) {
-                form.workflow_type = task.detectedWorkflow;
-            }
             const formData = new FormData();
             formData.append('file', task.file);
-            formData.append('payload', JSON.stringify(buildPayload()));
-            form.workflow_type = savedWorkflow;
+            formData.append('payload', JSON.stringify(buildPayload(workflowType)));
             const res = await fetch('/service/translate/file', {
                 method: 'POST',
                 body: formData
             });
             const data = await res.json();
             if (res.ok && data.task_started) {
+                if (task.removed) {
+                    await fetch(`/service/release/${data.task_id}`, {method: 'POST'});
+                    return;
+                }
                 task.backendId = data.task_id;
                 task.isTranslating = true;
                 task.initializing = false;
@@ -405,22 +438,28 @@ export function useTasks(settings, glossary, i18n) {
             task.statusClass = 'text-danger';
             task.isTranslating = false;
             task.initializing = false;
-            runningCount.value = Math.max(0, runningCount.value - 1);
+        } finally {
+            task.initializing = false;
         }
     };
 
     const pollStatus = (task) => {
+        const polledId = task.backendId;
+        let inFlight = false;
         const interval = setInterval(async () => {
-            if (!task.isTranslating) {
+            if (!task.isTranslating || task.removed || task.backendId !== polledId) {
                 clearInterval(interval);
                 return;
             }
+            if (inFlight) return;
+            inFlight = true;
             try {
                 // Fetch Logs
-                const logRes = await fetch(`/service/logs/${task.backendId}`);
+                const logRes = await fetch(`/service/logs/${polledId}`);
                 const logData = await logRes.json();
+                if (!task.isTranslating || task.removed || task.backendId !== polledId) return;
                 if (logData.logs && logData.logs.length) {
-                    task.logs += logData.logs.map(l => l.replace(/</g, "&lt;").replace(/>/g, "&gt;")).join('<br>') + '<br>';
+                    task.logs += logData.logs.map(l => l.replace(/&/g, '&amp;').replace(/</g, "&lt;").replace(/>/g, "&gt;")).join('<br>') + '<br>';
                     nextTick(() => {
                         const logEl = document.getElementById('log-' + task.uiId);
                         if (logEl) logEl.scrollTop = logEl.scrollHeight;
@@ -428,7 +467,8 @@ export function useTasks(settings, glossary, i18n) {
                 }
 
                 // Fetch Status
-                const statRes = await fetch(`/service/status/${task.backendId}`);
+                const statRes = await fetch(`/service/status/${polledId}`);
+                if (!task.isTranslating || task.removed || task.backendId !== polledId) return;
 
                 // Handle 404 (Task not found / Expired)
                 if (!statRes.ok) {
@@ -438,15 +478,16 @@ export function useTasks(settings, glossary, i18n) {
                         task.isProcessing = false;
                         task.statusClass = 'text-danger';
                         task.statusMessage = t('status_taskNotFound');
-                        const savedIds = JSON.parse(localStorage.getItem('active_task_ids') || '[]');
-                        const newIds = savedIds.filter(id => id !== task.backendId);
-                        localStorage.setItem('active_task_ids', JSON.stringify(newIds));
+                        task.backendId = null;
+                        saveActiveTasks();
+                        releaseBatchSlot(task);
                         return;
                     }
                     return;
                 }
 
                 const d = await statRes.json();
+                if (!task.isTranslating || task.removed || task.backendId !== polledId) return;
                 task.statusMessage = d.status_message;
                 task.isProcessing = d.is_processing;
                 task.progressPercent = d.progress_percent || 0;
@@ -465,7 +506,7 @@ export function useTasks(settings, glossary, i18n) {
                     task.isTranslating = false;
                     task.isFinished = true;
                     task.isProcessing = false;
-                    runningCount.value = Math.max(0, runningCount.value - 1);
+                    releaseBatchSlot(task);
                     if (d.download_ready && !d.error_flag) {
                         task.downloads = d.downloads || {};
                         task.attachment = d.attachment || {};
@@ -477,6 +518,8 @@ export function useTasks(settings, glossary, i18n) {
                 }
             } catch (e) {
                 // Continue polling on error
+            } finally {
+                inFlight = false;
             }
         }, 1500);
     };
