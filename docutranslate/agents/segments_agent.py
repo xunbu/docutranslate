@@ -169,14 +169,14 @@ class SegmentsTranslateAgent(Agent):
                 accumulated = flatten_and_filter(accumulated)
                 additional = flatten_and_filter(additional)
 
-                # 收集 accumulated 中的 ID
-                existing_ids = {item.get("id") for item in accumulated if isinstance(item, dict) and "id" in item}
+                # JSON 对象的键是字符串，模型返回的数字 ID 也按同一字符串匹配。
+                existing_ids = {str(item["id"]) for item in accumulated if "id" in item}
 
                 # 只添加 additional 中不重复的 ID
                 for item in additional:
-                    if isinstance(item, dict) and "id" in item and item.get("id") not in existing_ids:
+                    if "id" in item and str(item["id"]) not in existing_ids:
                         accumulated.append(item)
-                        existing_ids.add(item.get("id"))
+                        existing_ids.add(str(item["id"]))
 
                 return json.dumps(accumulated, ensure_ascii=False)
         except Exception as e:
@@ -226,6 +226,13 @@ class SegmentsTranslateAgent(Agent):
                     "Agent返回结果不是array的json形式, "
                     f"type={type(repaired_result).__name__}, chars={len(result)}"
                 )
+
+            # 原文 JSON 对象的键均为字符串，但模型可能混用数字和字符串 ID。
+            # 在排序、原文检测和结果匹配之前统一类型，避免比较异常及译文丢失。
+            repaired_array = [
+                {**item, "id": str(item["id"])} if "id" in item else item
+                for item in repaired_array
+            ]
 
             # 检查是否与原文完全相同（疑似翻译失败）
             # 按ID排序后比较，确保可靠性

@@ -300,6 +300,11 @@ class EpubTranslator(AiTranslator):
             else:
                 content_nodes = list(new_content_soup.contents)
 
+            # lxml 可能为纯文本补上 <p>；替换段落内容时需剥离同名外壳。
+            if (original_tag.name == 'p' and len(content_nodes) == 1
+                    and isinstance(content_nodes[0], Tag) and content_nodes[0].name == 'p'):
+                content_nodes = list(content_nodes[0].contents)
+
             # 策略 A: 替换模式（Replace）
             if self.insert_mode == "replace":
                 original_tag.clear()
