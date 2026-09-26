@@ -14,11 +14,21 @@ from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, Se
 from docutranslate.ir.document import Document
 from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTranslator
 
-# 块级元素集合：遇到这些标签时必须闭合当前段落，原样保留，避免嵌套进 <p>
+# 段落边界元素：遇到这些标签时必须闭合当前段落，并原样保留在段落之外。
+# 依据 HTML 规范，<p> 只能包含 phrasing content；以下 flow/block 元素一旦被包进 <p>
+# 就是非法嵌套（阅读器自动闭合后表现为空段落与错位），因此必须作为边界。
+# 注意：
+# - <p> 必须包含在内，否则容器内"裸文本 + 原有段落"混排时会被吞进同一个 <p>；
+# - 行内元素（含 <br/>、<img/>）不在其中，应保留在段落内部，避免换行与行内图片被拆成独立段落。
+#   代价是段落内的 <br/>、<img/> 会随原文进入翻译分片，依赖模型原样保留这些标签
+#   （与段落内既有的 <em>/<a> 等内联标签同一机制）；若需绝对保护图片，可把 'img' 移回本集合。
 _BLOCK_ELEMENTS = frozenset({
-    'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-    'table', 'ul', 'ol', 'li', 'blockquote',
-    'img', 'hr', 'pre', 'header', 'section',
+    'p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+    'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'caption',
+    'ul', 'ol', 'li', 'dl', 'dt', 'dd', 'blockquote',
+    'figure', 'figcaption', 'pre', 'hr', 'address', 'form', 'fieldset',
+    'header', 'footer', 'section', 'article', 'aside', 'main', 'nav',
+    'video', 'audio', 'canvas', 'svg', 'object', 'iframe',
 })
 
 # 容器型元素：需要递归处理其内部的裸露文本
@@ -29,10 +39,11 @@ _CONTAINER_ELEMENTS = frozenset({
 
 
 def _wrap_bare_texts_in_element(element: Tag, soup: BeautifulSoup) -> None:
-    """递归处理元素内部的裸露文本，将由 <br/> 分隔的裸露文本用 <p> 包裹。
+    """递归处理元素内部的裸露文本，用 <p> 包裹使其可被翻译。
 
     先递归处理所有子容器元素，再处理当前元素自身的直接子节点。
-    块级元素会打断当前段落并原样保留，内联元素则正常加入当前段落。
+    段落边界元素（见 _BLOCK_ELEMENTS）会打断当前段落并原样保留；
+    <br/>、<img/> 等行内元素则保留在段落内部，不改变原有换行与图文排版。
     """
     # 1. 先递归处理所有子容器元素
     for child in list(element.children):
@@ -59,6 +70,28 @@ def _wrap_bare_texts_in_element(element: Tag, soup: BeautifulSoup) -> None:
     leading_elements = []  # 用于存放开头的结构标记（如 span#pagestart）
     found_first_content = False
 
+    def flush_paragraph() -> None:
+        """把当前累计的行内内容收尾成一个 <p>。
+
+        只包含 <br/> 或空白的内容不生成段落，避免凭空多出空段落。
+        """
+        nonlocal current_paragraph
+        if not current_paragraph:
+            return
+        has_content = any(
+            (isinstance(node, NavigableString) and node.strip())
+            or (isinstance(node, Tag) and node.name != 'br')
+            for node in current_paragraph
+        )
+        if has_content:
+            p_tag = soup.new_tag('p')
+            for node in current_paragraph:
+                p_tag.append(node)
+            new_contents.append(p_tag)
+        else:
+            new_contents.extend(current_paragraph)
+        current_paragraph = []
+
     for child in list(element.contents):
         if isinstance(child, NavigableString):
             if child.strip():
@@ -71,27 +104,14 @@ def _wrap_bare_texts_in_element(element: Tag, soup: BeautifulSoup) -> None:
                 else:
                     leading_elements.append(child)
         elif isinstance(child, Tag):
-            if child.name == 'br':
-                found_first_content = True
-                # 遇到 <br/>，结束当前段落
-                if current_paragraph:
-                    p_tag = soup.new_tag('p')
-                    for node in current_paragraph:
-                        p_tag.append(node)
-                    new_contents.append(p_tag)
-                    current_paragraph = []
-            elif child.name in _BLOCK_ELEMENTS:
-                # 块级元素：先闭合当前段落，再原样保留
-                if current_paragraph:
-                    p_tag = soup.new_tag('p')
-                    for node in current_paragraph:
-                        p_tag.append(node)
-                    new_contents.append(p_tag)
-                    current_paragraph = []
+            if child.name in _BLOCK_ELEMENTS:
+                # 段落边界元素：先闭合当前段落，再原样保留
+                flush_paragraph()
                 new_contents.append(child)
                 found_first_content = True
             else:
-                # 内联元素（span, a, em 等）正常加入当前段落
+                # 行内元素（span、a、em、br、img 等）保留在当前段落内部：
+                # <br/> 不再作为段落边界，行内图片也不会被拆出句子
                 if not found_first_content:
                     # 检查是否是结构标记（如 span#pagestart）
                     if (child.name == 'span' and child.get('id')) or child.name in ['a', 'link']:
@@ -103,11 +123,7 @@ def _wrap_bare_texts_in_element(element: Tag, soup: BeautifulSoup) -> None:
                     current_paragraph.append(child)
 
     # 处理最后一个段落
-    if current_paragraph:
-        p_tag = soup.new_tag('p')
-        for node in current_paragraph:
-            p_tag.append(node)
-        new_contents.append(p_tag)
+    flush_paragraph()
 
     # 替换元素内容
     if new_contents:
