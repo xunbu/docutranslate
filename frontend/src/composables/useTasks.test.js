@@ -3,6 +3,21 @@ import { test } from 'node:test';
 import { ref } from 'vue';
 import { useTasks } from './useTasks.js';
 
+for (const [engine, key, expected] of [
+    ['mineru_deploy', 'local-service-key', 'local-service-key'],
+    ['mineru_deploy', '', null],
+    ['mineru', 'local-service-key', undefined],
+    ['identity', 'local-service-key', undefined],
+]) {
+    test(`local MinerU key is scoped to its parser: ${engine}/${key || 'empty'}`, () => {
+        const tasks = useTasks({
+            form: { workflow_type: 'markdown_based', convert_engine: engine, mineru_deploy_api_key: key },
+            workflowParams: {}, default_workflows: {}, queue_concurrent: ref(1),
+        }, { glossaryData: ref({}) }, { t: key => key });
+        assert.equal(tasks.buildPayload().mineru_deploy_api_key, expected);
+    });
+}
+
 for (const [value, expected] of [[0, 0], ['0', 0], ['5', 5], ['', 99999], [undefined, 99999]]) {
     test(`MinerU end page preserves ${JSON.stringify(value)}`, () => {
         const form = {

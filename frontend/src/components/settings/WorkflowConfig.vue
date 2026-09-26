@@ -211,6 +211,26 @@
                            required :placeholder="t('mineruDeployBaseUrlPlaceholder')">
                 </div>
                 <div class="mb-3">
+                    <label for="mineru-deploy-api-key" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('mineruDeployApiKeyLabel') }}</label>
+                    <div class="flex">
+                        <input id="mineru-deploy-api-key"
+                               :type="showMineruDeployApiKey ? 'text' : 'password'"
+                               autocomplete="new-password"
+                               class="flex-1 min-w-0 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-l bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                               v-model="form.mineru_deploy_api_key"
+                               @change="saveSetting('mineru_deploy_api_key', form.mineru_deploy_api_key)"
+                               :placeholder="t('mineruDeployApiKeyPlaceholder')">
+                        <button type="button"
+                                class="px-3 py-1.5 border border-l-0 border-gray-300 dark:border-gray-600 rounded-r text-gray-700 dark:text-gray-300"
+                                :aria-label="t(showMineruDeployApiKey ? 'mineruDeployApiKeyHide' : 'mineruDeployApiKeyShow')"
+                                :aria-pressed="showMineruDeployApiKey"
+                                @click="showMineruDeployApiKey = !showMineruDeployApiKey">
+                            <Heroicon :name="showMineruDeployApiKey ? 'EyeSlashIcon' : 'EyeIcon'" class="w-4 h-4" />
+                        </button>
+                    </div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400 mt-1">{{ t('mineruDeployApiKeyHelp') }}</div>
+                </div>
+                <div class="mb-3">
                     <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{{ t('mineruDeployBackendLabel') }}</label>
                     <select class="w-full px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary"
                             v-model="form.mineru_deploy_backend"
@@ -378,6 +398,7 @@ const clearError = inject('clearError');
 const isWorkflowConfigOpen = ref(false);
 const showDocxPassword = ref(false);
 const showXlsxPassword = ref(false);
+const showMineruDeployApiKey = ref(false);
 
 const openDefaultWorkflowModal = () => {
     emit('openDefaultWorkflowModal');

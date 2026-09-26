@@ -1,5 +1,5 @@
 import { reactive, watch, ref } from 'vue';
-import { KNOWN_PLATFORMS } from '../constants/platforms';
+import { KNOWN_PLATFORMS } from '../constants/platforms.js';
 
 // ===== 存储键名常量 =====
 export const STORAGE = {
@@ -70,6 +70,7 @@ export function useSettings() {
         model_version: 'vlm',
         mineru_language: 'ch',
         mineru_deploy_base_url: 'http://127.0.0.1:8000',
+        mineru_deploy_api_key: '',
         mineru_deploy_backend: 'hybrid-engine',
         mineru_deploy_effort: 'medium',
         mineru_deploy_parse_method: 'auto',
@@ -175,6 +176,7 @@ export function useSettings() {
         form.model_version = storage.get('translator_model_version', 'vlm');
         form.mineru_language = storage.get('translator_mineru_language', 'ch');
         form.mineru_deploy_base_url = storage.get('mineru_deploy_base_url', 'http://127.0.0.1:8000');
+        form.mineru_deploy_api_key = storage.get('mineru_deploy_api_key', '');
         const savedMineruBackend = storage.get('mineru_deploy_backend', 'hybrid-engine');
         form.mineru_deploy_backend = {
             'vlm-auto-engine': 'vlm-engine',
@@ -303,6 +305,7 @@ export function useSettings() {
         storage.set('translator_model_version', f.model_version);
         storage.set('translator_mineru_language', f.mineru_language);
         storage.set('mineru_deploy_base_url', f.mineru_deploy_base_url);
+        storage.set('mineru_deploy_api_key', f.mineru_deploy_api_key || '');
         storage.set('mineru_deploy_backend', f.mineru_deploy_backend);
         storage.set('mineru_deploy_effort', f.mineru_deploy_effort);
         storage.set('mineru_deploy_parse_method', f.mineru_deploy_parse_method);

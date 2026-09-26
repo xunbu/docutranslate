@@ -5,6 +5,7 @@
 import asyncio
 import base64
 import os
+from enum import Enum
 from pathlib import Path
 from typing import Optional, Literal, Dict, Any, List, Union
 
@@ -18,6 +19,15 @@ from docutranslate.core.factory import create_workflow_from_payload
 from docutranslate.core.file_types import PARSER_INPUT_SUFFIXES
 from docutranslate.translator import default_params
 from docutranslate.config import TO_LANG
+
+
+class _Unset(Enum):
+    """Distinguish an omitted option from an explicit None (disabled)."""
+
+    TOKEN = "unset"
+
+
+_UNSET = _Unset.TOKEN
 
 # --- 映射配置 ---
 # 格式说明: {workflow_type: {save_type: (method_name, default_suffix)}}
@@ -188,7 +198,10 @@ class Client:
             "top_p": top_p,
             **kwargs
         }
-        self.defaults = {k: v for k, v in self.defaults.items() if v is not None}
+        self.defaults = {
+            k: v for k, v in self.defaults.items()
+            if v is not None or k == "md2docx_engine"
+        }
 
     def translate(
             self,
@@ -221,7 +234,7 @@ class Client:
             translate_regions: Optional[List[str]] = None,
             convert_engine: Optional[Literal["identity", "mineru", "mineru_deploy"]] = None,
             mineru_token: Optional[str] = None,
-            md2docx_engine: Optional[Literal["python", "pandoc", "auto"]] = None,
+            md2docx_engine: Union[Literal["python", "pandoc", "auto"], None, _Unset] = _UNSET,
             model_version: Optional[Literal["pipeline", "vlm", "MinerU-HTML"]] = None,
             formula_ocr: Optional[bool] = None,
             mineru_language: Optional[Literal[
@@ -230,6 +243,7 @@ class Client:
                 "east_slavic", "devanagari"
             ]] = None,
             mineru_deploy_base_url: Optional[str] = None,
+            mineru_deploy_api_key: Optional[str] = None,
             mineru_deploy_backend: Optional[Literal["flash", "basic", "standard", "advanced", "pipeline", "vlm-engine", "vlm-http-client", "hybrid-engine", "hybrid-http-client", "vlm-auto-engine", "hybrid-auto-engine"]] = None,
             mineru_deploy_effort: Optional[Literal["medium", "high"]] = None,
             mineru_deploy_parse_method: Optional[Literal["auto", "txt", "ocr"]] = None,
@@ -301,7 +315,7 @@ class Client:
             # --- 解析引擎 (PDF/OCR) ---
             convert_engine: Optional[Literal["identity", "mineru", "mineru_deploy"]] = None,
             mineru_token: Optional[str] = None,
-            md2docx_engine: Optional[Literal["python", "pandoc", "auto"]] = None,
+            md2docx_engine: Union[Literal["python", "pandoc", "auto"], None, _Unset] = _UNSET,
             model_version: Optional[Literal["pipeline", "vlm", "MinerU-HTML"]] = None,
             formula_ocr: Optional[bool] = None,
             mineru_language: Optional[Literal[
@@ -312,6 +326,7 @@ class Client:
 
             # --- Mineru 本地部署参数 ---
             mineru_deploy_base_url: Optional[str] = None,
+            mineru_deploy_api_key: Optional[str] = None,
             mineru_deploy_backend: Optional[Literal["flash", "basic", "standard", "advanced", "pipeline", "vlm-engine", "vlm-http-client", "hybrid-engine", "hybrid-http-client", "vlm-auto-engine", "hybrid-auto-engine"]] = None,
             mineru_deploy_effort: Optional[Literal["medium", "high"]] = None,
             mineru_deploy_parse_method: Optional[Literal["auto", "txt", "ocr"]] = None,
@@ -346,7 +361,9 @@ class Client:
         :param insert_mode: [Docx/Xlsx/Txt] 译文插入模式 (replace, append, prepend)。
         :param convert_engine: [PDF/OCR] 解析引擎 (identity, mineru, mineru_deploy)。
         :param mineru_token: [Mineru Cloud] API Token。
+        :param md2docx_engine: Markdown 转 DOCX 引擎；省略时继承默认配置，显式传 None 禁用 DOCX 导出。
         :param mineru_deploy_base_url: [Mineru Local] 本地服务地址。
+        :param mineru_deploy_api_key: [Mineru Local] 可选的服务鉴权密钥，空值回退到环境变量。
         :param mineru_deploy_effort: [Mineru Local] Hybrid 解析强度 (medium, high)。
         :param mineru_deploy_image_analysis: [Mineru Local] 是否启用图片/图表分析。
         :param office_password: [Docx/Xlsx专用] 用于解密加密文件的密码。
@@ -356,7 +373,9 @@ class Client:
         current_args = locals()
         call_params = {
             k: v for k, v in current_args.items()
-            if k not in ['self', 'file_path', 'kwargs'] and v is not None
+            if k not in ['self', 'file_path', 'kwargs']
+            and v is not _UNSET
+            and (v is not None or k == 'md2docx_engine')
         }
         call_params.update({k: v for k, v in kwargs.items() if v is not None})
 

@@ -367,7 +367,7 @@ class TranslationService:
             universal_fields = [
                 "convert_engine", "mineru_token", "model_version", "formula_ocr",
                 "mineru_language",
-                "mineru_deploy_base_url", "mineru_deploy_backend", "mineru_deploy_effort",
+                "mineru_deploy_base_url", "mineru_deploy_api_key", "mineru_deploy_backend", "mineru_deploy_effort",
                 "mineru_deploy_parse_method",
                 "mineru_deploy_table_enable", "mineru_deploy_formula_enable",
                 "mineru_deploy_image_analysis",
@@ -809,6 +809,7 @@ class TranslationService:
             elif payload.convert_engine == "mineru_deploy":
                 converter_config = ConverterMineruDeployConfig(
                     base_url=payload.mineru_deploy_base_url,
+                    api_key=payload.mineru_deploy_api_key or "",
                     backend=payload.mineru_deploy_backend,
                     effort=payload.mineru_deploy_effort,
                     parse_method=payload.mineru_deploy_parse_method,

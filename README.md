@@ -254,6 +254,7 @@ print(f"Exported content length: {len(base64_content)}")
 | **skip_translate** | `bool` | `False` | Skip translation, only parse document |
 | **output_dir** | `str` | `"./output"` | Default output directory for `save()` |
 | **chunk_size** | `int` | 3000 | Text chunk size for LLM processing |
+| **mineru_deploy_api_key** | `str` | - | Optional key for the self-hosted MinerU parsing service. Empty values use `DOCUTRANSLATE_MINERU_DEPLOY_API_KEY`; configured environment values take precedence when `DOCUTRANSLATE_ENV_FORCE_OVERRIDE=true`. |
 | **temperature** | `float` | 0.3 | LLM temperature parameter |
 | **timeout** | `int` | 60 | Request timeout in seconds |
 | **retry** | `int` | 3 | Number of retry attempts on failure |

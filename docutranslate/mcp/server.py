@@ -27,7 +27,7 @@ from docutranslate.config import (
     # MarkdownWorkflowParams defaults
     CONVERT_ENGINE, MD2DOCX_ENGINE, MINERU_TOKEN, MODEL_VERSION,
     FORMULA_OCR, MINERU_LANGUAGE,
-    MINERU_DEPLOY_BASE_URL, MINERU_DEPLOY_BACKEND, MINERU_DEPLOY_EFFORT,
+    MINERU_DEPLOY_BASE_URL, MINERU_DEPLOY_API_KEY, MINERU_DEPLOY_BACKEND, MINERU_DEPLOY_EFFORT,
     MINERU_DEPLOY_PARSE_METHOD, MINERU_DEPLOY_TABLE_ENABLE,
     MINERU_DEPLOY_FORMULA_ENABLE, MINERU_DEPLOY_IMAGE_ANALYSIS,
     MINERU_DEPLOY_START_PAGE_ID, MINERU_DEPLOY_END_PAGE_ID, MINERU_DEPLOY_SERVER_URL,
@@ -169,6 +169,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             "mineru_language": MINERU_LANGUAGE,
             # MinerU Deploy settings
             "mineru_deploy_base_url": MINERU_DEPLOY_BASE_URL,
+            "mineru_deploy_api_key": MINERU_DEPLOY_API_KEY,
             "mineru_deploy_backend": MINERU_DEPLOY_BACKEND,
             "mineru_deploy_effort": MINERU_DEPLOY_EFFORT,
             "mineru_deploy_parse_method": MINERU_DEPLOY_PARSE_METHOD,
@@ -246,6 +247,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 mineru_language: Optional[str] = None,
                 # MinerU Deploy settings
                 mineru_deploy_base_url: Optional[str] = None,
+                mineru_deploy_api_key: Optional[str] = None,
                 mineru_deploy_backend: Optional[str] = None,
                 mineru_deploy_effort: Optional[str] = None,
                 mineru_deploy_parse_method: Optional[str] = None,
@@ -285,6 +287,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 formula_ocr: Enable formula OCR
                 mineru_language: MinerU Cloud language option
                 mineru_deploy_base_url: MinerU local deployment base URL
+                mineru_deploy_api_key: Optional key for the local parsing service (empty uses environment default)
                 mineru_deploy_backend: MinerU local backend/tier (pipeline, vlm-engine, vlm-http-client, hybrid-engine, hybrid-http-client, flash, basic, standard, advanced)
                 mineru_deploy_effort: Hybrid parsing effort (medium, high)
                 mineru_deploy_parse_method: MinerU parse method (auto, txt, ocr)
@@ -348,6 +351,8 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             # MinerU Deploy settings
             if mineru_deploy_base_url is not None:
                 client_config["mineru_deploy_base_url"] = mineru_deploy_base_url
+            if mineru_deploy_api_key is not None:
+                client_config["mineru_deploy_api_key"] = mineru_deploy_api_key
             if mineru_deploy_backend is not None:
                 client_config["mineru_deploy_backend"] = mineru_deploy_backend
             if mineru_deploy_effort is not None:
@@ -396,6 +401,8 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             """Get current client configuration (without sensitive data like API keys)."""
             # Mask sensitive data
             masked_config = client_config.copy()
+            if masked_config.get("mineru_deploy_api_key"):
+                masked_config["mineru_deploy_api_key"] = "****"
             # Mask API key
             if masked_config.get("api_key"):
                 key = masked_config["api_key"]
@@ -457,6 +464,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 formula_ocr: Optional[bool] = None,
                 mineru_language: Optional[str] = None,
                 mineru_deploy_base_url: Optional[str] = None,
+                mineru_deploy_api_key: Optional[str] = None,
                 mineru_deploy_backend: Optional[str] = None,
                 mineru_deploy_effort: Optional[str] = None,
                 mineru_deploy_parse_method: Optional[str] = None,
@@ -511,6 +519,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                 formula_ocr: Enable formula OCR
                 mineru_language: MinerU Cloud language option (ch, ch_server, en, japan, korean, chinese_cht, ta, te, ka, el, th, latin, arabic, cyrillic, east_slavic, devanagari)
                 mineru_deploy_base_url: MinerU local deployment base URL
+                mineru_deploy_api_key: Optional key for the local parsing service (empty uses environment default)
                 mineru_deploy_backend: MinerU local backend/tier (pipeline, vlm-engine, vlm-http-client, hybrid-engine, hybrid-http-client, flash, basic, standard, advanced)
                 mineru_deploy_effort: Hybrid parsing effort (medium, high)
                 mineru_deploy_parse_method: MinerU parse method (auto, txt, ocr)
@@ -686,6 +695,10 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             if use_mineru_language:
                 payload_dict["mineru_language"] = use_mineru_language
             use_mineru_deploy_base_url = mineru_deploy_base_url or client_config.get("mineru_deploy_base_url")
+            payload_dict["mineru_deploy_api_key"] = (
+                mineru_deploy_api_key if mineru_deploy_api_key is not None
+                else client_config.get("mineru_deploy_api_key")
+            )
             if use_mineru_deploy_base_url:
                 payload_dict["mineru_deploy_base_url"] = use_mineru_deploy_base_url
             use_mineru_deploy_backend = mineru_deploy_backend or client_config.get("mineru_deploy_backend")

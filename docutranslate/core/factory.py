@@ -77,6 +77,7 @@ def create_workflow_from_payload(payload: TranslatePayload, logger: logging.Logg
                                                      language=payload.mineru_language)
         elif payload.convert_engine == "mineru_deploy":
             converter_config = ConverterMineruDeployConfig(base_url=payload.mineru_deploy_base_url,
+                                                           api_key=payload.mineru_deploy_api_key or "",
                                                            backend=payload.mineru_deploy_backend,
                                                            effort=payload.mineru_deploy_effort,
                                                            parse_method=payload.mineru_deploy_parse_method,

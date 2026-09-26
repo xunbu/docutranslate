@@ -18,6 +18,7 @@ tests/test_contract/*
 tests/test_agents/*
 !tests/test_agents/test_reasoning_compatibility.py
 !tests/test_agents/test_token_usage_parsing.py
+!tests/test_agents/test_request_accounting.py
 !tests/test_agents/test_segments_agent.py
 !tests/test_translator/
 tests/test_translator/*

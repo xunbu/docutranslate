@@ -1,4 +1,9 @@
 {
+  "mineruDeployApiKeyLabel": "Local service API Key (optional)",
+  "mineruDeployApiKeyPlaceholder": "Leave empty if authentication is disabled",
+  "mineruDeployApiKeyHelp": "Access key for your self-hosted MinerU parser, separate from the online Token and translation model key. Leave empty to use the server environment variable. Forced environment settings take precedence.",
+  "mineruDeployApiKeyShow": "Show key",
+  "mineruDeployApiKeyHide": "Hide key",
   "pageTitle": "DocuTranslate - Interactive Document Translation",
   "tutorialBtn": "Tutorial",
   "projectContributeBtn": "Project Collaboration",

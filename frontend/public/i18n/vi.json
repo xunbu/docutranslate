@@ -1,4 +1,9 @@
 {
+  "mineruDeployApiKeyLabel": "API Key dịch vụ cục bộ (tùy chọn)",
+  "mineruDeployApiKeyPlaceholder": "Để trống nếu không bật xác thực",
+  "mineruDeployApiKeyHelp": "Khóa truy cập dịch vụ phân tích MinerU tự triển khai, khác với Token trực tuyến và khóa mô hình dịch. Để trống để dùng biến môi trường máy chủ. Cấu hình môi trường bắt buộc được ưu tiên.",
+  "mineruDeployApiKeyShow": "Hiện khóa",
+  "mineruDeployApiKeyHide": "Ẩn khóa",
   "pageTitle": "DocuTranslate - Dịch tài liệu tương tác",
   "tutorialBtn": "Hướng dẫn",
   "projectContributeBtn": "Hợp tác dự án",

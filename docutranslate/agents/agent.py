@@ -1033,6 +1033,8 @@ class Agent:
     ) -> Any:
         if system_prompt is None:
             system_prompt = self.system_prompt
+        # Rebuild each retry from unprocessed input so glossary/rules are applied once.
+        retry_system_prompt, retry_prompt = system_prompt, prompt
         if pre_send_handler:
             system_prompt, prompt = pre_send_handler(system_prompt, prompt)
 
@@ -1059,6 +1061,9 @@ class Agent:
         output_tokens = 0
         try:
             response_data = await self._request_completion_async(client, data, headers)
+
+            # Count this response before a finish_reason branch can return or continue.
+            self.token_counter.add(*self.token_usage_parser.parse(response_data))
 
             # 检查 finish_reason
             choices = response_data.get("choices", [])
@@ -1116,14 +1121,6 @@ class Agent:
                     "返回已获取内容"
                 )
 
-            input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens = (
-                self.token_usage_parser.parse(response_data)
-            )
-
-            self.token_counter.add(
-                input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens
-            )
-
             if retry_count > 0:
                 self.logger.info(f"{self._request_label(retry_count)} 重试成功")
 
@@ -1153,6 +1150,7 @@ class Agent:
             should_retry = True
             if e.append_prompt:
                 prompt += e.append_prompt
+                retry_prompt += e.append_prompt
 
         except httpx.HTTPStatusError as e:
             request_id = e.response.headers.get("x-request-id", "-")
@@ -1249,8 +1247,8 @@ class Agent:
             await asyncio.sleep(retry_delay)
             return await self.send_async(
                 client,
-                prompt,
-                system_prompt,
+                retry_prompt,
+                retry_system_prompt,
                 retry=True,
                 retry_count=retry_count + 1,
                 force_json=force_json,
@@ -1606,6 +1604,8 @@ class Agent:
     ) -> Any:
         if system_prompt is None:
             system_prompt = self.system_prompt
+        # Rebuild each retry from unprocessed input so glossary/rules are applied once.
+        retry_system_prompt, retry_prompt = system_prompt, prompt
         if pre_send_handler:
             system_prompt, prompt = pre_send_handler(system_prompt, prompt)
 
@@ -1628,6 +1628,9 @@ class Agent:
 
         try:
             response_data = self._request_completion_sync(client, data, headers)
+
+            # Count this response before a finish_reason branch can return or continue.
+            self.token_counter.add(*self.token_usage_parser.parse(response_data))
 
             # 检查 finish_reason
             choices = response_data.get("choices", [])
@@ -1685,14 +1688,6 @@ class Agent:
                     "返回已获取内容"
                 )
 
-            input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens = (
-                self.token_usage_parser.parse(response_data)
-            )
-
-            self.token_counter.add(
-                input_tokens, cached_tokens, output_tokens, reasoning_tokens, api_total_tokens
-            )
-
             if retry_count > 0:
                 self.logger.info(f"{self._request_label(retry_count)} 重试成功")
 
@@ -1719,6 +1714,9 @@ class Agent:
             )
             current_partial_result = e.partial_result
             should_retry = True
+            if e.append_prompt:
+                prompt += e.append_prompt
+                retry_prompt += e.append_prompt
 
         except httpx.HTTPStatusError as e:
             request_id = e.response.headers.get("x-request-id", "-")
@@ -1813,8 +1811,8 @@ class Agent:
             time.sleep(retry_delay)
             return self.send(
                 client,
-                prompt,
-                system_prompt,
+                retry_prompt,
+                retry_system_prompt,
                 retry=True,
                 retry_count=retry_count + 1,
                 force_json=force_json,

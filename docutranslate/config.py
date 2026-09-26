@@ -143,6 +143,7 @@ GLOSSARY_GENERATE_ENABLE = _get_env_bool("DOCUTRANSLATE_GLOSSARY_GENERATE_ENABLE
 
 # 环境变量是否被实际设置的标记（用于强制覆盖逻辑）
 ENV_SET = {
+    "mineru_deploy_api_key": _is_env_set("DOCUTRANSLATE_MINERU_DEPLOY_API_KEY"),
     "api_key": _is_env_set("DOCUTRANSLATE_API_KEY"),
     "base_url": _is_env_set("DOCUTRANSLATE_BASE_URL"),
     "model_id": _is_env_set("DOCUTRANSLATE_MODEL_ID"),
@@ -171,7 +172,7 @@ ENV_SET = {
 # 环境变量默认值模式（仅影响 Web 前端）
 # ============================================================
 WEB_SKIP_VALIDATION = _get_env_bool("DOCUTRANSLATE_WEB_SKIP_VALIDATION", False)
-# 是否强制使用环境变量的值（仅对 API_KEY, BASE_URL, MODEL_ID, PROVIDER 生效）
+# 是否强制使用已设置的环境变量值（翻译参数及本地 MinerU 服务密钥）
 # 设为 true 时，无论前端是否传参，都强制使用 .env 中的值
 # 设为 false 时，仅当前端传参为空时才使用 .env 中的值
 ENV_FORCE_OVERRIDE = _get_env_bool("DOCUTRANSLATE_ENV_FORCE_OVERRIDE", False)

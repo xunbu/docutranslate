@@ -56,7 +56,7 @@ class AiTranslator(Translator[T]):
         ):
             raise ValueError("skip_translate不为false时，base_url、api_key、model_id为必填项")
 
-        if config.glossary_generate_enable:
+        if not self.skip_translate and config.glossary_generate_enable:
             # 创建术语表进度回调 (20% - 30%)
             def glossary_progress_callback(current: int, total: int):
                 if self.progress_tracker:

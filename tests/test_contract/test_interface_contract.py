@@ -48,6 +48,7 @@ SDK_INHERITED_DEFAULT_FIELDS = {
     "formula_ocr",
     "mineru_language",
     "mineru_deploy_base_url",
+    "mineru_deploy_api_key",
     "mineru_deploy_backend",
     "mineru_deploy_effort",
     "mineru_deploy_parse_method",
@@ -79,8 +80,9 @@ def test_sdk_sync_and_async_signatures_inherit_workflow_defaults():
     async_params = inspect.signature(Client.translate_async).parameters
 
     for field_name in SDK_INHERITED_DEFAULT_FIELDS:
-        assert sync_params[field_name].default is None
-        assert async_params[field_name].default is None
+        expected = sdk_module._UNSET if field_name == "md2docx_engine" else None
+        assert sync_params[field_name].default is expected
+        assert async_params[field_name].default is expected
 
 
 @pytest.mark.asyncio

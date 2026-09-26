@@ -35,7 +35,7 @@ from docutranslate.config import (
     # Additional BaseWorkflowParams defaults
     CUSTOM_PROMPT, FORCE_JSON, RPM, TPM, EXTRA_BODY, GLOSSARY_GENERATE_ENABLE,
     # MarkdownWorkflowParams defaults
-    CONVERT_ENGINE, MD2DOCX_ENGINE, MINERU_TOKEN, MINERU_DEPLOY_BASE_URL,
+    CONVERT_ENGINE, MD2DOCX_ENGINE, MINERU_TOKEN, MINERU_DEPLOY_BASE_URL, MINERU_DEPLOY_API_KEY,
     MODEL_VERSION, FORMULA_OCR, MINERU_LANGUAGE,
     MINERU_DEPLOY_BACKEND, MINERU_DEPLOY_PARSE_METHOD,
     MINERU_DEPLOY_EFFORT, MINERU_DEPLOY_TABLE_ENABLE,
@@ -316,6 +316,7 @@ class UniversalParamsMixin(BaseModel):
 
     # MinerU Deploy 相关 - 设置默认值避免 None 导致的验证错误
     mineru_deploy_base_url: Optional[str] = None
+    mineru_deploy_api_key: Optional[str] = Field(default=None, repr=False)
     mineru_deploy_backend: Optional[Literal[
         "flash", "basic", "standard", "advanced", "pipeline", "vlm-engine", "vlm-http-client",
         "hybrid-engine", "hybrid-http-client",
@@ -398,6 +399,11 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
         description="[仅当 convert_engine='mineru_deploy'] 本地部署的 MinerU 服务地址。",
     )
     # --- UPDATED BACKEND LIST ---
+    mineru_deploy_api_key: Optional[str] = Field(
+        default=None, repr=False,
+        description="[仅当 convert_engine='mineru_deploy'] 可选的服务鉴权密钥；空值回退到环境变量。",
+        json_schema_extra={"writeOnly": True},
+    )
     mineru_deploy_backend: Literal[
         "flash", "basic", "standard", "advanced",
         "pipeline",
@@ -458,6 +464,10 @@ class MarkdownWorkflowParams(BaseWorkflowParams):
                     "当 `convert_engine` 为 'mineru' 时，`mineru_token` 字段是必须的。"
                 )
         if self.convert_engine == "mineru_deploy":
+            if ENV_FORCE_OVERRIDE and ENV_SET.get("mineru_deploy_api_key"):
+                self.mineru_deploy_api_key = MINERU_DEPLOY_API_KEY
+            elif not self.mineru_deploy_api_key:
+                self.mineru_deploy_api_key = MINERU_DEPLOY_API_KEY
             backend_aliases = {
                 "vlm-auto-engine": "vlm-engine",
                 "hybrid-auto-engine": "hybrid-engine",

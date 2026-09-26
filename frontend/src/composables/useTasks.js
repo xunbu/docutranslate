@@ -261,6 +261,7 @@ export function useTasks(settings, glossary, i18n) {
                 basePayload.mineru_language = form.mineru_language;
             } else if (form.convert_engine === 'mineru_deploy') {
                 basePayload.mineru_deploy_base_url = emptyToNull(form.mineru_deploy_base_url);
+                basePayload.mineru_deploy_api_key = emptyToNull(form.mineru_deploy_api_key);
                 basePayload.mineru_deploy_backend = form.mineru_deploy_backend;
                 basePayload.mineru_deploy_effort = form.mineru_deploy_effort;
                 basePayload.mineru_deploy_parse_method = form.mineru_deploy_parse_method;
