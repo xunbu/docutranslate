@@ -313,6 +313,27 @@ def test_cloud_pdf_chunking_uses_current_limit():
     c = cloud.ConverterMineru(cloud.ConverterMineruConfig(mineru_token="token"))
     chunks = c._split_pdf(buffer.getvalue())
     assert [len(PdfReader(io.BytesIO(chunk)).pages) for chunk in chunks] == [200, 1]
+    assert c.max_pages == 200
+    assert c.max_size_mb == 180
+
+
+def test_cloud_pdf_chunking_respects_size_limit():
+    from pypdf import PdfWriter, PdfReader
+    writer = PdfWriter()
+    for _ in range(20):
+        writer.add_blank_page(width=72, height=72)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    content = buffer.getvalue()
+    c = cloud.ConverterMineru(cloud.ConverterMineruConfig(mineru_token="token"))
+    total_mb = len(content) / 1024 / 1024
+    c.max_size_mb = total_mb / 2  # 原文件超出上限，强制走大小分支
+    limit = int(c.max_size_mb * 1024 * 1024)
+    chunks = c._split_pdf(content)
+    pages = [len(PdfReader(io.BytesIO(chunk)).pages) for chunk in chunks]
+    assert len(chunks) > 1
+    assert sum(pages) == 20
+    assert all(len(chunk) <= limit for chunk in chunks)
 
 
 @pytest.mark.parametrize("backend", ["hybrid-auto-engine", "pipeline", "standard", "advanced"])

@@ -6,7 +6,7 @@
 
 SDK 的 `Client.translate/translate_async`、HTTP JSON/表单接口、MCP 和前端继续使用原有 `convert_engine`、`mineru_token`、`model_version`、`mineru_deploy_*` 参数。未移除或改名任何 MinerU 参数，默认后端仍为 `hybrid-engine`，旧的 `*-auto-engine` 别名继续有效。返回的工作流结果、Markdown 图片内联和 ZIP 附件格式保持不变。
 
-- `convert_engine="mineru"`：沿用在线精准解析 API 和原有 Token。PDF 超过 200 页或 200 MB 时仍自动拆分；HTML/HTM 自动选择 `MinerU-HTML`。原有 `pipeline`、`vlm` 可继续使用。未切换到功能和额度不同的免 Token Agent API。
+- `convert_engine="mineru"`：沿用在线精准解析 API 和原有 Token。PDF 超过 200 页或 180 MB 时仍自动拆分（大小上限低于服务端的 200 MB，以留出余量）；HTML/HTM 自动选择 `MinerU-HTML`。原有 `pipeline`、`vlm` 可继续使用。未切换到功能和额度不同的免 Token Agent API。
 - `convert_engine="mineru_deploy"`：保持原有服务根地址（例如 `http://127.0.0.1:8000`，不包含 `/v1`）。先尝试 3.x `/tasks`；仅在 404/405 时检查 `/v1/health` 并执行 4.x 上传、提交、轮询、ZIP 下载。如果 V1 也不存在，沿用 2.x `/file_parse`。鉴权错误、限流、服务错误或已提交任务失败均不会触发重复提交或降级。
 - 如果本地服务启用了 Bearer 鉴权（如 4.x 的 `--api-key`），可在前端“本地服务 API Key”中填写密钥，或通过 SDK、HTTP JSON/文件上传/扁平表单、MCP 的 `mineru_deploy_api_key` 传入。MCP `configure_client` 可保存默认值，`submit_task` 可按任务覆盖，配置查询只显示脱敏值。前端沿用现有配置保存、导入和导出方式。
 - 环境变量 `DOCUTRANSLATE_MINERU_DEPLOY_API_KEY` 提供默认值：参数省略或为空时回退到环境变量，非空参数优先；启用 `DOCUTRANSLATE_ENV_FORCE_OVERRIDE` 且该变量已设置时，强制使用环境变量值。跳过翻译、仅解析时同样生效。环境变量中的密钥不会通过前端默认参数接口回传。

@@ -73,7 +73,7 @@ class ConverterMineru(X2MarkdownConverter):
         self.attachments: list[AttachMent] = []
         self.max_pages = 200  # 每个切片最大页数
         self.task_timeout = max(MINERU_TASK_TIMEOUT, 0.1)
-        self.max_size_mb = 200  # 每个切片最大文件大小 (MB)
+        self.max_size_mb = 180  # 每个切片最大文件大小 (MB)，留出余量以应对服务端按十进制 MB 判定的情况
 
     def _get_header(self):
         return {
@@ -95,7 +95,7 @@ class ConverterMineru(X2MarkdownConverter):
     def _split_pdf(self, content: bytes) -> List[bytes]:
         """
         检查 PDF 页数和文件大小，如果超过限制则进行拆分。
-        每个切片 <= 200页 且 <= 200MB。
+        每个切片 <= 200页 且 <= 180MB。
         返回拆分后的 bytes 列表。如果不超限，返回包含原内容的单元素列表。
         """
         if not HAS_PYPDF:
