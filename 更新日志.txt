@@ -1,6 +1,6 @@
 更新日志
 ----------------
-v1.7.10版 2026.9.26
+v1.7.10版 2026.10.4
 特性：
 - 支持本地 MinerU 4.x V1 接口及 flash、basic、standard、advanced 解析档位，兼容旧版 2.x/3.x 服务
 - 支持本地 MinerU 服务可选鉴权，前端新增密钥输入项，SDK、HTTP、MCP 及工作流支持透传；统一使用 DOCUTRANSLATE_MINERU_DEPLOY_API_KEY 作为环境变量默认值并支持强制覆盖，MCP 配置查询对密钥脱敏
