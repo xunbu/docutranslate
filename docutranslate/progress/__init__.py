@@ -98,10 +98,13 @@ class ProgressTracker:
                 else:
                     self._current_percent = int(((step + 1) / len(self._steps)) * 100) if self._steps else 0
             else:
-                # 递增一步
+                # 递增一步。以前用 `_current_step < len(self._steps)` 作为守卫，
+                # 最后一步永远不会写入百分比（3 步时停在 66%）。
                 self._current_step += 1
-                if self._steps and self._current_step < len(self._steps):
-                    self._current_percent = int(((self._current_step) / len(self._steps)) * 100)
+                if self._steps:
+                    self._current_percent = min(
+                        100, int((self._current_step / len(self._steps)) * 100)
+                    )
 
             self._message = message
 

@@ -90,6 +90,7 @@ export function useTasks(settings, glossary, i18n) {
             if (!confirm(t('confirmRemoveTranslatingTask'))) return;
         }
         task.removed = true;
+        stopPolling(task);
         removeFromPendingQueue(task);
         tasks.value = tasks.value.filter(t => t.uiId !== task.uiId);
         saveActiveTasks();
@@ -110,6 +111,7 @@ export function useTasks(settings, glossary, i18n) {
         saveActiveTasks();
         for (const task of removedTasks) {
             task.removed = true;
+            stopPolling(task);
             task.queuePosition = null;
             task.queueTotal = null;
             releaseBatchSlot(task);
@@ -444,12 +446,19 @@ export function useTasks(settings, glossary, i18n) {
         }
     };
 
+    const stopPolling = (task) => {
+        if (task && task.pollInterval) {
+            clearInterval(task.pollInterval);
+            task.pollInterval = null;
+        }
+    };
+
     const pollStatus = (task) => {
         const polledId = task.backendId;
         let inFlight = false;
         const interval = setInterval(async () => {
             if (!task.isTranslating || task.removed || task.backendId !== polledId) {
-                clearInterval(interval);
+                stopPolling(task);
                 return;
             }
             if (inFlight) return;
@@ -474,7 +483,7 @@ export function useTasks(settings, glossary, i18n) {
                 // Handle 404 (Task not found / Expired)
                 if (!statRes.ok) {
                     if (statRes.status === 404) {
-                        clearInterval(interval);
+                        stopPolling(task);
                         task.isTranslating = false;
                         task.isProcessing = false;
                         task.statusClass = 'text-danger';
@@ -503,7 +512,7 @@ export function useTasks(settings, glossary, i18n) {
                 }
 
                 if (!d.is_processing) {
-                    clearInterval(interval);
+                    stopPolling(task);
                     task.isTranslating = false;
                     task.isFinished = true;
                     task.isProcessing = false;
@@ -523,10 +532,13 @@ export function useTasks(settings, glossary, i18n) {
                 inFlight = false;
             }
         }, 1500);
+        // 记录定时器，删除任务时可以立即停止轮询，而不是再等一个 1.5s 周期。
+        task.pollInterval = interval;
     };
 
     const copyLog = (e, l) => {
-        navigator.clipboard.writeText(l.replace(/<br>/g, '\n')).then(() => {
+        const text = l.replace(/<br>/g, '\n');
+        const markCopied = () => {
             const btn = e.currentTarget;
             const svg = btn.querySelector('svg');
             btn.classList.add('text-success');
@@ -541,7 +553,32 @@ export function useTasks(settings, glossary, i18n) {
                     svg.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />';
                 }
             }, 2000);
-        });
+        };
+
+        // navigator.clipboard 在非安全上下文（局域网 http 访问是本项目的默认用法）
+        // 是 undefined；以前这里会同步抛 TypeError，既不复制也没有任何反馈。
+        const clipboard = navigator.clipboard;
+        if (clipboard && typeof clipboard.writeText === 'function') {
+            Promise.resolve(clipboard.writeText(text)).then(markCopied).catch(() => fallbackCopy(text));
+        } else {
+            fallbackCopy(text);
+        }
+    };
+
+    const fallbackCopy = (text) => {
+        try {
+            const area = document.createElement('textarea');
+            area.value = text;
+            area.setAttribute('readonly', '');
+            area.style.position = 'fixed';
+            area.style.opacity = '0';
+            document.body.appendChild(area);
+            area.select();
+            document.execCommand('copy');
+            document.body.removeChild(area);
+        } catch (err) {
+            console.warn('复制日志失败', err);
+        }
     };
 
     return {

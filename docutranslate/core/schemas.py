@@ -166,7 +166,7 @@ class BaseWorkflowParams(BaseModel):
         default=TO_LANG, description="目标翻译语言。", examples=["简体中文", "English"]
     )
     chunk_size: int = Field(
-        default=CHUNK_SIZE, description="文本分割的块大小（字符）。"
+        default=CHUNK_SIZE, description="文本分割的块大小（UTF-8 字节，不是字符数）。"
     )
     concurrent: int = Field(
         default=CONCURRENT, description="并发请求数。"

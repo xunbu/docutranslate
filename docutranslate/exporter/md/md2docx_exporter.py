@@ -133,8 +133,10 @@ def _process_inline_markdown(paragraph, text: str, images: Dict[int, Dict]):
     patterns = [
         r'(<!--IMG_PLACEHOLDER_\d+-->)',
         r'(`[^`]+`)',
-        r'(!\[[^\]]*\]\([^\)]+\))',
-        r'(\[[^\]]+\]\([^\)]+\))',
+        # URLs may contain balanced parentheses, e.g. .../Foo_(bar); `[^\)]+`
+        # truncated the link and leaked the closing paren into the body text.
+        r'(!\[[^\]]*\]\((?:[^()]|\([^()]*\))*\))',
+        r'(\[[^\]]+\]\((?:[^()]|\([^()]*\))*\))',
         r'(\*\*[^\*]+\*\*)',
         r'(__[^_]+__)',
         r'(\*[^\*]+\*)',
@@ -163,14 +165,14 @@ def _process_inline_markdown(paragraph, text: str, images: Dict[int, Dict]):
             continue
 
         if part.startswith('![') and ']' in part and '(' in part and part.endswith(')'):
-            m = re.match(r'!\[([^\]]*)\]\(([^)]+)\)', part)
+            m = re.match(r'!\[([^\]]*)\]\(((?:[^()]|\([^()]*\))*)\)', part)
             if m:
                 alt = m.group(1)
                 paragraph.add_run(f"[Image: {alt}]").italic = True
             continue
 
         if part.startswith('[') and ']' in part and '(' in part and part.endswith(')'):
-            m = re.match(r'\[([^\]]+)\]\(([^)]+)\)', part)
+            m = re.match(r'\[([^\]]+)\]\(((?:[^()]|\([^()]*\))*)\)', part)
             if m:
                 link_text, link_url = m.group(1), m.group(2)
                 _add_hyperlink(paragraph, link_url, link_text)
@@ -485,7 +487,8 @@ class MD2DocxExporter(Exporter):
         self.logger = config.logger if hasattr(config, 'logger') and config.logger else global_logger
 
     def export(self, document: MarkdownDocument) -> Document:
-        md_content = document.content.decode("utf-8")
+        # utf-8-sig 会吞掉 BOM：否则首行 "\ufeff# 标题" 会退化成普通段落。
+        md_content = document.content.decode("utf-8-sig")
 
         engine = self.engine
         if engine == "auto":

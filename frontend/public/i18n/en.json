@@ -130,6 +130,7 @@
   "taskListTitle": "Task List",
   "clearAllTasksBtn": "Clear All",
   "confirmClearAllTasks": "Are you sure you want to clear all tasks?",
+  "confirmRemoveTranslatingTask": "This task is still translating. Remove it anyway?",
   "newTaskBtn": "New Task",
   "noTaskPlaceholder": "No tasks yet. Click \"New Task\" to get started!",
   "taskCardIdLabel": "Task ID",

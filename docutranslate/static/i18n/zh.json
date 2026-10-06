@@ -130,6 +130,7 @@
   "taskListTitle": "任务列表",
   "clearAllTasksBtn": "清空任务",
   "confirmClearAllTasks": "确定要清空所有任务吗？",
+  "confirmRemoveTranslatingTask": "该任务正在翻译中，确定要移除吗？",
   "newTaskBtn": "新建任务",
   "noTaskPlaceholder": "当前没有任务，点击“新建任务”开始吧！",
   "taskCardIdLabel": "任务 ID",

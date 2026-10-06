@@ -209,7 +209,13 @@ onMounted(async () => {
         console.error("Backend init failed", e);
     }
 
-    loadConfig(defaultParams);
+    // 读取本地配置不能让后续初始化（主题、平台监听、任务恢复）整体失败：
+    // 历史上这里一旦抛错，用户会看到"没有主题、没有设置、在途任务卡全消失"。
+    try {
+        loadConfig(defaultParams);
+    } catch (e) {
+        console.error("Load config failed", e);
+    }
     setupPlatformWatchers();
     setTheme(localStorage.getItem('theme') || 'auto');
 

@@ -56,7 +56,7 @@ from docutranslate.server import (
     get_translation_service,
     MEDIA_TYPES,
 )
-from docutranslate.config import PORT
+from docutranslate.config import PORT, MAX_UPLOAD_MB
 from docutranslate.translator import default_params
 from docutranslate.utils.resource_utils import resource_path
 from docutranslate.utils.utils import mask_secrets
@@ -71,6 +71,51 @@ except ImportError:
 
 # --- Shared Translation Service ---
 translation_service: TranslationService = get_translation_service()
+
+_MAX_UPLOAD_BYTES = int(MAX_UPLOAD_MB * 1024 * 1024) if MAX_UPLOAD_MB and MAX_UPLOAD_MB > 0 else 0
+
+
+def _enforce_upload_limit(size_bytes: int, what: str = "文件") -> None:
+    """单进程内存受限，超过上限直接返回 413 而不是把进程拖到 OOM。"""
+    if _MAX_UPLOAD_BYTES and size_bytes > _MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                f"{what}过大: {size_bytes / 1024 / 1024:.1f}MB 超过上限 "
+                f"{MAX_UPLOAD_MB:.0f}MB（可通过 DOCUTRANSLATE_MAX_UPLOAD_MB 调整）。"
+            ),
+        )
+
+
+class MaxBodySizeMiddleware:
+    """按 Content-Length 拒绝超大请求体（chunked 请求由各端点读取后再判断）。"""
+
+    def __init__(self, app, max_bytes: int = 0):
+        self.app = app
+        self.max_bytes = max_bytes
+
+    async def __call__(self, scope, receive, send):
+        if scope.get("type") == "http" and self.max_bytes > 0:
+            for name, value in scope.get("headers") or []:
+                if name == b"content-length":
+                    try:
+                        length = int(value)
+                    except (TypeError, ValueError):
+                        break
+                    if length > self.max_bytes:
+                        response = JSONResponse(
+                            status_code=413,
+                            content={
+                                "detail": (
+                                    f"请求体过大: {length / 1024 / 1024:.1f}MB 超过上限 "
+                                    f"{MAX_UPLOAD_MB:.0f}MB（可通过 DOCUTRANSLATE_MAX_UPLOAD_MB 调整）。"
+                                )
+                            },
+                        )
+                        await response(scope, receive, send)
+                        return
+                    break
+        await self.app(scope, receive, send)
 
 # --- FastAPI application and router setup ---
 tags_metadata = [
@@ -155,6 +200,8 @@ DocuTranslate 后端服务 API，提供文档翻译、状态查询、结果下�
     version=__version__,
 )
 service_router = APIRouter(prefix="/service", tags=["Service API"])
+if _MAX_UPLOAD_BYTES:
+    app.add_middleware(MaxBodySizeMiddleware, max_bytes=_MAX_UPLOAD_BYTES)
 STATIC_DIR = resource_path("static")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
@@ -321,7 +368,9 @@ async def service_translate(
 
     try:
         # Accept line-wrapped Base64, but reject other ignored characters.
+        _enforce_upload_limit(len(request.file_content) * 3 // 4, "文件内容")
         file_contents = base64.b64decode("".join(request.file_content.split()), validate=True)
+        _enforce_upload_limit(len(file_contents), "文件内容")
     except (binascii.Error, TypeError) as e:
         raise HTTPException(status_code=400, detail=f"无效的Base64文件内容: {mask_secrets(str(e))}")
 
@@ -384,7 +433,11 @@ async def service_translate_file(
     task_id = uuid.uuid4().hex[:8]
 
     try:
+        _enforce_upload_limit(getattr(file, "size", None) or 0)
         file_contents = await file.read()
+        _enforce_upload_limit(len(file_contents))
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"读取上传文件失败: {mask_secrets(str(e))}")
 
@@ -790,9 +843,13 @@ async def service_content(
     filename = file_info["filename"]
 
     try:
-        with open(file_path, "rb") as f:
-            content_bytes = f.read()
-        final_content = base64.b64encode(content_bytes).decode("utf-8")
+        # 读取 + base64 都在事件循环里做会阻塞所有并发请求（状态轮询、日志、
+        # 其他任务的导出），大文件下前端会像卡死一样。
+        def _read_and_encode(path: str) -> str:
+            with open(path, "rb") as f:
+                return base64.b64encode(f.read()).decode("utf-8")
+
+        final_content = await asyncio.to_thread(_read_and_encode, file_path)
         return JSONResponse(
             content={
                 "file_type": file_type,
@@ -938,8 +995,8 @@ async def service_flat_translate(
         separator: str = Form("\n", description="追加/前置时的分隔符"),
         segment_mode: str = Form("line", description="[Txt专用] 分段模式: line(按行), paragraph(按段), none(全文)"),
         translate_regions: Optional[List[str]] = Form(None, description="[Xlsx专用] 翻译区域列表, 如 'Sheet1!A1:B10'"),
-        convert_engine: Optional[ConvertEngineType] = Form("mineru",
-                                                           description="[PDF/MD] 解析引擎: mineru, identity,mineru_deploy"),
+        convert_engine: Optional[ConvertEngineType] = Form(None,
+                                                           description="[PDF/MD] 解析引擎: mineru, identity,mineru_deploy。留空时按文件后缀自动选择。"),
         mineru_token: Optional[str] = Form("", description="[MinerU Cloud] API Token"),
         model_version: str = Form("vlm", description="[MinerU Cloud] 模型版本: vlm, pipeline, MinerU-HTML"),
         mineru_language: str = Form("ch", description="[MinerU Cloud] 识别语言: ch, ch_server, en, japan, korean, chinese_cht, ta, te, ka, el, th, latin, arabic, cyrillic, east_slavic, devanagari"),
@@ -968,8 +1025,12 @@ async def service_flat_translate(
     task_id = uuid.uuid4().hex[:8]
 
     try:
+        _enforce_upload_limit(getattr(file, "size", None) or 0)
         file_contents = await file.read()
+        _enforce_upload_limit(len(file_contents))
         original_filename = file.filename or "uploaded_file"
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"文件读取失败: {mask_secrets(str(e))}")
 
@@ -1070,6 +1131,9 @@ async def service_flat_translate(
             file_contents=file_contents,
             original_filename=original_filename
         )
+    except HTTPException:
+        # 保留 start_translation 抛出的 400/429 等语义，避免客户端错误被改写为 500。
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"内部翻译错误: {mask_secrets(str(e))}")
 
@@ -1092,6 +1156,16 @@ async def service_flat_translate(
         await task
 
     task_state = translation_service.get_task_state(task_id)
+
+    if not task_state:
+        # 任务可能已被并发请求 /release 释放。
+        raise HTTPException(status_code=410, detail=f"任务 '{task_id}' 已被释放，无法获取结果。")
+
+    if task_state.get("cancelled"):
+        raise HTTPException(
+            status_code=409,
+            detail=f"翻译任务已取消: {task_state.get('status_message', '')}",
+        )
 
     if task_state.get("error_flag"):
         error_msg = task_state.get("status_message", "未知错误")

@@ -6,7 +6,8 @@
   "scripts": {
     "test": "node --test src/composables/*.test.js",
     "dev": "vite",
-    "build": "vite build",
+    "clean:static": "node -e \"require('node:fs').rmSync('../docutranslate/static/assets',{recursive:true,force:true})\"",
+    "build": "npm run clean:static && vite build",
     "preview": "vite preview"
   },
   "browserslist": [

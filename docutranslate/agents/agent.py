@@ -316,6 +316,16 @@ class TotalErrorCounter:
     def reach_limit(self):
         return self.count > self.max_errors_count
 
+    def reset(self):
+        """Reset the per-batch error budget.
+
+        The counter is owned by the Agent instance, so without an explicit
+        reset every later batch inherits the previous batch's errors and stops
+        retrying almost immediately.
+        """
+        with self.lock:
+            self.count = 0
+
 
 # --- 新增 RateLimiter 类 ---
 class RateLimiter:
@@ -1001,9 +1011,31 @@ class Agent:
 
         except (httpx.HTTPStatusError, httpx.RequestError, KeyError, IndexError, ValueError) as e:
             self.logger.error(f"继续获取内容失败: {repr(e)}")
-            # 退化：返回已获取的部分结果，而不是报错
+            # 续写请求同样要享受重试策略：以前这里直接吞掉异常并把【被截断】的
+            # 结果当成功返回，导致缺失分片被回填原文且用户无从察觉。
+            if retry_count < self.retry:
+                retry_delay = 0.5 * (2 ** retry_count)
+                self.logger.info(
+                    f"{self._request_label(retry_count)} 续写请求将在 {retry_delay:.1f}s 后重试"
+                )
+                await asyncio.sleep(retry_delay)
+                return await self._continue_fetch_async(
+                    client=client,
+                    prompt=prompt,
+                    system_prompt=system_prompt,
+                    force_json=force_json,
+                    pre_send_handler=pre_send_handler,
+                    result_handler=result_handler,
+                    error_result_handler=error_result_handler,
+                    retry_count=retry_count + 1,
+                    accumulated_result=accumulated_result,
+                    continue_count=continue_count,
+                )
+            # 重试耗尽：退化返回已获取的部分结果，而不是报错
             if accumulated_result:
-                self.logger.warning(f"API不支持继续获取，返回已获取的部分结果 ({len(accumulated_result)} 字符)")
+                self.logger.warning(
+                    f"续写请求重试耗尽，返回已获取的部分结果 ({len(accumulated_result)} 字符)"
+                )
                 # 即使是部分结果，也尝试清理一下
                 accumulated_result = self._sanitize_result(accumulated_result)
                 return (
@@ -1083,10 +1115,12 @@ class Agent:
                     f"{self._request_label(retry_count)} 响应因长度限制被截断，尝试继续获取"
                 )
                 # 注意：这里传入原始result，清理工作在 _continue_fetch_async 最终返回时统一处理
+                # 传入【未经过 pre_send_handler】的原始 prompt/system_prompt：续写路径会
+                # 再应用一次处理器，若这里传已加工的版本，术语表与规则会被注入两次。
                 return await self._continue_fetch_async(
                     client=client,
-                    prompt=prompt,
-                    system_prompt=system_prompt,
+                    prompt=retry_prompt,
+                    system_prompt=retry_system_prompt,
                     force_json=force_json,
                     pre_send_handler=pre_send_handler,
                     result_handler=result_handler,
@@ -1302,9 +1336,19 @@ class Agent:
         )
         self.logger.info(f"预计发送{total}个请求")
 
-        self.total_error_counter.max_errors_count = (
-                len(prompts) // MAX_REQUESTS_PER_ERROR
-        )
+        # 每个批次重新开始错误预算：计数器由 Agent 实例持有，若不重置，
+        # 复用同一实例处理多份文档时上一批的错误会提前耗尽本批额度，
+        # 导致后续批次完全不再重试。
+        self.total_error_counter.reset()
+        # 熔断阈值只用于识别“上游整体不可用”，不能用来限制少分片文档的重试：
+        # 旧的 len(prompts) // MAX_REQUESTS_PER_ERROR 对 <15 个分片的批次恒为 0，
+        # 遇到一次 5xx/429/超时就直接放弃重试并把原文当译文返回。
+        # 现在：小批量不做全局熔断（每个分片都用满自己的 retry 次数）；
+        # 大批量下超过一半分片失败才停止后续重试，避免把请求量放大到 N×(retry+1)。
+        if len(prompts) < MAX_REQUESTS_PER_ERROR:
+            self.total_error_counter.max_errors_count = len(prompts)
+        else:
+            self.total_error_counter.max_errors_count = max(1, len(prompts) // 2)
 
         self.unresolved_error_count = 0
         self.token_counter.reset()
@@ -1574,9 +1618,30 @@ class Agent:
 
         except (httpx.HTTPStatusError, httpx.RequestError, KeyError, IndexError, ValueError) as e:
             self.logger.error(f"继续获取内容失败: {repr(e)}")
-            # 退化：返回已获取的部分结果，而不是报错
+            # 与异步实现保持一致：续写请求也要重试，而不是把截断结果当成功返回。
+            if retry_count < self.retry:
+                retry_delay = 0.5 * (2 ** retry_count)
+                self.logger.info(
+                    f"{self._request_label(retry_count)} 续写请求将在 {retry_delay:.1f}s 后重试"
+                )
+                time.sleep(retry_delay)
+                return self._continue_fetch(
+                    client=client,
+                    prompt=prompt,
+                    system_prompt=system_prompt,
+                    force_json=force_json,
+                    pre_send_handler=pre_send_handler,
+                    result_handler=result_handler,
+                    error_result_handler=error_result_handler,
+                    retry_count=retry_count + 1,
+                    accumulated_result=accumulated_result,
+                    continue_count=continue_count,
+                )
+            # 重试耗尽：退化返回已获取的部分结果，而不是报错
             if accumulated_result:
-                self.logger.warning(f"API不支持继续获取，返回已获取的部分结果 ({len(accumulated_result)} 字符)")
+                self.logger.warning(
+                    f"续写请求重试耗尽，返回已获取的部分结果 ({len(accumulated_result)} 字符)"
+                )
                 accumulated_result = self._sanitize_result(accumulated_result)
                 return (
                     accumulated_result
@@ -1650,10 +1715,11 @@ class Agent:
                     f"{self._request_label(retry_count)} 响应因长度限制被截断，尝试继续获取"
                 )
                 # 注意：这里传入原始result，清理工作在 _continue_fetch 最终返回时统一处理
+                # 传入未加工的 prompt/system_prompt，避免 pre_send_handler 被应用两次。
                 return self._continue_fetch(
                     client=client,
-                    prompt=prompt,
-                    system_prompt=system_prompt,
+                    prompt=retry_prompt,
+                    system_prompt=retry_system_prompt,
                     force_json=force_json,
                     pre_send_handler=pre_send_handler,
                     result_handler=result_handler,

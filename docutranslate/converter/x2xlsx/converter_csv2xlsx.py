@@ -18,9 +18,11 @@ from docutranslate.ir.document import Document
 # logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 @dataclass(kw_only=True)
 class ConverterCsv2XlsxConfig(X2XlsxConverterConfig):
+    # 显式指定源文件编码；留空时按 utf-8 → 自动检测 的顺序尝试。
+    encoding: str | None = None
 
     def gethash(self) -> Hashable:
-        return "1"
+        return f"1:{self.encoding or 'auto'}"
 
 
 class ConverterCsv2Xlsx(X2XlsxConverter):
@@ -44,19 +46,41 @@ class ConverterCsv2Xlsx(X2XlsxConverter):
         self.logger.info(f"开始转换文件 {document.name} (大小: {len(document.content)} bytes)")
 
         try:
-            # --- 1. 自动检测文件编码 ---
-            # 为提高性能，只取文件头部一部分进行检测
-            detection_result = charset_normalizer.detect(document.content[:4096])
-            encoding = detection_result['encoding'] or 'utf-8'  # 提供一个默认值
-            confidence = detection_result['confidence']
-            self.logger.info(f"检测到文件编码为: {encoding} (置信度: {confidence:.2%})")
-
-            # --- 2. 解码并创建文本流 ---
-            try:
-                decoded_content = document.content.decode(encoding)
-            except UnicodeDecodeError:
-                self.logger.warning(f"使用检测到的编码 '{encoding}' 解码失败，尝试使用 'utf-8'。")
-                decoded_content = document.content.decode('utf-8', errors='replace')
+            # --- 1. 解码源文件 ---
+            # 先按调用方声明的编码，再尝试严格的 utf-8（含 BOM），最后才用检测结果。
+            # 之前只取前 4096 字节做 detect()，小文件常被误判成 Big5/CP949 且不报错，
+            # 结果整张表变成乱码。
+            declared_encoding = getattr(self.config, "encoding", None)
+            decoded_content = None
+            encoding = None
+            if declared_encoding:
+                try:
+                    decoded_content = document.content.decode(declared_encoding)
+                    encoding = declared_encoding
+                except (UnicodeDecodeError, LookupError) as exc:
+                    self.logger.warning(
+                        "使用指定编码 %s 解码失败(%s)，改用自动检测。", declared_encoding, exc
+                    )
+            if decoded_content is None:
+                try:
+                    decoded_content = document.content.decode("utf-8-sig")
+                    encoding = "utf-8-sig"
+                except UnicodeDecodeError:
+                    decoded_content = None
+            if decoded_content is None:
+                best = charset_normalizer.from_bytes(document.content).best()
+                candidate = best.encoding if best is not None else None
+                if candidate:
+                    try:
+                        decoded_content = document.content.decode(candidate)
+                        encoding = candidate
+                    except (UnicodeDecodeError, LookupError):
+                        decoded_content = None
+                if decoded_content is None:
+                    self.logger.warning("无法确定 CSV 编码，将按 utf-8 替换非法字节。")
+                    decoded_content = document.content.decode("utf-8", errors="replace")
+                    encoding = "utf-8 (replace)"
+            self.logger.info(f"使用编码 {encoding} 读取 CSV")
 
             csv_text_stream = StringIO(decoded_content)
 

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 from dataclasses import dataclass
 
+import html
 import jinja2
 
 from docutranslate.exporter.base import ExporterConfig
@@ -26,7 +27,8 @@ class TXT2HTMLExporter(TXTExporter):
         html_template = resource_path("template/txt.html").read_text(encoding="utf-8")
 
         # language=html
-        body=document.content.decode()
+        # 转义正文：否则 `5 < 6 & a > b` 会破坏标记，文档里的 </pre><script> 会真的执行。
+        body = html.escape(document.content.decode("utf-8-sig"))
         render = jinja2.Template(html_template).render(
             title=document.stem,
             body=body,

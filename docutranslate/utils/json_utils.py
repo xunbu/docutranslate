@@ -11,6 +11,39 @@ def get_json_size(js: dict) -> int:
     return len(json.dumps(js, ensure_ascii=False).encode('utf-8'))
 
 
+# 估算块大小时使用的保守键：真实键是 str(index)（通常 1-5 个字符），
+# 用固定 8 字符的键估算可以保证实际生成的块不会比估算值更大。
+_SIZE_ESTIMATE_KEY = "00000000"
+
+
+def _split_oversized_line(line: str, key_hint: str, chunk_size_max: int,
+                          sub_segments: list) -> None:
+    """把超过 chunk_size 的单行继续按字符切分。
+
+    以前单行超限时会被整体保留，导致单元请求远超 chunk_size（例如 10000 字符
+    的单行会发出 ~10KB 的请求），既可能超出上下文也影响翻译质量。
+    """
+    remaining = line
+    while remaining and get_json_size({_SIZE_ESTIMATE_KEY: remaining}) > chunk_size_max:
+        low, high = 1, len(remaining)
+        best = 0
+        while low <= high:
+            mid = (low + high) // 2
+            if get_json_size({_SIZE_ESTIMATE_KEY: remaining[:mid]}) <= chunk_size_max:
+                best = mid
+                low = mid + 1
+            else:
+                high = mid - 1
+        if best <= 0:
+            # chunk_size 小到连一个字符都放不下：整块发出，避免死循环
+            sub_segments.append(remaining)
+            return
+        sub_segments.append(remaining[:best])
+        remaining = remaining[best:]
+    if remaining:
+        sub_segments.append(remaining)
+
+
 def segments2json_chunks(segments: list[str], chunk_size_max: int) -> tuple[dict[str, str],
 list[dict[str, str]], list[tuple[int, int]]]:
     """
@@ -24,8 +57,8 @@ list[dict[str, str]], list[tuple[int, int]]]:
 
     for segment in segments:
         # 检查单个segment（作为一个JSON对象的值）是否已超限
-        # 使用一个较长的key来预估，避免key长度变化带来的误差
-        long_key_estimate = str(len(segments) + len(new_segments))
+        # 使用保守的长键估算，避免键长度变化带来的误差
+        long_key_estimate = _SIZE_ESTIMATE_KEY
         if get_json_size({long_key_estimate: segment}) > chunk_size_max:
             sub_segments = []
             lines = segment.splitlines(keepends=True)
@@ -37,8 +70,11 @@ list[dict[str, str]], list[tuple[int, int]]]:
                     if current_sub_segment:
                         sub_segments.append(current_sub_segment)
 
-                    # 即使单行超限，也必须作为一个独立的子段添加
-                    sub_segments.append(line)
+                    # 单行自身超限时必须继续切分，否则会发出远超 chunk_size 的请求
+                    if line and get_json_size({long_key_estimate: line}) > chunk_size_max:
+                        _split_oversized_line(line, long_key_estimate, chunk_size_max, sub_segments)
+                    else:
+                        sub_segments.append(line)
                     current_sub_segment = ""
                 else:
                     current_sub_segment = next_sub_segment

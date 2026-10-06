@@ -63,6 +63,9 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+markers = [
+    "integration: 需要真实外部服务（LLM/MinerU）的测试，默认不随单元测试运行",
+]
 addopts = "-v --cov=docutranslate --cov-report=term --cov-report=html:htmlcov"
 env = [
     "DOCUTRANSLATE_BASE_URL=https://api.openai.com/v1",

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 from dataclasses import dataclass
 
+import html
 import jinja2
 
 import srt
@@ -24,10 +25,11 @@ class Srt2HTMLExporter(SrtExporter):
 
     def export(self, document: Document) -> Document:
         cdn = self.cdn
-        srt_string=document.content.decode("utf-8")
+        srt_string = document.content.decode("utf-8-sig")
         subs = list(srt.parse(srt_string))
         for sub in subs:
-            sub.content = sub.content.replace('\n', '<br>')
+            # 先转义再插入 <br>：字幕文本里的 `<`/`&` 以前会被当成 HTML 解析。
+            sub.content = html.escape(sub.content).replace('\n', '<br>')
 
         html_template = resource_path("template/srt.html").read_text(encoding="utf-8")
 

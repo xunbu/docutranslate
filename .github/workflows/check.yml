@@ -22,7 +22,9 @@ jobs:
       - name: Install locked dependencies
         run: uv sync --locked --group dev --extra mcp
       - name: Run Python tests
-        run: uv run --no-sync pytest tests -o addopts= -q --tb=short
+        run: |
+          uv run --no-sync pytest tests -o addopts= -q --tb=short \
+            --cov=docutranslate --cov-report=term --cov-fail-under=55
 
   frontend:
     runs-on: ubuntu-latest
@@ -42,3 +44,12 @@ jobs:
       - name: Build frontend
         run: npm run build
         working-directory: frontend
+      - name: Verify committed static assets match the frontend sources
+        # 随包静态资源是提交进仓库的：重建后工作区必须干净（含新增文件），
+        # 否则说明有人改了前端源码却没提交构建产物。
+        run: |
+          if [ -n "$(git status --porcelain -- docutranslate/static)" ]; then
+            git status --porcelain -- docutranslate/static
+            echo "docutranslate/static 与前端源码不一致：请在 frontend/ 运行 npm run build 并提交结果。" >&2
+            exit 1
+          fi

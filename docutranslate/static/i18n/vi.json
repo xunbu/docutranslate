@@ -130,6 +130,7 @@
   "taskListTitle": "Danh sách tác vụ",
   "clearAllTasksBtn": "Xóa tất cả",
   "confirmClearAllTasks": "Bạn có chắc chắn muốn xóa tất cả tác vụ không?",
+  "confirmRemoveTranslatingTask": "Tác vụ này đang dịch. Bạn vẫn muốn xóa chứ?",
   "newTaskBtn": "Tác vụ mới",
   "noTaskPlaceholder": "Chưa có tác vụ nào. Nhấn \"Tác vụ mới\" để bắt đầu!",
   "taskCardIdLabel": "ID Tác vụ",

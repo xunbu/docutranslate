@@ -69,18 +69,21 @@ uv run pytest tests/ -v --cov=docutranslate --cov-report=term --cov-report=html:
 覆盖率报告将生成在 `htmlcov/` 目录下，打开 `htmlcov/index.html` 查看详细报告。
 
 ### 覆盖率要求
-- 核心模块测试覆盖率达到 80% 以上
+- CI 门禁：全项目行覆盖率不低于 55%（`check.yml` 中 `--cov-fail-under=55`）。
+  当前实测约 60%，核心模块（转换、工作流、缓存、加密、SDK 契约）明显更高；
+  不要用单个总数推断“没有潜在问题”。
 
 ## 目录结构
 
 ```
 tests/
 ├── conftest.py          # 全局fixture配置
+├── test_agents/         # LLM Agent（重试预算、续写、用量统计）
 ├── test_utils/          # 通用工具函数测试
 ├── test_cacher/         # 缓存模块测试
 ├── test_context/        # 上下文处理模块测试
+├── test_contract/       # 接口契约与可用性回归
 ├── test_converter/      # 格式转换模块测试
-├── test_core/           # 核心业务层测试
 ├── test_exporter/       # 导出模块测试
 ├── test_global_values/  # 全局配置模块测试
 ├── test_glossary/       # 术语表模块测试
@@ -88,11 +91,13 @@ tests/
 ├── test_logger/         # 日志模块测试
 ├── test_translator/     # 翻译器模块测试
 ├── test_workflow/       # 工作流模块测试
-├── test_sdk.py          # SDK接口测试
-├── test_cli.py          # 命令行工具测试
-├── test_data/           # 测试数据文件
+├── test_data/           # 测试数据文件（被 .gitignore 忽略）
 └── README.md            # 测试文档
 ```
+
+> 说明：`tests/` 下的测试代码全部纳入版本控制；只有 `tests/resource/` 与
+> `tests/test_data/` 被忽略。此前 `.gitignore` 用白名单只放行了部分文件，
+> 导致 8 个本地能通过的测试模块从没在 CI 里跑过。
 
 ## 测试编写规范
 
@@ -121,6 +126,11 @@ export DOCUTRANSLATE_API_KEY=xxx
 export DOCUTRANSLATE_MODEL_ID=xxx
 export DOCUTRANSLATE_MINERU_TOKEN=xxx
 
-# 运行集成测试
+# 运行集成测试（marker 已在 pyproject.toml 注册；当前仓库尚无 integration 用例）
 uv run pytest tests/ -v -m integration
 ```
+
+注意：默认的 `pytest` 会带上 `pyproject.toml` 里的 `addopts`（含覆盖率）。
+在事件循环/临时目录受限的环境里，可加 `-o addopts= --basetemp=<可写目录>`。
+若看到 `PermissionError: ... pytest-of-<user>`，说明系统临时目录不可访问，
+不是测试失败。

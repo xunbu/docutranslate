@@ -31,6 +31,7 @@ from pydantic import TypeAdapter
 
 from docutranslate import __version__
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig
+from docutranslate.config import TASK_MAX_COUNT, TEMP_CLEANUP_AGE_HOURS
 from docutranslate.core.schemas import TranslatePayload
 from docutranslate.core.file_types import PARSER_INPUT_SUFFIXES
 from docutranslate.utils.utils import mask_secrets
@@ -223,6 +224,7 @@ def _create_default_task_state() -> Dict[str, Any]:
         "is_processing": False,
         "status_message": "空闲",
         "error_flag": False,
+        "cancelled": False,
         "download_ready": False,
         "progress_percent": 0,
         "workflow_instance": None,
@@ -236,6 +238,41 @@ def _create_default_task_state() -> Dict[str, Any]:
         "attachment_files": {},
         "statistics": None,  # 翻译完成后填充
     }
+
+
+def _write_bytes(path: str, data: bytes) -> None:
+    """同步写盘，供 asyncio.to_thread 调用，避免大文件导出阻塞事件循环。"""
+    with open(path, "wb") as f:
+        f.write(data)
+
+
+def cleanup_stale_temp_dirs(max_age_hours: float = TEMP_CLEANUP_AGE_HOURS) -> int:
+    """清理上一次进程异常退出后残留的 docutranslate_* 临时目录。
+
+    只删除早于 ``max_age_hours`` 的目录，这样同时运行的其他实例（不同端口）
+    不会互相删除正在使用的输出。
+    """
+    if max_age_hours is None or max_age_hours <= 0:
+        return 0
+    base_dir = tempfile.gettempdir()
+    cutoff = time.time() - max_age_hours * 3600
+    removed = 0
+    try:
+        entries = list(os.scandir(base_dir))
+    except OSError:
+        return 0
+    for entry in entries:
+        if not entry.name.startswith("docutranslate_"):
+            continue
+        try:
+            if entry.is_dir() and entry.stat().st_mtime < cutoff:
+                shutil.rmtree(entry.path, ignore_errors=True)
+                removed += 1
+        except OSError:
+            continue
+    if removed:
+        global_logger.info("已清理 %d 个残留的临时目录", removed)
+    return removed
 
 
 class TranslationService:
@@ -255,8 +292,9 @@ class TranslationService:
         # HTTP client for CDN checks
         self.httpx_client: Optional[httpx.AsyncClient] = None
 
-        # Lock for thread-safe operations
-        self._lock = asyncio.Lock()
+        # 说明：任务状态在所有协程里都是单线程事件循环串行访问的（没有 await 的
+        # 临界区不会被抢占），因此不需要额外锁；此前这里声明过一个从未使用的
+        # _lock，容易让人误以为状态访问已被保护，已删除。
 
         # Reference to main event loop (set by application)
         self.main_event_loop: Optional[asyncio.AbstractEventLoop] = None
@@ -271,6 +309,37 @@ class TranslationService:
         self.tasks_state.clear()
         self.tasks_log_queues.clear()
         self.tasks_log_histories.clear()
+        # 上一次进程被强杀时不会执行清理，这里按年龄清理残留的临时目录。
+        cleanup_stale_temp_dirs()
+
+    def _evict_finished_tasks(self) -> None:
+        """把内存中的任务记录限制在上限内（长时间运行/批量调用）。
+
+        只淘汰已经结束的任务，并删除它们的临时目录；正在处理的任务不会被淘汰。
+        """
+        if TASK_MAX_COUNT <= 0 or len(self.tasks_state) <= TASK_MAX_COUNT:
+            return
+        candidates = sorted(
+            (
+                task_id
+                for task_id, state in self.tasks_state.items()
+                if not state.get("is_processing")
+            ),
+            key=lambda task_id: self.tasks_state[task_id].get("task_start_time") or 0,
+        )
+        for task_id in candidates:
+            if len(self.tasks_state) <= TASK_MAX_COUNT:
+                break
+            state = self.tasks_state.get(task_id)
+            if state is None or state.get("is_processing"):
+                continue
+            temp_dir = state.get("temp_dir")
+            if temp_dir and os.path.isdir(temp_dir):
+                shutil.rmtree(temp_dir, ignore_errors=True)
+            self.tasks_state.pop(task_id, None)
+            self.tasks_log_queues.pop(task_id, None)
+            self.tasks_log_histories.pop(task_id, None)
+            global_logger.info("[%s] 任务记录超出上限，已淘汰并清理临时目录", task_id)
 
     def list_tasks(self) -> List[str]:
         """List all task IDs."""
@@ -467,6 +536,7 @@ class TranslationService:
                 "is_processing": True,
                 "status_message": "任务初始化中...",
                 "error_flag": False,
+                "cancelled": False,
                 "download_ready": False,
                 "workflow_instance": None,
                 "original_filename_stem": safe_stem,
@@ -499,6 +569,8 @@ class TranslationService:
                 self._perform_translation(task_id, payload, file_contents, original_filename)
             )
             task_state["current_task_ref"] = task
+            # 批量/长跑场景下限制内存中的任务记录数量（新任务不会被淘汰）。
+            self._evict_finished_tasks()
             return {
                 "task_started": True,
                 "task_id": task_id,
@@ -560,13 +632,13 @@ class TranslationService:
         )
 
         temp_dir = None
+        # 提前绑定：异常/取消分支会读取它，之前只靠 except Exception: pass 兜住未绑定。
+        workflow: Workflow | None = None
 
         try:
             workflow_class = WORKFLOW_DICT.get(payload.workflow_type)
             if not workflow_class:
                 raise ValueError(f"不支持的工作流类型: '{payload.workflow_type}'")
-
-            workflow: Workflow
 
             def build_glossary_agent_config():
                 if payload.glossary_generate_enable and payload.glossary_agent_config:
@@ -622,8 +694,7 @@ class TranslationService:
                     content = await asyncio.to_thread(export_func)
                     content_bytes = content.encode("utf-8") if is_string_output else content
                     file_path = os.path.join(temp_dir, filename)
-                    with open(file_path, "wb") as f:
-                        f.write(content_bytes)
+                    await asyncio.to_thread(_write_bytes, file_path, content_bytes)
                     downloadable_files[file_type] = {
                         "path": file_path,
                         "filename": filename,
@@ -647,8 +718,7 @@ class TranslationService:
                     try:
                         attachment_filename = f"{doc.stem or identifier}{doc.suffix}"
                         attachment_path = os.path.join(temp_dir, attachment_filename)
-                        with open(attachment_path, "wb") as f:
-                            f.write(doc.content)
+                        await asyncio.to_thread(_write_bytes, attachment_path, doc.content)
                         attachment_files[identifier] = {
                             "path": attachment_path,
                             "filename": attachment_filename,
@@ -696,13 +766,25 @@ class TranslationService:
                     statistics = workflow.get_statistics()
             except Exception:
                 pass
+            # 取消不是错误，但必须和完成区分开：进度不能停在 100%，
+            # 并且要立刻清掉临时目录（否则只有显式 /release 才会删除）。
+            if temp_dir and os.path.isdir(temp_dir):
+                try:
+                    shutil.rmtree(temp_dir)
+                    task_logger.info("任务已取消，临时目录已清理")
+                except Exception as cleanup_error:
+                    task_logger.warning(f"取消后清理临时目录失败: {cleanup_error}")
+                task_state["temp_dir"] = None
+                temp_dir = None
             task_state.update(
                 {
                     "status_message": f"翻译任务已取消 (用时 {duration:.2f} 秒).",
                     "error_flag": False,
+                    "cancelled": True,
                     "download_ready": False,
-                    "progress_percent": 100,
                     "task_end_time": end_time,
+                    "downloadable_files": {},
+                    "attachment_files": {},
                     "statistics": statistics,
                 }
             )
@@ -723,7 +805,6 @@ class TranslationService:
                     "status_message": f"翻译过程中发生错误 (用时 {duration:.2f} 秒): {mask_secrets(str(e))}",
                     "error_flag": True,
                     "download_ready": False,
-                    "progress_percent": 100,
                     "task_end_time": end_time,
                     "statistics": statistics,
                 }

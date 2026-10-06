@@ -71,7 +71,9 @@ def uris2placeholder(markdown: str, mask_dict: MaskDict):
         global_logger.debug("生成图片占位符: ph-%s", id)
         return f"<ph-{id}>"
 
-    uri_pattern = r'(!\[.*?\])\((.*?)\)'
+    # 平衡括号：`(.*?)` 会在 URL 里第一个 `)` 处截断（例如 .../Foo_(bar).png），
+    # 把 `.png)` 之类的片段当作正文交给模型，且还原时无法修复。
+    uri_pattern = r'!\[(?:[^\[\]]|\[[^\[\]]*\])*\]\((?:[^()]|\([^()]*\))*\)'
     markdown = re.sub(uri_pattern, uri2placeholder, markdown)
     return markdown
 
@@ -160,13 +162,25 @@ def embed_inline_image_from_zip(zip_bytes: bytes, filename_in_zip: str | None = 
         global_logger.debug("正在读取 ZIP 内文件: %s", target_md_filename)
         md_content_bytes = archive.read(target_md_filename)
 
-        # 自动检测编码，解码时忽略无法解码的字节
-        result = charset_normalizer.from_bytes(md_content_bytes).best()
-        if result is not None:
-            detected_encoding = result.encoding
-        else:
-            detected_encoding = encoding
-        md_content_text = md_content_bytes.decode(detected_encoding, errors='ignore')
+        # 先按调用方声明的编码严格解码（该参数此前只在检测失败时才会用到），
+        # 失败后再回退到 charset_normalizer；不再用 errors='ignore' 静默丢字节或产生乱码。
+        md_content_text = None
+        if encoding:
+            try:
+                md_content_text = md_content_bytes.decode(encoding)
+                detected_encoding = encoding
+            except (UnicodeDecodeError, LookupError):
+                md_content_text = None
+        if md_content_text is None:
+            result = charset_normalizer.from_bytes(md_content_bytes).best()
+            detected_encoding = result.encoding if result is not None else "utf-8"
+            try:
+                md_content_text = md_content_bytes.decode(detected_encoding)
+            except (UnicodeDecodeError, LookupError):
+                global_logger.warning(
+                    "ZIP 内 Markdown 无法用检测到的编码 %s 解码，将替换非法字节", detected_encoding
+                )
+                md_content_text = md_content_bytes.decode("utf-8", errors="replace")
         global_logger.debug("Markdown 解码完成: encoding=%s", detected_encoding)
         # 获取Markdown文件在ZIP包内的基本目录
         base_md_path_in_zip = os.path.dirname(target_md_filename)
@@ -283,7 +297,9 @@ def unembed_base64_images_to_zip(markdown: str, markdown_name: str, image_folder
 
         modified_md_content = re.sub(pattern, unembed_base64_images, markdown)
 
-        with open(os.path.join(temp_dir, f"{markdown_name}"), "w", encoding="utf-8") as f:
+        # newline="" 防止 Windows 文本模式把 LF 改写成 CRLF：导出的 ZIP 里应
+        # 保留用户原始文档的换行，重新导入也才能保持恒等。
+        with open(os.path.join(temp_dir, f"{markdown_name}"), "w", encoding="utf-8", newline="") as f:
             f.write(modified_md_content)
 
         zip_buffer = io.BytesIO()
@@ -293,6 +309,30 @@ def unembed_base64_images_to_zip(markdown: str, markdown_name: str, image_folder
                 if file.is_file():
                     zipf.write(file, file.relative_to(folder_path))
     return zip_buffer.getvalue()
+
+# 代码区域：围栏代码块（``` / ~~~）与行内代码（`...`）。
+# 公式与空行整理绝不能改写到这些区域里：shell 的 `echo $$`（PID）、Makefile、
+# LaTeX 示例里的 `$$` 都只是普通文本，被当成公式边界会劈开代码。
+_CODE_SEGMENT_PATTERN = re.compile(
+    r'(?P<fenced>^[ \t]*(?:```|~~~)[^\n]*\n[\s\S]*?^[ \t]*(?:```|~~~)[ \t]*$)'
+    r'|(?P<inline>`+[^`\n]*`+)',
+    re.MULTILINE,
+)
+
+
+def _transform_outside_code(text: str, transform) -> str:
+    """对非代码区域应用 transform，代码区域原样保留。"""
+    if not text:
+        return text
+    parts = []
+    last_end = 0
+    for match in _CODE_SEGMENT_PATTERN.finditer(text):
+        parts.append(transform(text[last_end:match.start()]))
+        parts.append(match.group(0))
+        last_end = match.end()
+    parts.append(transform(text[last_end:]))
+    return "".join(parts)
+
 
 def format_markdown_latex(markdown_text: str) -> str:
     """
@@ -304,20 +344,26 @@ def format_markdown_latex(markdown_text: str) -> str:
     同时，专门处理HTML表格内部的公式，将 $...$ 转换为 \\(...\\)，
     这样markdown解析器就能正确地解析它们了。
 
+    代码块与行内代码不参与上述改写（见 _CODE_SEGMENT_PATTERN）。
+
     Args:
         markdown_text: 包含LaTeX公式的原始Markdown字符串。
 
     Returns:
         格式化后的Markdown字符串。
     """
-    # 1. 专门处理HTML表格内部的公式
-    processed = re.sub(r'(<table[\s\S]*?</table>)', process_table_formulas, markdown_text)
+    def format_prose(segment: str) -> str:
+        if not segment:
+            return segment
+        # 1. 专门处理HTML表格内部的公式
+        segment = re.sub(r'(<table[\s\S]*?</table>)', process_table_formulas, segment)
+        # 2. 统一在所有 $$...$$ 公式块前后添加空行（非表格内的公式）
+        segment = re.sub(r'(\$\$[\s\S]*?\$\$)', r'\n\n\1\n\n', segment)
+        # 3. 清理多余的空行（连续多个换行）
+        segment = re.sub(r'\n\s*\n\s*\n+', '\n\n', segment)
+        return segment
 
-    # 2. 统一在所有 $$...$$ 公式块前后添加空行（非表格内的公式）
-    processed = re.sub(r'(\$\$[\s\S]*?\$\$)', r'\n\n\1\n\n', processed)
-
-    # 3. 清理多余的空行（连续多个换行）
-    processed = re.sub(r'\n\s*\n\s*\n+', '\n\n', processed)
+    processed = _transform_outside_code(markdown_text, format_prose)
 
     # 4. 处理字符串开头和结尾的空行
     processed = processed.strip('\n') + '\n' if processed and processed[-1] != '\n' else processed.strip('\n')
@@ -327,70 +373,24 @@ def format_markdown_latex(markdown_text: str) -> str:
 
 def process_table_formulas(match):
     """
-    处理HTML表格内部的公式，将 $...$ 转换为 \\(...\\)。
+    处理HTML表格内部的公式，将 $...$ 转换为 \\(...\\)，$$...$$ 转换为 \\[...\\]。
     """
     table_html = match.group(0)
+    # `$$...$$` 必须先处理：若先跑单 `$` 规则，`$$E=mc^2$$` 会被拆成两个空的
+    # 行内公式（`\(\)E=mc^2\(\)`），块级公式彻底损坏。
+    processed_table = re.sub(r'\$\$(.*?)\$\$', r'\\[\1\\]', table_html, flags=re.S)
     # 转换 $...$ 为 \(...\)
-    processed_table = re.sub(r'\$(.*?)\$', r'\\(\1\\)', table_html)
-    # 转换 $$...$$ 为 \[...\]
-    processed_table = re.sub(r'\$\$(.*?)\$\$', r'\\[\1\\]', processed_table)
+    processed_table = re.sub(r'\$(.*?)\$', r'\\(\1\\)', processed_table)
     return processed_table
 
 
 def extract_and_process_html_tables(markdown_text: str) -> str:
+    """兼容接口：把 HTML 表格内的公式转换为 KaTeX 可渲染形式。
+
+    以前这里有一份重复实现（且与 process_table_formulas 一样存在 `$$` 被单 `$`
+    规则先吃掉的缺陷）。现在统一复用同一套规则，避免两个实现再次漂移。
     """
-    提取markdown文本中的HTML表格，
-    将表格内部的 $...$ 和 $$...$$ 公式转换为 LaTeX 格式，
-    这样在markdown解析后，KaTeX能够正确地渲染它们。
-    """
-    # 找到所有HTML表格
-    import uuid
-    from bs4 import BeautifulSoup
-
-    tables = []
-    processed_text = markdown_text
-    table_pattern = re.compile(r'<table[\s\S]*?</table>')
-
-    # 找到所有表格并替换为临时占位符
-    temp_markers = []
-    def replace_with_marker(match):
-        temp_id = f"TABLE_{uuid.uuid4().hex}"
-        tables.append((temp_id, match.group()))
-        temp_markers.append(temp_id)
-        return temp_id
-
-    processed_text = table_pattern.sub(replace_with_marker, processed_text)
-
-    # 处理表格内部的公式
-    processed_tables = {}
-    for temp_id, table_html in tables:
-        try:
-            soup = BeautifulSoup(table_html, 'html.parser')
-            # 查找所有的td和th元素
-            cells = soup.find_all(['td', 'th'])
-            for cell in cells:
-                # 处理单元格内的 $...$ 公式
-                if cell.string:
-                    cell.string = re.sub(r'\$(.*?)\$', r'\\(\1\\)', cell.string)
-                    cell.string = re.sub(r'\$\$(.*?)\$\$', r'\\[\1\\]', cell.string)
-                else:
-                    # 处理包含子元素的单元格
-                    for content in cell.contents:
-                        if isinstance(content, str):
-                            processed_content = re.sub(r'\$(.*?)\$', r'\\(\1\\)', content)
-                            processed_content = re.sub(r'\$\$(.*?)\$\$', r'\\[\1\\]', processed_content)
-                            if processed_content != content:
-                                content.replace_with(processed_content)
-            processed_tables[temp_id] = str(soup)
-        except Exception as e:
-            global_logger.error("处理 Markdown 表格失败: %s", e)
-            processed_tables[temp_id] = table_html
-
-    # 将处理后的表格替换回原始位置
-    for temp_id, processed_table in processed_tables.items():
-        processed_text = processed_text.replace(temp_id, processed_table)
-
-    return processed_text
+    return re.sub(r'<table[\s\S]*?</table>', process_table_formulas, markdown_text)
 
 
 if __name__ == '__main__':

@@ -42,7 +42,8 @@
 </template>
 
 <script setup>
-import { computed, watch } from 'vue'
+import { computed, watch, onUnmounted } from 'vue'
+import { lockBodyScroll, unlockBodyScroll } from '../../utils/scrollLock.js'
 
 const props = defineProps({
   modelValue: Boolean,
@@ -91,10 +92,19 @@ const widthClass = computed(() => {
   return widths[props.width] || widths.md
 })
 
-// Prevent body scroll when offcanvas is open
-watch(() => props.modelValue, (val) => {
-  document.body.style.overflow = val ? 'hidden' : ''
-})
+// Prevent body scroll when offcanvas is open（含挂载时已打开与卸载时复位）
+let scrollLocked = false
+const syncScrollLock = (open) => {
+  if (open && !scrollLocked) {
+    lockBodyScroll()
+    scrollLocked = true
+  } else if (!open && scrollLocked) {
+    unlockBodyScroll()
+    scrollLocked = false
+  }
+}
+watch(() => props.modelValue, syncScrollLock, { immediate: true })
+onUnmounted(() => syncScrollLock(false))
 </script>
 
 <style scoped>

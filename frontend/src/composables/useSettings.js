@@ -1,6 +1,10 @@
 import { reactive, watch, ref } from 'vue';
 import { KNOWN_PLATFORMS } from '../constants/platforms.js';
 
+// 批量队列并发上限：与后端并发能力保持同一量级，避免误输入 999 之类造成
+// 前端显示、运行时钳制和重载取值的三种口径不一致。
+export const MAX_QUEUE_CONCURRENT = 120;
+
 // ===== 存储键名常量 =====
 export const STORAGE = {
     keys: {
@@ -191,7 +195,17 @@ export function useSettings() {
         form.mineru_deploy_image_analysis = storage.getBool('mineru_deploy_image_analysis', true);
         form.mineru_deploy_server_url = storage.get('mineru_deploy_server_url', '');
         const savedLangList = localStorage.getItem('mineru_deploy_lang_list');
-        form.mineru_deploy_lang_list = savedLangList ? JSON.parse(savedLangList) : [];
+        // 该键由本应用写成 JSON，但用户/其他版本可能写入非 JSON 内容；
+        // 以前这里未做保护，一次解析失败会让 loadConfig() 抛错，进而导致
+        // 主题、平台监听和所有在途任务卡都不再初始化。
+        try {
+            const parsedLangList = savedLangList ? JSON.parse(savedLangList) : [];
+            form.mineru_deploy_lang_list = Array.isArray(parsedLangList) ? parsedLangList : [];
+        } catch (e) {
+            console.warn('mineru_deploy_lang_list 不是合法 JSON，已重置', e);
+            localStorage.removeItem('mineru_deploy_lang_list');
+            form.mineru_deploy_lang_list = [];
+        }
         form.formula_ocr = storage.getBool('translator_formula_ocr', true);
         form.skip_translate = storage.getBool('translator_skip_translate', false);
         form.platform = storage.get(STORAGE.keys.PLATFORM, 'custom');
@@ -213,11 +227,10 @@ export function useSettings() {
 
     const loadPlatformConfig = () => {
         const platObj = KNOWN_PLATFORMS.find(p => p.val === form.platform);
-        if (form.platform === 'custom') {
-            form.provider = storage.get('translator_platform_custom_provider', 'default');
-        } else {
-            form.provider = platObj ? platObj.provider : '';
-        }
+        const fallbackProvider = form.platform === 'custom' ? 'default' : (platObj ? platObj.provider : '');
+        // 读取与 PlatformSelector 相同的键，否则用户手动选择的 provider 在
+        // 切换平台/重新加载后会被平台默认值静默覆盖。
+        form.provider = storage.get(`translator_platform_${form.platform}_provider`, fallbackProvider);
     };
 
     const loadGlossaryConfig = (defaults) => {
@@ -240,11 +253,13 @@ export function useSettings() {
         form.glossary_agent_extra_body = storage.get('glossary_agent_extra_body', defaults.extra_body ?? '');
 
         const gPlatObj = KNOWN_PLATFORMS.find(p => p.val === form.glossary_agent_platform);
-        if (form.glossary_agent_platform === 'custom') {
-            form.glossary_agent_provider = storage.get('glossary_agent_platform_custom_provider', 'default');
-        } else {
-            form.glossary_agent_provider = gPlatObj ? gPlatObj.provider : '';
-        }
+        const gFallbackProvider = form.glossary_agent_platform === 'custom'
+            ? 'default'
+            : (gPlatObj ? gPlatObj.provider : '');
+        form.glossary_agent_provider = storage.get(
+            `glossary_agent_platform_${form.glossary_agent_platform}_provider`,
+            gFallbackProvider
+        );
     };
 
     const loadWorkflowParams = () => {
@@ -286,9 +301,14 @@ export function useSettings() {
         loadWorkflowParams();
         loadDefaultWorkflows();
 
-        // Load queue concurrent
+        // Load queue concurrent（与运行时同样的下限，避免 0/NaN 变成第三种取值）
         const savedQueueConcurrent = localStorage.getItem(STORAGE.keys.QUEUE_CONCURRENT);
-        if (savedQueueConcurrent) queue_concurrent.value = Number(savedQueueConcurrent) || 3;
+        if (savedQueueConcurrent !== null && savedQueueConcurrent !== '') {
+            const parsed = Math.floor(Number(savedQueueConcurrent));
+            queue_concurrent.value = Number.isFinite(parsed) && parsed >= 1
+                ? Math.min(parsed, MAX_QUEUE_CONCURRENT)
+                : 3;
+        }
 
         // Trigger platform updates to load API keys/models
         updatePlatformParams(form.platform, 'translator_platform', form);
@@ -333,10 +353,10 @@ export function useSettings() {
         storage.set(STORAGE.keys.RPM, f.rpm || '');
         storage.set(STORAGE.keys.TPM, f.tpm || '');
         storage.set(STORAGE.keys.EXTRA_BODY, f.extra_body || '');
-        // 平台相关
+        // 平台相关：provider 与 PlatformSelector 使用同一个键，避免两条写入路径分叉
         storage.set(`translator_platform_${f.platform}_apikey`, f.api_key);
         storage.set(`translator_platform_${f.platform}_model_id`, f.model_id);
-        storage.set('translator_provider', f.provider);
+        storage.set(`translator_platform_${f.platform}_provider`, f.provider);
         if (f.platform === 'custom') storage.set('translator_platform_custom_base_url', f.base_url);
     };
 
@@ -362,7 +382,7 @@ export function useSettings() {
         // 术语表平台 Key
         storage.set(`glossary_agent_platform_${f.glossary_agent_platform}_apikey`, f.glossary_agent_key);
         storage.set(`glossary_agent_platform_${f.glossary_agent_platform}_model_id`, f.glossary_agent_model_id);
-        storage.set('glossary_agent_provider', f.glossary_agent_provider);
+        storage.set(`glossary_agent_platform_${f.glossary_agent_platform}_provider`, f.glossary_agent_provider);
         if (f.glossary_agent_platform === 'custom') storage.set('glossary_agent_platform_custom_base_url', f.glossary_agent_baseurl);
     };
 
@@ -393,7 +413,15 @@ export function useSettings() {
         }
     };
 
-    const saveSetting = (k, v) => localStorage.setItem(k, v);
+    const saveSetting = (k, v) => {
+        if (k === STORAGE.keys.QUEUE_CONCURRENT) {
+            // 单一收口：无论从哪个组件写入，都保证是 >=1 且不超过上限的整数。
+            const parsed = Math.floor(Number(v));
+            v = Number.isFinite(parsed) && parsed >= 1 ? Math.min(parsed, MAX_QUEUE_CONCURRENT) : 1;
+            queue_concurrent.value = v;
+        }
+        localStorage.setItem(k, v);
+    };
     const saveSettingArray = (k, v) => localStorage.setItem(k, JSON.stringify(v));
     const saveWorkflowParam = (keySuffix) => {
         const wfType = form.workflow_type;

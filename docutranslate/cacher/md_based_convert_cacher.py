@@ -1,15 +1,13 @@
 # SPDX-FileCopyrightText: 2025 QinHan
 # SPDX-License-Identifier: MPL-2.0
 
-import os
 from collections import OrderedDict
 from threading import RLock
 
+from docutranslate.config import CACHE_NUM
 from docutranslate.converter.base import ConverterConfig
 from docutranslate.ir.document import Document
 from docutranslate.ir.markdown_document import MarkdownDocument
-
-CACHE_NUM = os.getenv("DOCUTRANSLATE_CACHE_NUM", default="10")
 
 
 class MDBasedCovertCacher:

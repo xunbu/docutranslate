@@ -132,7 +132,12 @@ WRITE_TIMEOUT = _get_env_float("DOCUTRANSLATE_WRITE_TIMEOUT", 300.0)
 POOL_TIMEOUT = _get_env_float("DOCUTRANSLATE_POOL_TIMEOUT", 10.0)
 THINKING = _get_env_str("DOCUTRANSLATE_THINKING", "disable")
 RETRY = _get_env_int("DOCUTRANSLATE_RETRY", 2)
-SYSTEM_PROXY_ENABLE = _get_env_bool("DOCUTRANSLATE_SYSTEM_PROXY_ENABLE", False)
+# 系统代理默认值：DOCUTRANSLATE_PROXY_ENABLED 是文档里的“全局代理开关”，
+# 以前只是死变量；现在它作为 system_proxy_enable 的默认值生效，单次请求仍可覆盖。
+SYSTEM_PROXY_ENABLE = _get_env_bool(
+    "DOCUTRANSLATE_SYSTEM_PROXY_ENABLE",
+    _get_env_bool("DOCUTRANSLATE_PROXY_ENABLED", False),
+)
 CUSTOM_PROMPT = _get_env_str("DOCUTRANSLATE_CUSTOM_PROMPT", "")
 FORCE_JSON = _get_env_bool("DOCUTRANSLATE_FORCE_JSON", False)
 RPM = _get_env_optional_int("DOCUTRANSLATE_RPM")
@@ -234,6 +239,12 @@ SEGMENT_MODE = _get_env_str("DOCUTRANSLATE_SEGMENT_MODE", "line")
 PORT = _get_env_int("DOCUTRANSLATE_PORT", 8010)
 PROXY_ENABLED = _get_env_bool("DOCUTRANSLATE_PROXY_ENABLED", False)
 CACHE_NUM = _get_env_int("DOCUTRANSLATE_CACHE_NUM", 10)
+# 内存中保留的任务记录上限（<=0 表示不限制）；超出后淘汰最旧的已结束任务。
+TASK_MAX_COUNT = _get_env_int("DOCUTRANSLATE_TASK_MAX_COUNT", 200)
+# 启动时清理多久以前残留的 docutranslate_* 临时目录（小时，<=0 表示不清理）。
+TEMP_CLEANUP_AGE_HOURS = _get_env_float("DOCUTRANSLATE_TEMP_CLEANUP_AGE_HOURS", 24.0)
+# 单次上传/请求体大小上限（MB，<=0 表示不限制），用于避免单进程被大文件 OOM。
+MAX_UPLOAD_MB = _get_env_float("DOCUTRANSLATE_MAX_UPLOAD_MB", 512.0)
 
 # ============================================================
 # 兼容旧版 default_params

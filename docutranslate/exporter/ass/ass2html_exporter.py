@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 from dataclasses import dataclass
 
+import html
 import jinja2
 
 from docutranslate.exporter.ass.base import AssExporter
@@ -28,7 +29,8 @@ class Ass2HTMLExporter(AssExporter):
         html_template = resource_path("template/ass.html").read_text(encoding="utf-8")
 
         render = jinja2.Template(html_template).render(
-            ass_data=document.content.decode("utf-8")
+            # 转义字幕文本，避免 `<`/`&` 破坏标记或注入脚本。
+            ass_data=html.escape(document.content.decode("utf-8-sig"))
         )
         return Document.from_bytes(content=render.encode("utf-8"), suffix=".html", stem=document.stem)
 

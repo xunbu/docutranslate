@@ -28,13 +28,19 @@ class Json2HTMLExporter(JsonExporter):
 
         # language=html
         pico = f'<style>{resource_path("static/pico.css").read_text(encoding="utf-8")}</style>' if not cdn else r'<link rel="stylesheet" href="https://s4.zstatic.net/ajax/libs/picocss/2.1.1/pico.min.css" integrity="sha512-+4kjFgVD0n6H3xt19Ox84B56MoS7srFn60tgdWFuO4hemtjhySKyW4LnftYZn46k3THUEiTTsbVjrHai+0MOFw==" crossorigin="anonymous" referrerpolicy="no-referrer" />'
-        # language=html
-        renderjson=f'<script><{resource_path("static/renderjson.min.js").read_text(encoding="utf-8")}/script>'
-        json_data= document.content.decode()
+        # JSON 会被内联进 <script>：必须转义 <、>、& 以及 U+2028/2029，
+        # 否则文档里的 </script> 会提前结束脚本。
+        json_data = (
+            document.content.decode("utf-8-sig")
+            .replace("&", "\\u0026")
+            .replace("<", "\\u003c")
+            .replace(">", "\\u003e")
+            .replace("\u2028", "\\u2028")
+            .replace("\u2029", "\\u2029")
+        )
         render = jinja2.Template(html_template).render(
             title=document.stem,
             pico=pico,
-            renderjson=renderjson,
             jsonData=json_data,
         )
         return Document.from_bytes(content=render.encode("utf-8"), suffix=".html", stem=document.stem)

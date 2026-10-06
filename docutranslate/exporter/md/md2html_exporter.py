@@ -112,7 +112,8 @@ class MD2HTMLExporter(MDExporter):
             }
         }
 
-        content = document.content.decode()
+        # utf-8-sig 会吞掉 BOM：否则首行 "\ufeff# 标题" 不再被识别为标题块。
+        content = document.content.decode("utf-8-sig")
 
         # 预处理markdown内容
         from docutranslate.utils.markdown_utils import format_markdown_latex

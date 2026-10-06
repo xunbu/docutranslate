@@ -5,24 +5,9 @@ build/
 dist/
 wheels/
 *.egg-info
-tests/
-!tests/
-tests/*
-!tests/test_contract/
-tests/test_contract/*
-!tests/test_contract/test_interface_contract.py
-!tests/test_contract/test_mineru_compatibility.py
-!tests/test_contract/test_project_regressions.py
-!tests/test_contract/test_mcp_workflow_sdk_fixes.py
-!tests/test_agents/
-tests/test_agents/*
-!tests/test_agents/test_reasoning_compatibility.py
-!tests/test_agents/test_token_usage_parsing.py
-!tests/test_agents/test_request_accounting.py
-!tests/test_agents/test_segments_agent.py
-!tests/test_translator/
-tests/test_translator/*
-!tests/test_translator/test_epub_translator.py
+# Tests: keep all test code in version control, ignore only bulky fixtures/caches.
+# (The previous allow-list silently excluded 8 locally-passing test modules, so CI
+# never ran them.)
 tests/resource/
 tests/test_data/
 htmlcov/
@@ -41,5 +26,7 @@ docutranslate/output/
 .claude/
 # Vite cache
 .vite
+# Local scratch (test basetemp, ad-hoc probes)
+.cache/
 # Environment variables
 .env
