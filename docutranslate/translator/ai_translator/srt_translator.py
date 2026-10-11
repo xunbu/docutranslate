@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 import asyncio
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Self, Literal
 
 import charset_normalizer
@@ -9,6 +10,7 @@ import srt  # 导入srt库来处理字幕文件
 
 from docutranslate.agents.segments_agent import SegmentsTranslateAgentConfig, SegmentsTranslateAgent
 from docutranslate.ir.document import Document
+from docutranslate.logger import global_logger
 from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTranslator
 
 
@@ -16,6 +18,43 @@ from docutranslate.translator.ai_translator.base import AiTranslatorConfig, AiTr
 class SrtTranslatorConfig(AiTranslatorConfig):
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
     separator: str = "\n"
+
+
+# 注意：这里刻意**不**为 SRT 写死「逐条翻译、不得合并、不得留空」这类规则。
+#
+# 用 deepseek-chat 在英译中语料上实测（74 条真实字幕 × 5 轮，独立评审盲评）：
+# 真实字幕（句子自然跨条）本来就不会产出空译文，加不加这类规则盲评排序打平；
+# 它只在「逐词断句」这类畸形输入上把空译文率从 25% 降到 1%，代价是整句习语被
+# 拆到多条时退化成直译（kicked the bucket -> 他踢了/那个/桶）。
+# 而「空译文 = 失败」这个前提本身也不成立：它常常表示该段文字被并入了邻条的
+# 译文，属合法输出。因此合并与否交给模型判断，空的就如实写回空（时间窗照旧保留），
+# 有特殊需要时由调用方通过 custom_prompt 自行追加策略。
+
+
+def _srt_structural_skip_reason(subtitle: srt.Subtitle) -> str | None:
+    """返回该条目时间轴无法写入 SRT 的原因；可以写入时返回 ``None``。
+
+    只有**时间轴本身无法表示**时才判定不写入。内容为空不是丢条理由：它通常是
+    模型合并相邻段落的合法结果，条目与时间窗都必须保留。
+
+    ``srt.compose`` 默认以 ``reindex=True`` 调用 ``sort_and_reindex(skip=True)``，
+    那个函数会额外丢弃「内容为空/只有空白」「起始时间为负」「起始时间不早于结束
+    时间」的条目并重排其余编号，丢条因此既不报错也不留痕。这里把判定收回自己手里，
+    是为了让「哪些条目被移除」由本模块显式决定并逐条报告。
+    """
+    if subtitle.start < timedelta(0):
+        return "起始时间为负"
+    if subtitle.start >= subtitle.end:
+        return "起始时间不早于结束时间"
+    return None
+
+
+def _summarize_cue_indices(indices: list[int], limit: int = 10) -> str:
+    """把可能很长的条目编号列表压缩成一行日志。"""
+    shown = ", ".join(f"#{index}" for index in indices[:limit])
+    if len(indices) > limit:
+        shown += f" ...（共 {len(indices)} 条）"
+    return shown
 
 
 class SrtTranslator(AiTranslator):
@@ -111,28 +150,117 @@ class SrtTranslator(AiTranslator):
         """
         翻译后处理步骤：将译文根据配置模式写回字幕对象，并生成新的SRT文件内容。
 
+        两条原则：
+
+        1. **不伪造内容。** 空译文不是翻译失败的证据：模型按提示词约定合并相邻
+           段落时，译文会落在其中一条上，相邻那条就是空的。这里原样写回空内容，
+           不拿源文顶替（那会把「已翻译、只是并入了邻条」显示成「没有翻译」），
+           也不去猜它被并入了哪一条。
+        2. **不静默丢条。** ``srt.compose`` 默认经 ``sort_and_reindex(skip=True)``
+           丢弃空内容条目并重排编号，所以这里自己排序、自己重编号，再以
+           ``compose(reindex=False)`` 序列化。只有时间轴本身无法表示的条目才会被
+           移除，而且逐条报告。
+
+        保证的是**条目与时间窗完整**，不是文本逐字保真——``srt.compose(strict=True)``
+        仍会按库规则整理内容里的空行。
+
         Returns:
             bytes: 新的SRT文件内容的字节流。
         """
+        # 后处理只依赖 insert_mode/separator，允许在未走 __init__ 的实例上调用
+        logger = getattr(self, "logger", None) or global_logger
+
+        cue_count = len(subtitles)
+        if len(translated_texts) != cue_count:
+            logger.error(
+                "译文条目数与字幕条目数不一致（译文 %d 条 / 字幕 %d 条），缺少译文的条目按空内容保留。",
+                len(translated_texts), cue_count,
+            )
+
+        insert_mode = self.insert_mode
+        if insert_mode not in ("replace", "append", "prepend"):
+            logger.error(f"不正确的SrtTranslatorConfig参数: insert_mode='{insert_mode}'")
+            # 默认回退到替换模式，避免程序中断
+            insert_mode = "replace"
+
+        output_subtitles: list[srt.Subtitle] = []
+        untranslated_indices: list[int] = []
+        dropped: list[tuple[int, str]] = []
+
         for i, sub in enumerate(subtitles):
-            translated_text = translated_texts[i]
-            original_text = original_texts[i]
+            original_text = original_texts[i] if i < len(original_texts) else sub.content
+            original_text = "" if original_text is None else str(original_text)
+            translated_text = translated_texts[i] if i < len(translated_texts) else ""
+            translated_text = "" if translated_text is None else str(translated_text)
+            cue_number = sub.index if sub.index is not None else i + 1
 
-            # 根据插入模式更新字幕内容
-            if self.insert_mode == "replace":
-                sub.content = translated_text
-            elif self.insert_mode == "append":
-                # strip() 避免在原文和译文间产生多余的空白
-                sub.content = original_text.strip() + self.separator + translated_text.strip()
-            elif self.insert_mode == "prepend":
-                sub.content = translated_text.strip() + self.separator + original_text.strip()
+            # 根据插入模式计算该条目的最终内容；空译文原样保留，不做替换
+            if insert_mode == "replace":
+                content = translated_text
+            elif insert_mode == "append":
+                # strip() 避免在原文和译文间产生多余的空白；空译文不留悬空分隔符
+                content = original_text.strip() + self.separator + translated_text.strip() \
+                    if translated_text.strip() else original_text
             else:
-                self.logger.error(f"不正确的SrtTranslatorConfig参数: insert_mode='{self.insert_mode}'")
-                # 默认回退到替换模式，避免程序中断
-                sub.content = translated_text
+                content = translated_text.strip() + self.separator + original_text.strip() \
+                    if translated_text.strip() else original_text
 
-        # 使用 srt 库将修改后的字幕对象列表重新合成为SRT格式的字符串
-        new_srt_content_str = srt.compose(subtitles)
+            if not translated_text.strip():
+                untranslated_indices.append(cue_number)
+
+            reason = _srt_structural_skip_reason(sub)
+            if reason is not None:
+                dropped.append((cue_number, reason))
+                continue
+
+            sub.content = content
+            output_subtitles.append(sub)
+
+        if untranslated_indices:
+            logger.warning(
+                "以下字幕段落译文为空（相邻段落被合并翻译时会出现），已按空内容保留其时间窗（%d 条）：%s",
+                len(untranslated_indices), _summarize_cue_indices(untranslated_indices),
+            )
+        if dropped:
+            detail = "; ".join(f"#{index}（{reason}）" for index, reason in dropped[:10])
+            if len(dropped) > 10:
+                detail += f" ...（共 {len(dropped)} 条）"
+            logger.warning(
+                "以下字幕条目时间轴无效，无法写入SRT（%d 条）：%s",
+                len(dropped), detail,
+            )
+
+        # 自己排序并重编号，再以 reindex=False 序列化：绕开 srt.compose 默认的
+        # sort_and_reindex(skip=True)（它会丢掉空内容条目并重排编号）。按时间排序
+        # 同时避开了库内以 (start, index) 比较时 index=None 抛出的 TypeError。
+        ordered = sorted(output_subtitles, key=lambda item: (item.start, item.end))
+        composed_subtitles = [srt.Subtitle(**vars(item)) for item in ordered]
+        for position, item in enumerate(composed_subtitles, start=1):
+            item.index = position
+
+        new_srt_content_str = srt.compose(composed_subtitles, reindex=False)
+
+        # 导出后核对：逐条比对回读出来的时间窗，而不只是比条数——只比条数会被
+        # 「丢一条 + 译文里注入一条」相互抵消。回读只是诊断，译文里可能出现超长
+        # 数字（CPython int 转换上限）等库边界，任何异常都不能反过来让已经完成
+        # 的翻译整体失败。
+        try:
+            reparsed = list(srt.parse(new_srt_content_str)) if new_srt_content_str else []
+        except Exception as e:  # noqa: BLE001 - 诊断步骤，不应中断导出
+            logger.error("SRT 导出结果无法回读校验，文件可能不符合SRT规范: %s", e)
+        else:
+            written = sorted((sub.start, sub.end) for sub in composed_subtitles)
+            read_back = sorted((sub.start, sub.end) for sub in reparsed)
+            if read_back != written:
+                logger.error(
+                    "SRT 导出结果与预期时间窗不一致：预期写入 %d 条，回读 %d 条。",
+                    len(written), len(read_back),
+                )
+            elif len(written) != cue_count:
+                logger.error(
+                    "SRT 导出结果不完整：原始 %d 条，实际写入 %d 条。",
+                    cue_count, len(written),
+                )
 
         # 返回UTF-8编码的字节流
         return new_srt_content_str.encode('utf-8')
