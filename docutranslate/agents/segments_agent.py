@@ -59,7 +59,7 @@ Input:
 ```
 Output:
 ```json
-[{{"id":"3","t":"Tom says:\"Hello Jack.\""}},{{"id":"4","t":""}}]
+[{{"id":"3","t":"Tom says:\\"Hello Jack.\\""}},{{"id":"4","t":""}}]
 ```
 """
 

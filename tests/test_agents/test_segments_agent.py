@@ -1,4 +1,5 @@
 import json
+import re
 
 import pytest
 
@@ -6,8 +7,22 @@ from docutranslate.agents.agent import AgentResultError, PartialAgentResultError
 from docutranslate.agents.segments_agent import (
     SegmentsTranslateAgent,
     SegmentsTranslateAgentConfig,
+    _build_system_prompt,
     generate_prompt,
 )
+
+
+def test_few_shot_examples_in_system_prompt_are_valid_json():
+    """提示词里的示例 JSON 必须能解析——引号没转义会教坏模型（回归）。"""
+    prompt = _build_system_prompt("简体中文")
+    blocks = re.findall(r"Output:\s*```json\s*(.*?)\s*```", prompt, re.DOTALL)
+    assert blocks, "系统提示词里应当有示例输出"
+    for block in blocks:
+        parsed = json.loads(block)
+        assert isinstance(parsed, list) and parsed
+        for item in parsed:
+            assert isinstance(item.get("id"), str)
+            assert isinstance(item.get("t"), str)
 
 
 @pytest.fixture
