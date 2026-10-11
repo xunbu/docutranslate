@@ -202,8 +202,58 @@ DocuTranslate 后端服务 API，提供文档翻译、状态查询、结果下�
 service_router = APIRouter(prefix="/service", tags=["Service API"])
 if _MAX_UPLOAD_BYTES:
     app.add_middleware(MaxBodySizeMiddleware, max_bytes=_MAX_UPLOAD_BYTES)
+# 前端静态资源的 Content-Type 由这里显式决定，不经过 mimetypes。
+#
+# Starlette 的 FileResponse 在未指定 media_type 时执行
+# `guess_type(filename)[0] or "text/plain"`，而 Windows 上 mimetypes 会读取注册表
+# `HKEY_CLASSES_ROOT\<ext>\Content Type` 并覆盖 Python 内置表。把 .js 注册成
+# text/plain 的机器上（部分编辑器/工具会这么注册），模块脚本会以 text/plain 发出，
+# 浏览器按 HTML 规范拒绝执行 `type="module"` 脚本 —— 表现就是 UI 白屏，控制台报
+# "Expected a JavaScript module script but the server responded with a MIME type of
+# text/plain"。.mjs 与 .woff2 在内置表里本就缺失，健康机器上同样是 text/plain。
+_STATIC_MEDIA_TYPES = {
+    ".js": "text/javascript",
+    ".mjs": "text/javascript",
+    ".css": "text/css",
+    ".html": "text/html",
+    ".htm": "text/html",
+    ".json": "application/json",
+    ".map": "application/json",
+    ".txt": "text/plain",
+    ".csv": "text/csv",
+    ".xml": "application/xml",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".avif": "image/avif",
+    ".ico": "image/x-icon",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+    ".otf": "font/otf",
+    ".eot": "application/vnd.ms-fontobject",
+    ".wasm": "application/wasm",
+    ".pdf": "application/pdf",
+    ".webmanifest": "application/manifest+json",
+}
+
+
+class _WebStaticFiles(StaticFiles):
+    """/static 的静态文件按扩展名强制正确的 Content-Type（见上）。"""
+
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        media_type = _STATIC_MEDIA_TYPES.get(Path(path).suffix.lower())
+        if media_type and response.status_code == 200:
+            response.headers["content-type"] = media_type
+        return response
+
+
 STATIC_DIR = resource_path("static")
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+app.mount("/static", _WebStaticFiles(directory=STATIC_DIR), name="static")
 
 
 # ===================================================================
@@ -1210,7 +1260,7 @@ async def main_page():
         "Pragma": "no-cache",
         "Expires": "0",
     }
-    return FileResponse(index_path, headers=no_cache_headers)
+    return FileResponse(index_path, media_type="text/html", headers=no_cache_headers)
 
 
 @app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
@@ -1223,7 +1273,7 @@ async def main_page_admin():
         "Pragma": "no-cache",
         "Expires": "0",
     }
-    return FileResponse(index_path, headers=no_cache_headers)
+    return FileResponse(index_path, media_type="text/html", headers=no_cache_headers)
 
 
 @app.get("/docs", include_in_schema=False)
