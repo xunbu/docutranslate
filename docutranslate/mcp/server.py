@@ -109,22 +109,24 @@ def _task_state_to_dict(task_id: str, task_state: Optional[Dict[str, Any]]) -> D
 # ===========================================================================
 
 try:
-    from mcp.server.fastmcp import FastMCP, Context
+    # mcp 2.x：FastMCP 改名为 MCPServer，并且 host/port 不再是构造参数，
+    # 而是传给 run() / sse_app()（见下面的 run_mcp_server）。
+    from mcp.server.mcpserver import MCPServer, Context
 
     MCP_AVAILABLE = True
 except ImportError:
     MCP_AVAILABLE = False
-    FastMCP = None
+    MCPServer = None
     Context = None
 
-if MCP_AVAILABLE and FastMCP is not None and Context is not None:
+if MCP_AVAILABLE and MCPServer is not None and Context is not None:
 
     def create_mcp_server(
             host: str = "127.0.0.1",
             port: int = 8000,
             translation_service: Optional[TranslationService] = None,
     ):
-        """Create and configure the FastMCP server
+        """Create and configure the MCP server
 
         Args:
             host: Host address for SSE/streamable-http transport
@@ -132,7 +134,7 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             translation_service: Optional TranslationService instance (uses global if not provided)
 
         Returns:
-            Configured FastMCP server
+            Configured MCP server
         """
         # Use provided translation service or get the global one
         service = translation_service or get_translation_service()
@@ -186,8 +188,8 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             "segment_mode": SEGMENT_MODE,
         }
 
-        # Create FastMCP instance
-        mcp = FastMCP(
+        # Create the MCP server（host/port 不在这里设置，见 run_mcp_server）
+        mcp = MCPServer(
             name=SERVER_NAME,
             instructions="DocuTranslate MCP server for document translation. "
                          "Step 1: Use submit_task to start a translation task, "
@@ -196,8 +198,6 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
                          "Step 3: Use download_file to save translations or attachments (set auto_release=True to automatically clean up resources after download), "
                          "Step 4 (optional): Use release_task to manually clean up resources when done. "
                          "The translation uses the full workflow engine from DocuTranslate.",
-            host=host,
-            port=port,
         )
 
         @mcp.tool()
@@ -1128,13 +1128,13 @@ if MCP_AVAILABLE and FastMCP is not None and Context is not None:
             global_logger.info(
                 "Starting MCP Streamable HTTP server at http://%s:%s/mcp", host, port
             )
-            mcp.run(transport="streamable-http")
+            mcp.run(transport="streamable-http", host=host, port=port)
         elif transport == "sse":
             # Create a wrapper app with /mcp prefix
             from starlette.applications import Starlette
 
             wrapper_app = Starlette()
-            sse_app = mcp.sse_app()
+            sse_app = mcp.sse_app(host=host)
             wrapper_app.mount("/mcp", sse_app, name="mcp")
 
             # Run the wrapper app with uvicorn

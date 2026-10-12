@@ -29,7 +29,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-mcp = ["mcp>=1.8.0", "python-dotenv>=1.0.0"]
+mcp = ["mcp>=2.3.0", "python-dotenv>=1.0.0"]  # 代码按 mcp 2.x 的 MCPServer API 编写（1.x 的 FastMCP 已移除）
 
 [dependency-groups]
 dev = [

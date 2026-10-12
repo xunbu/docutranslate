@@ -128,7 +128,7 @@ def test_sdk_markdown_docx_engine_overrides(
 
 @pytest.fixture
 def fake_mcp_server_module(monkeypatch):
-    class FakeFastMCP:
+    class FakeMCPServer:
         def __init__(self, **kwargs):
             self.tools = {}
             self.run_transport = None
@@ -142,22 +142,24 @@ def fake_mcp_server_module(monkeypatch):
         def resource(self, *args, **kwargs):
             return lambda fn: fn
 
-        def run(self, transport):
+        def run(self, transport, **kwargs):
             self.run_transport = transport
+            self.run_kwargs = kwargs
 
-        def sse_app(self):
+        def sse_app(self, **kwargs):
             raise AssertionError("SSE app must not be used for Streamable HTTP")
 
     mcp_package = types.ModuleType("mcp")
     mcp_package.__path__ = []
     mcp_server_package = types.ModuleType("mcp.server")
     mcp_server_package.__path__ = []
-    fastmcp_module = types.ModuleType("mcp.server.fastmcp")
-    fastmcp_module.FastMCP = FakeFastMCP
-    fastmcp_module.Context = type("Context", (), {})
+    # 代码按 mcp 2.x 编写：FastMCP 已改名为 mcp.server.mcpserver.MCPServer
+    mcpserver_module = types.ModuleType("mcp.server.mcpserver")
+    mcpserver_module.MCPServer = FakeMCPServer
+    mcpserver_module.Context = type("Context", (), {})
     monkeypatch.setitem(sys.modules, "mcp", mcp_package)
     monkeypatch.setitem(sys.modules, "mcp.server", mcp_server_package)
-    monkeypatch.setitem(sys.modules, "mcp.server.fastmcp", fastmcp_module)
+    monkeypatch.setitem(sys.modules, "mcp.server.mcpserver", mcpserver_module)
 
     source = Path(__file__).parents[2] / "docutranslate" / "mcp" / "server.py"
     spec = importlib.util.spec_from_file_location("docutranslate.mcp._contract_server", source)
