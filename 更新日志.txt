@@ -1,6 +1,6 @@
 更新日志
 ----------------
-v1.7.10版 2026.10.11
+v1.7.10版 2026.10.12
 特性：
 - 支持本地 MinerU 4.x V1 接口及 flash、basic、standard、advanced 解析档位，兼容旧版 2.x/3.x 服务
 - 支持本地 MinerU 服务可选鉴权，前端新增密钥输入项，SDK、HTTP、MCP 及工作流支持透传；统一使用 DOCUTRANSLATE_MINERU_DEPLOY_API_KEY 作为环境变量默认值并支持强制覆盖，MCP 配置查询对密钥脱敏
@@ -50,6 +50,7 @@ v1.7.10版 2026.10.11
 - 修复 SRT 翻译中译文为空的段落被静默删除、后续编号被重排的问题：srt.compose 默认会丢弃空内容条目，现改为空译文按原样写回空内容并保留其时间窗，只有时间轴本身无法表示的条目才会被移除且逐条告警，导出后还会按时间窗回读核对结果完整性
 - 修复分段翻译系统提示词中合并示例的引号未转义、示例本身不是合法 JSON 的问题
 - 修复 Windows 上注册表把 .js 等扩展名注册为 text/plain 时，前端静态资源以错误 MIME 类型返回、浏览器拒绝执行模块脚本导致界面白屏的问题；静态资源现按扩展名显式给出 Content-Type，不再依赖 mimetypes 与注册表，并同时修正 .mjs、.woff2 等内置表缺失的类型
+- 修复 mcp 依赖未设上界、升级到 2.x 后 MCP 静默失效的问题：代码已适配 mcp 2.x 的 MCPServer API（FastMCP 改名、host/port 改为传给 run/sse_app），并要求 mcp>=2.3.0；缺少可用的 mcp 依赖时打包会直接失败，不再产出没有 MCP 却没有提示的安装包
 调整：
 - 移除 Docling 解析集成及相关参数和依赖，文档解析使用 MinerU 在线或本地服务
 - 移除 Windows 完整版构建，保留精简版；macOS 改为分别构建 Apple Silicon 和 Intel 原生安装包
@@ -57,6 +58,7 @@ v1.7.10版 2026.10.11
 - DOCUTRANSLATE_PROXY_ENABLED 现在作为 system_proxy_enable 的默认值真正生效
 - 新增 DOCUTRANSLATE_TASK_MAX_COUNT、DOCUTRANSLATE_TEMP_CLEANUP_AGE_HOURS、DOCUTRANSLATE_MAX_UPLOAD_MB 配置项，并补齐 SKIP_TRANSLATE 的示例说明
 - 测试与工程：测试文件全部纳入版本控制（此前 8 个模块被 .gitignore 排除、从未在 CI 运行），CI 增加覆盖率门禁与随包静态资源一致性检查，清理三代陈旧前端构建产物并移除 frontend/index.html.bak
+- 测试与工程：修复 CI 引用了不存在的 setup-uv 版本导致 Windows/macOS 构建在 “Set up job” 阶段就失败的问题；修正 macOS 包标识符占位符，并让 macOS 的 DMG 与 Windows 的 exe 一样随 Release 自动发布
 ----------------
 v1.7.9版 2026.9.2
 特性：
