@@ -1,1 +1,8 @@
 *.js linguist-detectable=false
+
+# 前端构建产物的文件名里带内容 hash，而 hash 会随源码行尾变化：
+# Windows（core.autocrlf=true）检出 CRLF、CI 在 Linux 检出 LF，
+# 同一份源码会构建出不同的文件名，导致 CI 的静态资源一致性检查必然失败。
+# 统一按 LF 检出，保证各平台构建结果一致。
+frontend/** text eol=lf
+frontend/public/favicon.ico binary
