@@ -77,7 +77,7 @@ jobs:
               <key>CFBundleIconFile</key>
               <string>DocuTranslate.icns</string>
               <key>CFBundleIdentifier</key>
-              <string>com.yourcompany.DocuTranslate</string>
+              <string>com.xunbu.docutranslate</string>
               <key>CFBundleName</key>
               <string>DocuTranslate</string>
               <key>CFBundleVersion</key>
@@ -102,3 +102,31 @@ jobs:
           name: DocuTranslate-macOS-${{ matrix.arch }}
           path: dist/DocuTranslate-${{ env.VERSION }}-macOS-${{ matrix.arch }}.dmg
           if-no-files-found: error
+
+  publish-macos:
+    # 与 Windows 保持一致：发布 Release 时把 DMG 自动挂上去
+    if: github.event_name == 'release'
+    needs: build-macos
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Download macOS DMGs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: DocuTranslate-macOS-*
+          path: release-assets
+      - name: Attach DMGs to Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          shopt -s nullglob
+          files=(release-assets/*/*.dmg)
+          if [ "${#files[@]}" -ne 2 ]; then
+            echo "Expected two macOS DMGs (arm64 + x86_64), found ${#files[@]}" >&2
+            exit 1
+          fi
+          gh release upload "$RELEASE_TAG" "${files[@]}" --clobber
