@@ -21,8 +21,9 @@ jobs:
           python-version: '3.12'
 
       # 第 3 步: 安装 uv
+      # setup-uv 自 v8 起不再发布 vN 浮动 tag（只有 v1~v7），必须写具体版本
       - name: Install uv
-        uses: astral-sh/setup-uv@v9
+        uses: astral-sh/setup-uv@v10.3.0
         with:
           version: '0.6.14'
 
