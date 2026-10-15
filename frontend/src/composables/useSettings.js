@@ -148,6 +148,8 @@ export function useSettings() {
     const webSkipValidation = ref(false);
     // 是否强制使用环境变量值（从后端获取）
     const envForceOverride = ref(false);
+    // 文本输入框字符上限（从后端 /service/meta 获取；-1=未获取到，0=不限制）
+    const textInputLimit = ref(-1);
 
     // Nested Params for specific workflows
     const workflowParams = reactive({
@@ -512,6 +514,7 @@ export function useSettings() {
         queue_concurrent,
         webSkipValidation,
         envForceOverride,
+        textInputLimit,
 
         // Methods
         clearError,

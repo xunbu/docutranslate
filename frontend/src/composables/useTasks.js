@@ -1,5 +1,5 @@
 import { ref, reactive, computed, nextTick } from 'vue';
-import { emptyToNull } from '../utils/helpers.js';
+import { emptyToNull, decodeBase64Utf8 } from '../utils/helpers.js';
 
 // 格式化错误信息，处理 FastAPI 422 验证错误等复杂格式
 const formatError = (data) => {
@@ -34,7 +34,7 @@ const formatError = (data) => {
 };
 
 export function useTasks(settings, glossary, i18n) {
-    const { form, workflowParams, default_workflows, queue_concurrent, saveSetting, saveAllSettings, updatePlatformParams, STORAGE, errors, webSkipValidation } = settings;
+    const { form, workflowParams, default_workflows, queue_concurrent, saveSetting, saveAllSettings, updatePlatformParams, STORAGE, errors, webSkipValidation, textInputLimit } = settings;
     const { glossaryData } = glossary;
     const { t } = i18n;
 
@@ -45,8 +45,12 @@ export function useTasks(settings, glossary, i18n) {
     const pendingQueue = [];
     const batchTasks = new Set();
 
+    // 文本任务没有 task.file，用这个统一判断任务是否可提交（批量运行等场景）
+    const isTaskSubmittable = (task) =>
+        !!task.file || (task.isTextInput && !!(task.inputText && task.inputText.trim()));
+
     const hasPendingTasks = computed(() =>
-        tasks.value.some(task => task.file && !task.initializing && !task.isTranslating && !task.isFinished && !task.queuePosition)
+        tasks.value.some(task => isTaskSubmittable(task) && !task.initializing && !task.isTranslating && !task.isFinished && !task.queuePosition)
     );
 
     const removeFromPendingQueue = (task) => {
@@ -76,6 +80,23 @@ export function useTasks(settings, glossary, i18n) {
             task.isTranslating = true;
             pollStatus(task);
         }
+        return task;
+    };
+
+    // ===== Text Task Creation（文本输入任务）=====
+    const createNewTextTask = () => {
+        const uiId = 'card_' + Math.random().toString(36).substring(2, 9);
+        const task = reactive({
+            uiId, backendId: null, file: null, fileName: '', logs: '', statusMessage: '',
+            statusClass: 'text-muted', isTranslating: false, isFinished: false, isProcessing: false,
+            validationError: false, downloads: null, attachment: null, initializing: false, isDragOver: false,
+            progressPercent: 0, detectedWorkflow: 'txt', statistics: null,
+            isTextInput: true, inputText: '', resultText: null, resultCopied: false
+        });
+        tasks.value.unshift(task);
+        // 让左侧面板同步显示 txt 工作流的专属配置（插入模式/分隔符/分段模式）
+        form.workflow_type = 'txt';
+        saveSetting('translator_last_workflow', 'txt');
         return task;
     };
 
@@ -182,7 +203,7 @@ export function useTasks(settings, glossary, i18n) {
             const task = pendingQueue.shift();
             task.queuePosition = null;
             task.queueTotal = null;
-            if (tasks.value.includes(task) && task.file && !task.removed && !task.initializing && !task.isTranslating && !task.isFinished) {
+            if (tasks.value.includes(task) && isTaskSubmittable(task) && !task.removed && !task.initializing && !task.isTranslating && !task.isFinished) {
                 batchTasks.add(task);
                 runningCount.value = batchTasks.size;
                 toggleTaskState(task, errors).finally(() => {
@@ -193,7 +214,7 @@ export function useTasks(settings, glossary, i18n) {
     };
 
     const runAllPendingTasks = () => {
-        const pending = tasks.value.filter(t => t.file && !t.initializing && !t.isTranslating && !t.isFinished);
+        const pending = tasks.value.filter(t => isTaskSubmittable(t) && !t.initializing && !t.isTranslating && !t.isFinished);
         pendingQueue.length = 0;
         pending.forEach((task, i) => {
             task.queuePosition = i + 1;
@@ -379,8 +400,8 @@ export function useTasks(settings, glossary, i18n) {
         }
 
         if (task.isFinished) {
-            // Re-translation requires a file
-            if (!task.file) {
+            // Re-translation requires a file or text input
+            if (!task.file && !task.isTextInput) {
                 task.validationError = true;
                 setTimeout(() => { task.validationError = false; }, 3000);
                 return;
@@ -393,11 +414,28 @@ export function useTasks(settings, glossary, i18n) {
             task.isFinished = false;
             task.logs = '';
             task.downloads = null;
+            task.resultText = null;
             await toggleTaskState(task, errors);
             return;
         }
 
-        if (!task.file) {
+        if (task.isTextInput) {
+            const text = task.inputText || '';
+            if (!text.trim()) {
+                task.validationError = true;
+                task.statusMessage = t('textInputEmptyError');
+                task.statusClass = 'text-danger';
+                setTimeout(() => { task.validationError = false; }, 3000);
+                return;
+            }
+            if (textInputLimit && textInputLimit.value > 0 && text.length > textInputLimit.value) {
+                task.validationError = true;
+                task.statusMessage = t('textInputTooLong', { n: text.length, limit: textInputLimit.value });
+                task.statusClass = 'text-danger';
+                setTimeout(() => { task.validationError = false; }, 3000);
+                return;
+            }
+        } else if (!task.file) {
             task.validationError = true;
             // Auto-clear validation error after 3 seconds
             setTimeout(() => { task.validationError = false; }, 3000);
@@ -414,13 +452,23 @@ export function useTasks(settings, glossary, i18n) {
 
         task.initializing = true;
         try {
-            const formData = new FormData();
-            formData.append('file', task.file);
-            formData.append('payload', JSON.stringify(buildPayload(workflowType)));
-            const res = await fetch('/service/translate/file', {
-                method: 'POST',
-                body: formData
-            });
+            let res;
+            if (task.isTextInput) {
+                // 文本任务固定走 txt 工作流参数
+                res = await fetch('/service/translate/text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: task.inputText, payload: buildPayload('txt') })
+                });
+            } else {
+                const formData = new FormData();
+                formData.append('file', task.file);
+                formData.append('payload', JSON.stringify(buildPayload(workflowType)));
+                res = await fetch('/service/translate/file', {
+                    method: 'POST',
+                    body: formData
+                });
+            }
             const data = await res.json();
             if (res.ok && data.task_started) {
                 if (task.removed) {
@@ -506,6 +554,12 @@ export function useTasks(settings, glossary, i18n) {
                     task.fileName = d.original_filename;
                 }
 
+                // 页面刷新/恢复后，根据后端标记把卡片识别回文本任务
+                if (d.input_source === 'text' && !task.isTextInput) {
+                    task.isTextInput = true;
+                    task.detectedWorkflow = 'txt';
+                }
+
                 // Store statistics if available
                 if (d.statistics) {
                     task.statistics = d.statistics;
@@ -519,6 +573,9 @@ export function useTasks(settings, glossary, i18n) {
                     releaseBatchSlot(task);
                     if (d.download_ready && !d.error_flag) {
                         task.downloads = d.downloads || {};
+                        if (task.isTextInput && d.downloads && d.downloads.txt) {
+                            fetchTextResult(task);
+                        }
                         task.attachment = d.attachment || {};
                         task.statusClass = 'text-success';
                     } else {
@@ -581,6 +638,37 @@ export function useTasks(settings, glossary, i18n) {
         }
     };
 
+    // 拉取文本任务的译文内容（base64 → UTF-8），用于卡片内直接显示
+    const fetchTextResult = async (task) => {
+        if (task.resultText) return;
+        const id = task.backendId;
+        try {
+            const res = await fetch(`/service/content/${id}/txt`);
+            if (!res.ok) return;
+            const data = await res.json();
+            if (task.backendId !== id) return; // 期间已重新翻译
+            task.resultText = decodeBase64Utf8(data.content);
+        } catch (e) {
+            console.error('获取译文内容失败:', e);
+        }
+    };
+
+    const copyResultText = (task) => {
+        const text = task.resultText || '';
+        const markCopied = () => {
+            task.resultCopied = true;
+            setTimeout(() => { task.resultCopied = false; }, 2000);
+        };
+        // 与 copyLog 相同的非安全上下文（局域网 http）回退策略
+        const clipboard = navigator.clipboard;
+        if (clipboard && typeof clipboard.writeText === 'function') {
+            Promise.resolve(clipboard.writeText(text)).then(markCopied).catch(() => { fallbackCopy(text); markCopied(); });
+        } else {
+            fallbackCopy(text);
+            markCopied();
+        }
+    };
+
     return {
         tasks,
         runningCount,
@@ -588,6 +676,9 @@ export function useTasks(settings, glossary, i18n) {
         hasPendingTasks,
         pendingQueue,
         createNewTask,
+        createNewTextTask,
+        fetchTextResult,
+        copyResultText,
         saveActiveTasks,
         removeTask,
         clearAllTasks,
