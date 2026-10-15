@@ -67,59 +67,59 @@
   opacity: 0;
 }
 
-.stats-section[data-v-1729b6eb] {
+.stats-section[data-v-c981dd2a] {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     padding: 8px 12px;
 }
-[data-theme="dark"] .stats-section[data-v-1729b6eb] {
+[data-theme="dark"] .stats-section[data-v-c981dd2a] {
     background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
     border-color: #475569;
 }
-.stats-grid[data-v-1729b6eb] {
+.stats-grid[data-v-c981dd2a] {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
     gap: 8px;
 }
 @media (max-width: 640px) {
-.stats-grid[data-v-1729b6eb] {
+.stats-grid[data-v-c981dd2a] {
         grid-template-columns: repeat(3, 1fr);
 }
 }
-.stat-item[data-v-1729b6eb] {
+.stat-item[data-v-c981dd2a] {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 2px;
 }
-.stat-label[data-v-1729b6eb] {
+.stat-label[data-v-c981dd2a] {
     font-size: 10px;
     color: #64748b;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
-[data-theme="dark"] .stat-label[data-v-1729b6eb] {
+[data-theme="dark"] .stat-label[data-v-c981dd2a] {
     color: #94a3b8;
 }
-.stat-value[data-v-1729b6eb] {
+.stat-value[data-v-c981dd2a] {
     font-size: 12px;
     color: #334155;
     font-weight: 600;
 }
-[data-theme="dark"] .stat-value[data-v-1729b6eb] {
+[data-theme="dark"] .stat-value[data-v-c981dd2a] {
     color: #e2e8f0;
 }
 
 /* Error rate colors - override default stat-value color */
-.stat-value-error.error-green[data-v-1729b6eb] {
+.stat-value-error.error-green[data-v-c981dd2a] {
     color: #22c55e !important;
 }
-.stat-value-error.error-orange[data-v-1729b6eb] {
+.stat-value-error.error-orange[data-v-c981dd2a] {
     color: #f97316 !important;
 }
-.stat-value-error.error-red[data-v-1729b6eb] {
+.stat-value-error.error-red[data-v-c981dd2a] {
     color: #ef4444 !important;
 }
 
@@ -1068,6 +1068,9 @@ video {
 .h-full {
   height: 100%;
 }
+.max-h-80 {
+  max-height: 20rem;
+}
 .max-h-\[90vh\] {
   max-height: 90vh;
 }
@@ -1246,6 +1249,9 @@ video {
 .overflow-hidden {
   overflow: hidden;
 }
+.overflow-y-auto {
+  overflow-y: auto;
+}
 .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1253,6 +1259,12 @@ video {
 }
 .whitespace-normal {
   white-space: normal;
+}
+.whitespace-pre-wrap {
+  white-space: pre-wrap;
+}
+.break-words {
+  overflow-wrap: break-word;
 }
 .break-all {
   word-break: break-all;
@@ -1489,6 +1501,9 @@ video {
 }
 .text-right {
   text-align: right;
+}
+.font-sans {
+  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 .text-base {
   font-size: 1rem;

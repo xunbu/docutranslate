@@ -30,6 +30,12 @@
                 </button>
                 <button
                     class="px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover transition-colors flex items-center gap-2"
+                    @click="handleCreateNewTextTask">
+                    <Heroicon name="PencilSquareIcon" class="w-4 h-4" />
+                    <span>{{ t('newTextTaskBtn') }}</span>
+                </button>
+                <button
+                    class="px-3 py-1.5 text-sm bg-primary text-white rounded hover:bg-primary-hover transition-colors flex items-center gap-2"
                     @click="handleCreateNewTask">
                     <Heroicon name="PlusIcon" class="w-4 h-4" />
                     <span>{{ t('newTaskBtn') }}</span>
@@ -60,6 +66,7 @@
                 @fileDrop="handleFileDrop"
                 @triggerFileInput="handleTriggerFileInput"
                 @copyLog="handleCopyLog"
+                @copyResult="handleCopyResult"
                 @openPreview="handleOpenPreview"
                 @printPdf="handlePrintPdf"
                 @toggleTaskState="handleToggleTaskState" />
@@ -83,6 +90,8 @@ const tasks = inject('tasks');
 const hasPendingTasks = inject('hasPendingTasks');
 const errors = inject('errors');
 const createNewTask = inject('createNewTask');
+const createNewTextTask = inject('createNewTextTask');
+const copyResultText = inject('copyResultText');
 const removeTask = inject('removeTask');
 const clearAllTasks = inject('clearAllTasks');
 const handleTaskFileSelect = inject('handleTaskFileSelect');
@@ -102,6 +111,8 @@ const openQueueSettings = inject('openQueueSettings');
 // Event handlers
 const handleClearAllTasks = () => clearAllTasks();
 const handleCreateNewTask = () => createNewTask();
+const handleCreateNewTextTask = () => createNewTextTask();
+const handleCopyResult = (task) => copyResultText(task);
 const handleRunAllPendingTasks = () => runAllPendingTasks();
 const handleSelectTask = (task) => selectTaskWorkflow(task);
 const handleRemoveTask = (task) => removeTask(task);

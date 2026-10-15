@@ -56,7 +56,7 @@ from docutranslate.server import (
     get_translation_service,
     MEDIA_TYPES,
 )
-from docutranslate.config import PORT, MAX_UPLOAD_MB
+from docutranslate.config import PORT, MAX_UPLOAD_MB, TEXT_INPUT_LIMIT
 from docutranslate.translator import default_params
 from docutranslate.utils.resource_utils import resource_path
 from docutranslate.utils.utils import mask_secrets
@@ -187,6 +187,7 @@ DocuTranslate 后端服务 API，提供文档翻译、状态查询、结果下�
 
 ### 主要工作流程:
 1.  **`POST /service/translate`** 或 **`POST /service/translate/file`**: 提交文件和包含`workflow_type`的翻译参数，启动一个后台任务。服务会自动生成并返回一个唯一的 `task_id`。
+    也可使用 **`POST /service/translate/text`** 直接提交纯文本（`workflow_type` 须为 `txt`），无需上传文件。
 2.  **`GET /service/status/{{task_id}}`**: 使用获取到的 `task_id` 轮询此端点，获取任务的实时状态。
 3.  **`GET /service/logs/{{task_id}}`**: (可选) 获取实时的翻译日志。
 4.  **`GET /service/download/{{task_id}}/{{file_type}}`**: 任务完成后 (当 `download_ready` 为 `true` 时)，通过此端点下载结果文件。
@@ -373,6 +374,35 @@ class TranslateServiceRequest(BaseModel):
     )
 
 
+class TranslateTextServiceRequest(BaseModel):
+    text: str = Field(
+        ...,
+        description="要翻译的文本内容。",
+        examples=["Hello world\n这是第二行"],
+    )
+    payload: TranslatePayload = Field(
+        ...,
+        description="包含工作流类型和相应参数的载荷，workflow_type 必须为 'txt'。"
+    )
+
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "text": "Hello world\nThis is the second line.",
+                    "payload": {
+                        "workflow_type": "txt",
+                        "base_url": "https://api.openai.com/v1",
+                        "api_key": "sk-your-api-key-here",
+                        "model_id": "gpt-4o",
+                        "to_lang": "中文",
+                    },
+                }
+            ]
+        }
+    )
+
+
 # ===================================================================
 # --- Service Endpoints (/service) ---
 # ===================================================================
@@ -506,6 +536,96 @@ async def service_translate_file(
                 content={"task_started": False, "message": e.detail},
             )
         if e.status_code == 500:
+            return JSONResponse(
+                status_code=e.status_code,
+                content={"task_started": False, "message": e.detail},
+            )
+        raise e
+
+
+@service_router.post(
+    "/translate/text",
+    summary="提交翻译任务 (文本输入)",
+    description="""
+接收一个 JSON 请求（纯文本 + 工作流参数），启动后台 TXT 翻译任务，任务机制与文件上传完全一致（轮询/日志/取消/下载）。
+
+- **工作流限制**: `payload.workflow_type` 必须为 `txt`。
+- **长度限制**: `text` 的字符数受 `DOCUTRANSLATE_TEXT_INPUT_LIMIT` 限制（默认 1,000,000，`0` 表示不限制）；
+  无论是否限制字符数，均同时受 `DOCUTRANSLATE_MAX_UPLOAD_MB` 请求体大小限制。
+- **异步处理**: 此端点会立即返回任务ID，客户端需轮询状态接口获取进度。
+""",
+    responses={
+        200: {
+            "description": "翻译任务已成功启动。",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "task_started": True,
+                        "task_id": "a1b2c3d4",
+                        "message": "翻译任务已成功启动，请稍候...",
+                    }
+                }
+            },
+        },
+        400: {"description": "workflow_type 不是 'txt'，或文本内容为空。"},
+        413: {"description": "文本超过字符数上限或请求体超过大小上限。"},
+        429: {
+            "description": "服务器已有一个同ID的任务在处理中（理论上不应发生，因为ID是新生成的）。"
+        },
+        500: {"description": "启动后台任务时发生未知错误。"},
+    },
+)
+async def service_translate_text(
+        request: TranslateTextServiceRequest = Body(
+            ..., description="要翻译的文本内容和工作流参数。"
+        )
+):
+    task_id = uuid.uuid4().hex[:8]
+
+    if request.payload.workflow_type != "txt":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"文本翻译接口仅支持 workflow_type='txt'，"
+                f"当前为 '{request.payload.workflow_type}'，请改用文件上传接口。"
+            ),
+        )
+
+    text = request.text or ""
+    if not text.strip():
+        raise HTTPException(status_code=400, detail="文本内容不能为空。")
+
+    if TEXT_INPUT_LIMIT > 0 and len(text) > TEXT_INPUT_LIMIT:
+        raise HTTPException(
+            status_code=413,
+            detail=(
+                f"文本过长: {len(text)} 个字符超过上限 {TEXT_INPUT_LIMIT} 个字符"
+                f"（可通过 DOCUTRANSLATE_TEXT_INPUT_LIMIT 调整，0 表示不限制）。"
+            ),
+        )
+
+    try:
+        file_contents = text.encode("utf-8")
+        # 与文件上传保持同一套请求体大小口径（UTF-8 字节数）。
+        _enforce_upload_limit(len(file_contents), "文本内容")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"处理文本内容失败: {mask_secrets(str(e))}"
+        )
+
+    try:
+        response_data = await translation_service.start_translation(
+            task_id=task_id,
+            payload=request.payload,
+            file_contents=file_contents,
+            original_filename="text_input.txt",
+            input_source="text",
+        )
+        return JSONResponse(content=response_data)
+    except HTTPException as e:
+        if e.status_code in (429, 500):
             return JSONResponse(
                 status_code=e.status_code,
                 content={"task_started": False, "message": e.detail},
@@ -703,6 +823,7 @@ async def service_get_status(
             "progress_percent": task_state.get("progress_percent", 0),
             "original_filename_stem": task_state["original_filename_stem"],
             "original_filename": task_state.get("original_filename"),
+            "input_source": task_state.get("input_source", "file"),
             "task_start_time": task_state["task_start_time"],
             "task_end_time": task_state["task_end_time"],
             "downloads": downloads,
@@ -1001,7 +1122,7 @@ def service_get_default_params():
     },
 )
 async def service_get_app_version():
-    return JSONResponse(content={"version": __version__})
+    return JSONResponse(content={"version": __version__, "text_input_limit": TEXT_INPUT_LIMIT})
 
 
 @service_router.post(

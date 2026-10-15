@@ -389,6 +389,7 @@ class TranslationService:
         payload: TranslatePayload,
         file_contents: bytes,
         original_filename: str,
+        input_source: str = "file",
     ) -> Dict[str, Any]:
         """
         Start a translation task.
@@ -398,6 +399,8 @@ class TranslationService:
             payload: Translation parameters
             file_contents: File content bytes
             original_filename: Original filename
+            input_source: Input source type ("file" or "text"), used by the
+                frontend to restore task cards after a page reload.
 
         Returns:
             Response dict with task_id and status
@@ -547,6 +550,7 @@ class TranslationService:
                 "temp_dir": None,
                 "downloadable_files": {},
                 "attachment_files": {},
+                "input_source": input_source,
             }
         )
 
