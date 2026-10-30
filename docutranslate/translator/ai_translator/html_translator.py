@@ -39,7 +39,7 @@ SAFE_ATTRIBUTES: Dict[str, List[str]] = {
 @dataclass
 class HtmlTranslatorConfig(AiTranslatorConfig):
     insert_mode: Literal["replace", "append", "prepend"] = "replace"
-    separator: str = "\n"
+    separator: str = " "
 
 
 class HtmlTranslator(AiTranslator):

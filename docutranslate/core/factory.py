@@ -43,7 +43,7 @@ from docutranslate.workflow.txt_workflow import TXTWorkflowConfig, TXTWorkflow
 from docutranslate.workflow.xlsx_workflow import XlsxWorkflowConfig, XlsxWorkflow
 
 
-def create_workflow_from_payload(payload: TranslatePayload, logger: logging.Logger = None) -> Workflow:
+def create_workflow_from_payload(payload: TranslatePayload, logger: logging.Logger = None, progress_tracker=None) -> Workflow:
     """
     根据扁平化的 Payload 配置对象，构建并返回对应的 Workflow 实例。
     """
@@ -56,18 +56,27 @@ def create_workflow_from_payload(payload: TranslatePayload, logger: logging.Logg
             return GlossaryAgentConfig(logger=logger, **payload.glossary_agent_config.model_dump())
         return None
 
+    def build_html_config(config_type):
+        options = (payload.html_exporter_options.model_dump(exclude_none=True)
+                   if payload.html_exporter_options else {})
+        if config_type is not PPTX2HTMLExporterConfig:
+            options.pop("include_hidden_slides", None)
+        return config_type(**options)
+
     # 1. Markdown Based Workflow
     if isinstance(payload, MarkdownWorkflowParams):
         translator_args = payload.model_dump(
             include={"skip_translate", "base_url", "api_key", "model_id", "to_lang", "custom_prompt",
                      "temperature", "top_p", "thinking", "chunk_size", "concurrent", "glossary_dict", "timeout",
                      "connect_timeout", "read_timeout", "write_timeout", "pool_timeout",
+                     "streaming", "stream_idle_timeout", "non_stream_timeout",
                      "retry", "system_proxy_enable", "force_json", "rpm", "tpm", "provider", "extra_body"},
-            exclude_none=True,
+            exclude_none=False,
         )
         translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
         translator_args["glossary_agent_config"] = build_glossary_agent_config()
         translator_config = MDTranslatorConfig(**translator_args)
+        translator_config.progress_tracker = progress_tracker
 
         converter_config = None
         if payload.convert_engine == "mineru":
@@ -89,8 +98,8 @@ def create_workflow_from_payload(payload: TranslatePayload, logger: logging.Logg
                                                            lang_list=payload.mineru_deploy_lang_list,
                                                            server_url=payload.mineru_deploy_server_url)
 
-        # 默认 CDN 开启，如果是 Python 调用可能需要允许用户覆盖，这里暂定 True
-        html_exporter_config = MD2HTMLExporterConfig(cdn=True)
+        # Both SDK and background exports use the same validated HTML options.
+        html_exporter_config = build_html_config(MD2HTMLExporterConfig)
 
         workflow_config = MarkdownBasedWorkflowConfig(
             convert_engine=payload.convert_engine,
@@ -101,9 +110,11 @@ def create_workflow_from_payload(payload: TranslatePayload, logger: logging.Logg
                 MD2DocxExporterConfig(engine=payload.md2docx_engine)
                 if payload.md2docx_engine is not None else None
             ),
-            logger=logger,
+            logger=logger, progress_tracker=progress_tracker,
         )
-        return MarkdownBasedWorkflow(config=workflow_config)
+        workflow = MarkdownBasedWorkflow(config=workflow_config)
+        workflow._html_cdn_explicit = bool(payload.html_exporter_options and payload.html_exporter_options.cdn is not None)
+        return workflow
 
     # 2. Text/Json/Docx/Etc... (使用通用模式简化代码)
     # 定义映射关系：Payload类型 -> (TranslatorConfig类, WorkflowConfig类, Workflow类, ExporterConfig类)
@@ -122,10 +133,10 @@ def create_workflow_from_payload(payload: TranslatePayload, logger: logging.Logg
     for param_type, (TransConf, WorkConf, WorkClass, ExpConf) in mapping.items():
         if isinstance(payload, param_type):
             # 提取通用 Translator 参数
-            dump_exclude = {"workflow_type"}
+            dump_exclude = {"workflow_type", "html_exporter_options"}
             # 特定类型的特殊参数需要保留，例如 json_paths, insert_mode 等
             # model_dump 会自动包含定义在 param_type 中的所有字段
-            translator_args = payload.model_dump(exclude=dump_exclude, exclude_none=True)
+            translator_args = payload.model_dump(exclude=dump_exclude, exclude_none=False)
 
             # 手动注入复杂对象
             translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
@@ -133,18 +144,23 @@ def create_workflow_from_payload(payload: TranslatePayload, logger: logging.Logg
 
             # 实例化 Translator Config
             translator_config = TransConf(**translator_args)
+            translator_config.progress_tracker = progress_tracker
 
             # 实例化 Exporter Config
-            html_exporter_config = ExpConf(cdn=True) if ExpConf else None
+            html_exporter_config = build_html_config(ExpConf) if ExpConf else None
 
             # 实例化 Workflow Config
             # 注意：不同的 WorkflowConfig 构造函数参数可能略有不同，这里做一个简单的适配
             if WorkClass == HtmlWorkflow:
-                workflow_config = WorkConf(translator_config=translator_config, logger=logger)
+                workflow_config = WorkConf(translator_config=translator_config, logger=logger,
+                                           progress_tracker=progress_tracker)
             else:
                 workflow_config = WorkConf(translator_config=translator_config,
-                                           html_exporter_config=html_exporter_config, logger=logger)
+                                           html_exporter_config=html_exporter_config, logger=logger,
+                                           progress_tracker=progress_tracker)
 
-            return WorkClass(config=workflow_config)
+            workflow = WorkClass(config=workflow_config)
+            workflow._html_cdn_explicit = bool(payload.html_exporter_options and payload.html_exporter_options.cdn is not None)
+            return workflow
 
     raise ValueError(f"未知的 Payload 类型: {type(payload)}")

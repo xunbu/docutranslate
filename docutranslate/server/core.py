@@ -16,6 +16,7 @@ import shutil
 import tempfile
 import time
 import uuid
+from dataclasses import replace
 from pathlib import Path
 from typing import (
     List,
@@ -27,20 +28,18 @@ from typing import (
 
 import httpx
 from fastapi import HTTPException
-from pydantic import TypeAdapter
 
-from docutranslate import __version__
-from docutranslate.agents.glossary_agent import GlossaryAgentConfig
 from docutranslate.config import TASK_MAX_COUNT, TEMP_CLEANUP_AGE_HOURS
 from docutranslate.core.schemas import TranslatePayload
-from docutranslate.core.file_types import PARSER_INPUT_SUFFIXES
+from docutranslate.core.file_types import detect_workflow
+from docutranslate.core.params import resolve_auto_payload
+from docutranslate.core.factory import create_workflow_from_payload
 from docutranslate.utils.utils import mask_secrets
-from docutranslate.exporter.md.types import ConvertEngineType
-from docutranslate.workflow.ass_workflow import AssWorkflow, AssWorkflowConfig
+from docutranslate.workflow.ass_workflow import AssWorkflow
 from docutranslate.workflow.base import Workflow
-from docutranslate.workflow.docx_workflow import DocxWorkflow, DocxWorkflowConfig
-from docutranslate.workflow.epub_workflow import EpubWorkflow, EpubWorkflowConfig
-from docutranslate.workflow.html_workflow import HtmlWorkflow, HtmlWorkflowConfig
+from docutranslate.workflow.docx_workflow import DocxWorkflow
+from docutranslate.workflow.epub_workflow import EpubWorkflow
+from docutranslate.workflow.html_workflow import HtmlWorkflow
 from docutranslate.workflow.interfaces import (
     DocxExportable,
     EpubExportable,
@@ -54,53 +53,17 @@ from docutranslate.workflow.interfaces import (
     AssExportable,
     PPTXExportable,
 )
-from docutranslate.workflow.json_workflow import JsonWorkflow, JsonWorkflowConfig
-from docutranslate.workflow.md_based_workflow import (
-    MarkdownBasedWorkflow,
-    MarkdownBasedWorkflowConfig,
-)
-from docutranslate.workflow.pptx_workflow import PPTXWorkflow, PPTXWorkflowConfig
-from docutranslate.workflow.srt_workflow import SrtWorkflow, SrtWorkflowConfig
-from docutranslate.workflow.txt_workflow import TXTWorkflow, TXTWorkflowConfig
-from docutranslate.workflow.xlsx_workflow import XlsxWorkflow, XlsxWorkflowConfig
+from docutranslate.workflow.json_workflow import JsonWorkflow
+from docutranslate.workflow.md_based_workflow import MarkdownBasedWorkflow
+from docutranslate.workflow.pptx_workflow import PPTXWorkflow
+from docutranslate.workflow.srt_workflow import SrtWorkflow
+from docutranslate.workflow.txt_workflow import TXTWorkflow
+from docutranslate.workflow.xlsx_workflow import XlsxWorkflow
 from docutranslate.logger import global_logger
 from docutranslate.progress import ProgressTracker
-from docutranslate.translator import default_params
-
-from docutranslate.converter.x2md.converter_mineru import ConverterMineruConfig
-from docutranslate.converter.x2md.converter_mineru_deploy import ConverterMineruDeployConfig
-from docutranslate.exporter.md.md2html_exporter import MD2HTMLExporterConfig
-from docutranslate.exporter.md.md2docx_exporter import MD2DocxExporterConfig
-from docutranslate.exporter.txt.txt2html_exporter import TXT2HTMLExporterConfig
-from docutranslate.translator.ai_translator.md_translator import MDTranslatorConfig
-from docutranslate.translator.ai_translator.txt_translator import TXTTranslatorConfig
-from docutranslate.translator.ai_translator.json_translator import JsonTranslatorConfig
-from docutranslate.exporter.js.json2html_exporter import Json2HTMLExporterConfig
-from docutranslate.translator.ai_translator.xlsx_translator import XlsxTranslatorConfig
-from docutranslate.exporter.xlsx.xlsx2html_exporter import Xlsx2HTMLExporterConfig
-from docutranslate.translator.ai_translator.docx_translator import DocxTranslatorConfig
-from docutranslate.exporter.docx.docx2html_exporter import Docx2HTMLExporterConfig
-from docutranslate.translator.ai_translator.srt_translator import SrtTranslatorConfig
-from docutranslate.exporter.srt.srt2html_exporter import Srt2HTMLExporterConfig
-from docutranslate.translator.ai_translator.epub_translator import EpubTranslatorConfig
-from docutranslate.exporter.epub.epub2html_exporter import Epub2HTMLExporterConfig
-from docutranslate.translator.ai_translator.html_translator import HtmlTranslatorConfig
-from docutranslate.translator.ai_translator.ass_translator import AssTranslatorConfig
-from docutranslate.exporter.ass.ass2html_exporter import Ass2HTMLExporterConfig
-from docutranslate.translator.ai_translator.pptx_translator import PPTXTranslatorConfig
-from docutranslate.exporter.pptx.pptx2html_exporter import PPTX2HTMLExporterConfig
-
 
 MAX_LOG_HISTORY = 200
 MAX_LOG_QUEUE = 500
-AGENT_TIMEOUT_FIELDS = (
-    "timeout",
-    "connect_timeout",
-    "read_timeout",
-    "write_timeout",
-    "pool_timeout",
-)
-
 
 # --- Workflow dictionary ---
 WORKFLOW_DICT: Dict[str, Type[Workflow]] = {
@@ -191,31 +154,7 @@ class QueueAndHistoryHandler(logging.Handler):
 
 def get_workflow_type_from_filename(filename: str) -> str:
     """Get workflow type based on file extension."""
-    ext = Path(filename).suffix.lower()
-    if ext in PARSER_INPUT_SUFFIXES:
-        return "markdown_based"
-    elif ext in [".md", ".markdown", ".zip"]:
-        return "markdown_based"
-    elif ext in [".docx", ".doc"]:
-        return "docx"
-    elif ext in [".csv", ".xlsx", ".xls"]:
-        return "xlsx"
-    elif ext in [".pptx", ".ppt"]:
-        return "pptx"
-    elif ext in [".json"]:
-        return "json"
-    elif ext in [".srt"]:
-        return "srt"
-    elif ext in [".ass"]:
-        return "ass"
-    elif ext in [".epub"]:
-        return "epub"
-    elif ext in [".html", ".htm"]:
-        return "html"
-    elif ext in [".txt"]:
-        return "txt"
-    else:
-        return "txt"
+    return detect_workflow(filename)
 
 
 def _create_default_task_state() -> Dict[str, Any]:
@@ -402,113 +341,10 @@ class TranslationService:
         Returns:
             Response dict with task_id and status
         """
-        # Auto workflow routing
-        if payload.workflow_type == "auto":
-            detected_type = get_workflow_type_from_filename(original_filename)
-            global_logger.info(
-                "[%s] 自动识别工作流: %s -> %s",
-                task_id,
-                original_filename,
-                detected_type,
-            )
-
-            # 关键修复：完全手动构造 payload_data，不依赖 model_dump
-            # 这样可以确保所有字段都正确传递，不会因为 exclude_none 或其他原因丢失
-            payload_data = {
-                "workflow_type": detected_type,
-            }
-
-            # 从 BaseWorkflowParams 复制所有字段
-            base_fields = [
-                "skip_translate", "base_url", "api_key", "model_id", "to_lang",
-                "chunk_size", "concurrent", "temperature", "top_p", *AGENT_TIMEOUT_FIELDS, "thinking", "retry",
-                "system_proxy_enable", "custom_prompt", "glossary_dict",
-                "glossary_generate_enable", "glossary_agent_config",
-                "force_json", "rpm", "tpm", "provider", "extra_body"
-            ]
-            for field_name in base_fields:
-                if hasattr(payload, field_name):
-                    value = getattr(payload, field_name)
-                    if value is not None and value != "":
-                        payload_data[field_name] = value
-
-            # 从 UniversalParamsMixin 复制所有字段（关键！）
-            universal_fields = [
-                "convert_engine", "mineru_token", "model_version", "formula_ocr",
-                "mineru_language",
-                "mineru_deploy_base_url", "mineru_deploy_api_key", "mineru_deploy_backend", "mineru_deploy_effort",
-                "mineru_deploy_parse_method",
-                "mineru_deploy_table_enable", "mineru_deploy_formula_enable",
-                "mineru_deploy_image_analysis",
-                "mineru_deploy_start_page_id", "mineru_deploy_end_page_id",
-                "mineru_deploy_lang_list", "mineru_deploy_server_url",
-                "insert_mode", "separator", "segment_mode", "translate_regions", "json_paths", "md2docx_engine",
-                "office_password"
-            ]
-            for field_name in universal_fields:
-                if hasattr(payload, field_name):
-                    value = getattr(payload, field_name)
-                    if value is not None:
-                        # 注意：mineru_token 即使是空字符串也要保留，因为 MarkdownWorkflowParams 的默认值是空字符串
-                        # 但如果用户明确传入了 token（非空），我们需要保留它
-                        if isinstance(value, str) and value == "" and field_name != "mineru_token":
-                            continue  # 跳过空字符串，除了 mineru_token
-                        payload_data[field_name] = value
-                        global_logger.debug(
-                            "[%s] 复制字段 %s: %s%s",
-                            task_id,
-                            field_name,
-                            type(value).__name__,
-                            f" (len={len(value)})" if isinstance(value, str) else "",
-                        )
-
-            # 调试日志
-            global_logger.debug(
-                "[%s] payload_data keys: %s", task_id, sorted(payload_data)
-            )
-            if "mineru_token" in payload_data:
-                token = payload_data["mineru_token"]
-                global_logger.debug(
-                    "[%s] mineru_token configured=%s, length=%d",
-                    task_id,
-                    bool(token),
-                    len(token),
-                )
-            if "convert_engine" in payload_data:
-                global_logger.debug(
-                    "[%s] convert_engine=%s",
-                    task_id,
-                    payload_data["convert_engine"],
-                )
-
-            if detected_type == "json" and not payload_data.get("json_paths"):
-                payload_data["json_paths"] = ["$..*"]
-
-            if detected_type == "markdown_based" and not payload_data.get("convert_engine"):
-                if Path(original_filename).suffix.lower() in PARSER_INPUT_SUFFIXES:
-                    payload_data["convert_engine"] = "mineru"
-                else:
-                    payload_data["convert_engine"] = "identity"
-
-            try:
-                payload = TypeAdapter(TranslatePayload).validate_python(payload_data)
-                # 验证后再次检查
-                if hasattr(payload, "mineru_token"):
-                    token = payload.mineru_token
-                    global_logger.debug(
-                        "[%s] 参数校验后 mineru_token configured=%s, length=%d",
-                        task_id,
-                        bool(token),
-                        len(token) if token else 0,
-                    )
-                if hasattr(payload, "convert_engine"):
-                    global_logger.debug(
-                        "[%s] 参数校验后 convert_engine=%s",
-                        task_id,
-                        payload.convert_engine,
-                    )
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"自动转换工作流参数失败: {mask_secrets(str(e))}")
+        try:
+            payload = resolve_auto_payload(payload, original_filename)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=f"参数配置错误: {mask_secrets(str(exc))}") from exc
 
         if task_id not in self.tasks_state:
             self.tasks_state[task_id] = _create_default_task_state()
@@ -539,6 +375,7 @@ class TranslationService:
                 "cancelled": False,
                 "download_ready": False,
                 "workflow_instance": None,
+                "statistics": None,
                 "original_filename_stem": safe_stem,
                 "original_filename": original_filename,
                 "task_start_time": time.time(),
@@ -640,23 +477,7 @@ class TranslationService:
             if not workflow_class:
                 raise ValueError(f"不支持的工作流类型: '{payload.workflow_type}'")
 
-            def build_glossary_agent_config():
-                if payload.glossary_generate_enable and payload.glossary_agent_config:
-                    agent_payload = payload.glossary_agent_config
-                    return GlossaryAgentConfig(
-                        logger=task_logger, **agent_payload.model_dump()
-                    )
-                return None
-
-            if hasattr(payload, 'md2docx_engine'):
-                md2docx_engine = payload.md2docx_engine
-            else:
-                md2docx_engine = "auto"
-
-            workflow = self._create_workflow(
-                payload, task_logger, progress_tracker, build_glossary_agent_config, md2docx_engine
-            )
-
+            workflow = self._create_workflow(payload, task_logger, progress_tracker)
             # 保存workflow引用以便在polling时获取实时统计
             task_state["workflow_instance"] = workflow
 
@@ -827,485 +648,12 @@ class TranslationService:
         payload: TranslatePayload,
         task_logger: logging.Logger,
         progress_tracker: ProgressTracker,
-        build_glossary_agent_config,
-        md2docx_engine: str,
+        build_glossary_agent_config=None,
+        md2docx_engine=None,
     ) -> Workflow:
-        """Create workflow instance based on payload type."""
-        from docutranslate.core.schemas import (
-            MarkdownWorkflowParams,
-            TextWorkflowParams,
-            JsonWorkflowParams,
-            XlsxWorkflowParams,
-            DocxWorkflowParams,
-            SrtWorkflowParams,
-            EpubWorkflowParams,
-            HtmlWorkflowParams,
-            AssWorkflowParams,
-            PPTXWorkflowParams,
-        )
-
-        if isinstance(payload, MarkdownWorkflowParams):
-            task_logger.info("构建 MarkdownBasedWorkflow 配置。")
-            translator_args = payload.model_dump(
-                include={
-                    "skip_translate",
-                    "base_url",
-                    "api_key",
-                    "model_id",
-                    "to_lang",
-                    "custom_prompt",
-                    "temperature",
-                    "top_p",
-                    "thinking",
-                    "chunk_size",
-                    "concurrent",
-                    "glossary_dict",
-                    *AGENT_TIMEOUT_FIELDS,
-                    "retry",
-                    "system_proxy_enable",
-                    "force_json",
-                    "rpm",
-                    "tpm",
-                    "provider",
-                    "extra_body",
-                },
-                exclude_none=True,
-            )
-            translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
-            translator_args["glossary_agent_config"] = build_glossary_agent_config()
-            translator_config = MDTranslatorConfig(**translator_args)
-            translator_config.progress_tracker = progress_tracker
-
-            converter_config = None
-            if payload.convert_engine == "mineru":
-                token = payload.mineru_token or ""
-                task_logger.info(f"Creating ConverterMineruConfig with mineru_token (length: {len(token)})")
-                converter_config = ConverterMineruConfig(
-                    logger=task_logger,
-                    mineru_token=token,
-                    formula_ocr=payload.formula_ocr,
-                    model_version=payload.model_version,
-                    language=payload.mineru_language,
-                )
-            elif payload.convert_engine == "mineru_deploy":
-                converter_config = ConverterMineruDeployConfig(
-                    base_url=payload.mineru_deploy_base_url,
-                    api_key=payload.mineru_deploy_api_key or "",
-                    backend=payload.mineru_deploy_backend,
-                    effort=payload.mineru_deploy_effort,
-                    parse_method=payload.mineru_deploy_parse_method,
-                    formula_enable=payload.mineru_deploy_formula_enable,
-                    table_enable=payload.mineru_deploy_table_enable,
-                    image_analysis=payload.mineru_deploy_image_analysis,
-                    start_page_id=payload.mineru_deploy_start_page_id,
-                    end_page_id=payload.mineru_deploy_end_page_id,
-                    lang_list=payload.mineru_deploy_lang_list,
-                    server_url=payload.mineru_deploy_server_url,
-                )
-            html_exporter_config = MD2HTMLExporterConfig(cdn=True)
-            md2docx_exporter_config = MD2DocxExporterConfig(
-                engine=md2docx_engine
-            ) if md2docx_engine is not None else None
-            workflow_config = MarkdownBasedWorkflowConfig(
-                convert_engine=payload.convert_engine,
-                converter_config=converter_config,
-                translator_config=translator_config,
-                html_exporter_config=html_exporter_config,
-                md2docx_exporter_config=md2docx_exporter_config,
-                logger=task_logger,
-                progress_tracker=progress_tracker,
-            )
-            return MarkdownBasedWorkflow(config=workflow_config)
-
-        elif isinstance(payload, TextWorkflowParams):
-            task_logger.info("构建 TXTWorkflow 配置。")
-            translator_args = payload.model_dump(
-                include={
-                    "skip_translate",
-                    "base_url",
-                    "api_key",
-                    "model_id",
-                    "to_lang",
-                    "custom_prompt",
-                    "temperature",
-                    "top_p",
-                    "thinking",
-                    "chunk_size",
-                    "concurrent",
-                    "glossary_dict",
-                    "insert_mode",
-                    "separator",
-                    "segment_mode",
-                    *AGENT_TIMEOUT_FIELDS,
-                    "retry",
-                    "system_proxy_enable",
-                    "force_json",
-                    "rpm",
-                    "tpm",
-                    "provider",
-                    "extra_body",
-                },
-                exclude_none=True,
-            )
-            translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
-            translator_args["glossary_agent_config"] = build_glossary_agent_config()
-            translator_config = TXTTranslatorConfig(**translator_args)
-            translator_config.progress_tracker = progress_tracker
-
-            html_exporter_config = TXT2HTMLExporterConfig(cdn=True)
-            workflow_config = TXTWorkflowConfig(
-                translator_config=translator_config,
-                html_exporter_config=html_exporter_config,
-                logger=task_logger,
-                progress_tracker=progress_tracker,
-            )
-            return TXTWorkflow(config=workflow_config)
-
-        elif isinstance(payload, JsonWorkflowParams):
-            task_logger.info("构建 JsonWorkflow 配置。")
-            translator_args = payload.model_dump(
-                include={
-                    "skip_translate",
-                    "base_url",
-                    "api_key",
-                    "model_id",
-                    "to_lang",
-                    "custom_prompt",
-                    "temperature",
-                    "top_p",
-                    "thinking",
-                    "chunk_size",
-                    "concurrent",
-                    "glossary_dict",
-                    "json_paths",
-                    *AGENT_TIMEOUT_FIELDS,
-                    "retry",
-                    "system_proxy_enable",
-                    "force_json",
-                    "rpm",
-                    "tpm",
-                    "provider",
-                    "extra_body",
-                },
-                exclude_none=True,
-            )
-            translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
-            translator_args["glossary_agent_config"] = build_glossary_agent_config()
-            translator_config = JsonTranslatorConfig(**translator_args)
-            translator_config.progress_tracker = progress_tracker
-
-            html_exporter_config = Json2HTMLExporterConfig(cdn=True)
-            workflow_config = JsonWorkflowConfig(
-                translator_config=translator_config,
-                html_exporter_config=html_exporter_config,
-                logger=task_logger,
-                progress_tracker=progress_tracker,
-            )
-            return JsonWorkflow(config=workflow_config)
-
-        elif isinstance(payload, XlsxWorkflowParams):
-            task_logger.info("构建 XlsxWorkflow 配置。")
-            translator_args = payload.model_dump(
-                include={
-                    "skip_translate",
-                    "base_url",
-                    "api_key",
-                    "model_id",
-                    "to_lang",
-                    "custom_prompt",
-                    "temperature",
-                    "top_p",
-                    "thinking",
-                    "chunk_size",
-                    "concurrent",
-                    "insert_mode",
-                    "separator",
-                    "translate_regions",
-                    "office_password",
-                    "glossary_dict",
-                    *AGENT_TIMEOUT_FIELDS,
-                    "retry",
-                    "system_proxy_enable",
-                    "force_json",
-                    "rpm",
-                    "tpm",
-                    "provider",
-                    "extra_body",
-                },
-                exclude_none=True,
-            )
-            translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
-            translator_args["glossary_agent_config"] = build_glossary_agent_config()
-            translator_config = XlsxTranslatorConfig(**translator_args)
-            translator_config.progress_tracker = progress_tracker
-
-            html_exporter_config = Xlsx2HTMLExporterConfig(cdn=True)
-            workflow_config = XlsxWorkflowConfig(
-                translator_config=translator_config,
-                html_exporter_config=html_exporter_config,
-                logger=task_logger,
-                progress_tracker=progress_tracker,
-            )
-            return XlsxWorkflow(config=workflow_config)
-
-        elif isinstance(payload, DocxWorkflowParams):
-            task_logger.info("构建 DocxWorkflow 配置。")
-            translator_args = payload.model_dump(
-                include={
-                    "skip_translate",
-                    "base_url",
-                    "api_key",
-                    "model_id",
-                    "to_lang",
-                    "custom_prompt",
-                    "temperature",
-                    "top_p",
-                    "thinking",
-                    "chunk_size",
-                    "concurrent",
-                    "insert_mode",
-                    "separator",
-                    "office_password",
-                    "glossary_dict",
-                    *AGENT_TIMEOUT_FIELDS,
-                    "retry",
-                    "system_proxy_enable",
-                    "force_json",
-                    "rpm",
-                    "tpm",
-                    "provider",
-                    "extra_body",
-                },
-                exclude_none=True,
-            )
-            translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
-            translator_args["glossary_agent_config"] = build_glossary_agent_config()
-            translator_config = DocxTranslatorConfig(**translator_args)
-            translator_config.progress_tracker = progress_tracker
-
-            html_exporter_config = Docx2HTMLExporterConfig(cdn=True)
-            workflow_config = DocxWorkflowConfig(
-                translator_config=translator_config,
-                html_exporter_config=html_exporter_config,
-                logger=task_logger,
-                progress_tracker=progress_tracker,
-            )
-            return DocxWorkflow(config=workflow_config)
-
-        elif isinstance(payload, SrtWorkflowParams):
-            task_logger.info("构建 SrtWorkflow 配置。")
-            translator_args = payload.model_dump(
-                include={
-                    "skip_translate",
-                    "base_url",
-                    "api_key",
-                    "model_id",
-                    "to_lang",
-                    "custom_prompt",
-                    "temperature",
-                    "top_p",
-                    "thinking",
-                    "chunk_size",
-                    "concurrent",
-                    "insert_mode",
-                    "separator",
-                    "glossary_dict",
-                    *AGENT_TIMEOUT_FIELDS,
-                    "retry",
-                    "system_proxy_enable",
-                    "force_json",
-                    "rpm",
-                    "tpm",
-                    "provider",
-                    "extra_body",
-                },
-                exclude_none=True,
-            )
-            translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
-            translator_args["glossary_agent_config"] = build_glossary_agent_config()
-            translator_config = SrtTranslatorConfig(**translator_args)
-            translator_config.progress_tracker = progress_tracker
-
-            html_exporter_config = Srt2HTMLExporterConfig(cdn=True)
-            workflow_config = SrtWorkflowConfig(
-                translator_config=translator_config,
-                html_exporter_config=html_exporter_config,
-                logger=task_logger,
-                progress_tracker=progress_tracker,
-            )
-            return SrtWorkflow(config=workflow_config)
-
-        elif isinstance(payload, EpubWorkflowParams):
-            task_logger.info("构建 EpubWorkflow 配置。")
-            translator_args = payload.model_dump(
-                include={
-                    "skip_translate",
-                    "base_url",
-                    "api_key",
-                    "model_id",
-                    "to_lang",
-                    "custom_prompt",
-                    "temperature",
-                    "top_p",
-                    "thinking",
-                    "chunk_size",
-                    "concurrent",
-                    "insert_mode",
-                    "separator",
-                    "glossary_dict",
-                    *AGENT_TIMEOUT_FIELDS,
-                    "retry",
-                    "system_proxy_enable",
-                    "force_json",
-                    "rpm",
-                    "tpm",
-                    "provider",
-                    "extra_body",
-                },
-                exclude_none=True,
-            )
-            translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
-            translator_args["glossary_agent_config"] = build_glossary_agent_config()
-            translator_config = EpubTranslatorConfig(**translator_args)
-            translator_config.progress_tracker = progress_tracker
-
-            html_exporter_config = Epub2HTMLExporterConfig(cdn=True)
-            workflow_config = EpubWorkflowConfig(
-                translator_config=translator_config,
-                html_exporter_config=html_exporter_config,
-                logger=task_logger,
-                progress_tracker=progress_tracker,
-            )
-            return EpubWorkflow(config=workflow_config)
-
-        elif isinstance(payload, HtmlWorkflowParams):
-            task_logger.info("构建 HtmlWorkflow 配置。")
-            translator_args = payload.model_dump(
-                include={
-                    "skip_translate",
-                    "base_url",
-                    "api_key",
-                    "model_id",
-                    "to_lang",
-                    "custom_prompt",
-                    "temperature",
-                    "top_p",
-                    "thinking",
-                    "chunk_size",
-                    "concurrent",
-                    "insert_mode",
-                    "separator",
-                    "glossary_dict",
-                    *AGENT_TIMEOUT_FIELDS,
-                    "retry",
-                    "system_proxy_enable",
-                    "force_json",
-                    "rpm",
-                    "tpm",
-                    "provider",
-                    "extra_body",
-                },
-                exclude_none=True,
-            )
-            translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
-            translator_args["glossary_agent_config"] = build_glossary_agent_config()
-            translator_config = HtmlTranslatorConfig(**translator_args)
-            translator_config.progress_tracker = progress_tracker
-
-            workflow_config = HtmlWorkflowConfig(
-                translator_config=translator_config, logger=task_logger,
-                progress_tracker=progress_tracker,
-            )
-            return HtmlWorkflow(config=workflow_config)
-
-        elif isinstance(payload, AssWorkflowParams):
-            task_logger.info("构建 AssWorkflow 配置。")
-            translator_args = payload.model_dump(
-                include={
-                    "skip_translate",
-                    "base_url",
-                    "api_key",
-                    "model_id",
-                    "to_lang",
-                    "custom_prompt",
-                    "temperature",
-                    "top_p",
-                    "thinking",
-                    "chunk_size",
-                    "concurrent",
-                    "insert_mode",
-                    "separator",
-                    "glossary_dict",
-                    *AGENT_TIMEOUT_FIELDS,
-                    "retry",
-                    "system_proxy_enable",
-                    "force_json",
-                    "rpm",
-                    "tpm",
-                    "provider",
-                    "extra_body",
-                },
-                exclude_none=True,
-            )
-            translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
-            translator_args["glossary_agent_config"] = build_glossary_agent_config()
-            translator_config = AssTranslatorConfig(**translator_args)
-            translator_config.progress_tracker = progress_tracker
-
-            html_exporter_config = Ass2HTMLExporterConfig(cdn=True)
-            workflow_config = AssWorkflowConfig(
-                translator_config=translator_config,
-                html_exporter_config=html_exporter_config,
-                logger=task_logger,
-                progress_tracker=progress_tracker,
-            )
-            return AssWorkflow(config=workflow_config)
-
-        elif isinstance(payload, PPTXWorkflowParams):
-            task_logger.info("构建 PPTXWorkflow 配置。")
-            translator_args = payload.model_dump(
-                include={
-                    "skip_translate",
-                    "base_url",
-                    "api_key",
-                    "model_id",
-                    "to_lang",
-                    "custom_prompt",
-                    "temperature",
-                    "top_p",
-                    "thinking",
-                    "chunk_size",
-                    "concurrent",
-                    "insert_mode",
-                    "separator",
-                    "glossary_dict",
-                    *AGENT_TIMEOUT_FIELDS,
-                    "retry",
-                    "system_proxy_enable",
-                    "force_json",
-                    "rpm",
-                    "tpm",
-                    "provider",
-                    "extra_body",
-                },
-                exclude_none=True,
-            )
-            translator_args["glossary_generate_enable"] = payload.glossary_generate_enable
-            translator_args["glossary_agent_config"] = build_glossary_agent_config()
-            translator_config = PPTXTranslatorConfig(**translator_args)
-            translator_config.progress_tracker = progress_tracker
-
-            html_exporter_config = PPTX2HTMLExporterConfig(cdn=True)
-            workflow_config = PPTXWorkflowConfig(
-                translator_config=translator_config,
-                html_exporter_config=html_exporter_config,
-                logger=task_logger,
-                progress_tracker=progress_tracker,
-            )
-            return PPTXWorkflow(config=workflow_config)
-
-        else:
-            raise TypeError(f"工作流类型 '{payload.workflow_type}' 的处理逻辑未实现。")
+        """Compatibility wrapper around the shared SDK/server workflow factory."""
+        return create_workflow_from_payload(payload, logger=task_logger,
+                                            progress_tracker=progress_tracker)
 
     def _build_export_map(
         self,
@@ -1393,25 +741,9 @@ class TranslationService:
             )
 
         if isinstance(workflow, HTMLExportable):
-            html_config = None
-            if isinstance(workflow, MarkdownBasedWorkflow):
-                html_config = MD2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, TXTWorkflow):
-                html_config = TXT2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, JsonWorkflow):
-                html_config = Json2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, XlsxWorkflow):
-                html_config = Xlsx2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, DocxWorkflow):
-                html_config = Docx2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, SrtWorkflow):
-                html_config = Srt2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, EpubWorkflow):
-                html_config = Epub2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, AssWorkflow):
-                html_config = Ass2HTMLExporterConfig(cdn=is_cdn_available)
-            elif isinstance(workflow, PPTXWorkflow):
-                html_config = PPTX2HTMLExporterConfig(cdn=is_cdn_available)
+            html_config = getattr(workflow.config, "html_exporter_config", None)
+            if html_config is not None and not getattr(workflow, "_html_cdn_explicit", False):
+                html_config = replace(html_config, cdn=is_cdn_available)
             export_map["html"] = (
                 lambda: workflow.export_to_html(html_config),
                 f"{filename_stem}_translated.html",

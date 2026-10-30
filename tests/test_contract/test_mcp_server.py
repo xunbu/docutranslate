@@ -15,7 +15,7 @@ from docutranslate.mcp import MCP_AVAILABLE, create_mcp_server  # noqa: E402
 EXPECTED_TOOLS = {
     "get_status", "configure_client", "get_client_config", "submit_task",
     "get_task_status", "download_file", "cancel_task", "release_task",
-    "load_glossary_file",
+    "load_glossary_file", "list_tasks", "get_task_logs",
 }
 
 

@@ -4,6 +4,7 @@ from abc import abstractmethod
 from dataclasses import dataclass, field
 from typing import TypeVar, Dict, Any, Optional
 
+from docutranslate.config import TO_LANG, CHUNK_SIZE
 from docutranslate.agents.agent import AgentConfig
 from docutranslate.agents.glossary_agent import GlossaryAgentConfig, GlossaryAgent
 from docutranslate.glossary.glossary import Glossary
@@ -20,9 +21,9 @@ class AiTranslatorConfig(TranslatorConfig, AgentConfig):
     model_id: str | None = field(
         default=None, metadata={"description": "当skip_translate为False时为必填项"}
     )
-    to_lang: str = "简体中文"
+    to_lang: str = TO_LANG
     custom_prompt: str | None = None
-    chunk_size: int = 3000
+    chunk_size: int = CHUNK_SIZE
     glossary: Glossary | None = None
     glossary_dict: Dict[str, str] | None = None
     glossary_generate_enable: bool = False

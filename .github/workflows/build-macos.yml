@@ -62,6 +62,14 @@ jobs:
           # 移动可执行文件到 .app 包中
           mv "dist/DocuTranslate-${{ env.VERSION }}-${{ matrix.executable_suffix }}" dist/DocuTranslate.app/Contents/MacOS/DocuTranslate
           chmod +x dist/DocuTranslate.app/Contents/MacOS/DocuTranslate
+
+          # Finder 不会为 .app 自动打开终端，通过启动器显示服务日志和实际访问地址。
+          cp scripts/macos/DocuTranslateLauncher dist/DocuTranslate.app/Contents/MacOS/
+          cp scripts/macos/DocuTranslate.command dist/DocuTranslate.app/Contents/MacOS/
+          chmod +x dist/DocuTranslate.app/Contents/MacOS/DocuTranslateLauncher \
+            dist/DocuTranslate.app/Contents/MacOS/DocuTranslate.command
+          /bin/bash -n dist/DocuTranslate.app/Contents/MacOS/DocuTranslateLauncher
+          /bin/bash -n dist/DocuTranslate.app/Contents/MacOS/DocuTranslate.command
           
           # 复制应用图标
           cp DocuTranslate.icns dist/DocuTranslate.app/Contents/Resources/
@@ -73,7 +81,7 @@ jobs:
           <plist version="1.0">
           <dict>
               <key>CFBundleExecutable</key>
-              <string>DocuTranslate</string>
+              <string>DocuTranslateLauncher</string>
               <key>CFBundleIconFile</key>
               <string>DocuTranslate.icns</string>
               <key>CFBundleIdentifier</key>

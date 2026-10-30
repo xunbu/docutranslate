@@ -43,6 +43,7 @@ from docutranslate.config import (
     MINERU_DEPLOY_START_PAGE_ID, MINERU_DEPLOY_END_PAGE_ID, MINERU_DEPLOY_SERVER_URL,
     # TextWorkflowParams defaults
     INSERT_MODE, SEPARATOR, SEGMENT_MODE,
+    LLM_STREAMING, STREAM_IDLE_TIMEOUT, NON_STREAM_TIMEOUT,
 )
 
 # --- 公共类型定义 ---
@@ -91,7 +92,7 @@ class GlossaryAgentConfigPayload(BaseModel):
     connect_timeout: float = Field(
         default=CONNECT_TIMEOUT, description="每次建立TCP/TLS连接的超时时间（秒）。"
     )
-    read_timeout: float = Field(
+    read_timeout: Optional[float] = Field(
         default=READ_TIMEOUT, description="非流式两次网络读取之间允许的最大静默时间（秒）。"
     )
     write_timeout: float = Field(
@@ -130,9 +131,20 @@ class GlossaryAgentConfigPayload(BaseModel):
         default="", description="JSON字符串格式的额外请求体参数，会合并到API请求中"
     )
 
+    streaming: bool = LLM_STREAMING
+    stream_idle_timeout: float = STREAM_IDLE_TIMEOUT
+    non_stream_timeout: Optional[float] = NON_STREAM_TIMEOUT
+
 
 # 1. 定义所有工作流共享的基础参数
+class HTMLExportOptions(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    cdn: Optional[bool] = None
+    include_hidden_slides: Optional[bool] = None
+
+
 class BaseWorkflowParams(BaseModel):
+    html_exporter_options: Optional[HTMLExportOptions] = None
     skip_translate: bool = Field(
         default=False,
         description="是否跳过翻译步骤。如果为True，则仅执行文档解析和格式转换。",
@@ -183,7 +195,7 @@ class BaseWorkflowParams(BaseModel):
     connect_timeout: float = Field(
         default=CONNECT_TIMEOUT, description="每次建立TCP/TLS连接的超时时间（秒）。"
     )
-    read_timeout: float = Field(
+    read_timeout: Optional[float] = Field(
         default=READ_TIMEOUT, description="非流式两次网络读取之间允许的最大静默时间（秒）。"
     )
     write_timeout: float = Field(
@@ -237,6 +249,10 @@ class BaseWorkflowParams(BaseModel):
         default=EXTRA_BODY, description="JSON字符串格式的额外请求体参数，会合并到API请求中"
     )
 
+    streaming: bool = LLM_STREAMING
+    stream_idle_timeout: float = STREAM_IDLE_TIMEOUT
+    non_stream_timeout: Optional[float] = NON_STREAM_TIMEOUT
+
     @model_validator(mode="before")
     @classmethod
     def check_translation_fields(cls, values):
@@ -248,6 +264,7 @@ class BaseWorkflowParams(BaseModel):
                 pass
 
         if isinstance(values, dict):
+            values = dict(values)
             if not values.get("skip_translate"):
                 # 环境变量值映射
                 env_values = {
@@ -281,9 +298,17 @@ class BaseWorkflowParams(BaseModel):
                         if ENV_SET.get(field):
                             values[field] = env_value
                 else:
-                    # 默认模式：仅空值时填充
+                    # 默认模式：补缺省值，并保留显式的 false、0 和空文本
                     for field, env_value in env_values.items():
-                        if not values.get(field) and env_value:
+                        # Empty credentials retain their historical environment fallback;
+                        # explicit false, zero and empty text options are valid overrides.
+                        missing = field not in values or (values[field] is None and field != "read_timeout")
+                        if field in {"base_url", "model_id", "api_key", "provider", "to_lang"}:
+                            missing = missing or values[field] == ""
+                        aliases = {"base_url": "baseurl", "api_key": "key"}
+                        if field in aliases and values.get(aliases[field]):
+                            missing = False
+                        if missing and env_value is not None:
                             values[field] = env_value
 
                 # 验证：如果填充后仍为空，则报错（Auto 模式除外）
@@ -324,11 +349,11 @@ class UniversalParamsMixin(BaseModel):
     ]] = None
     mineru_deploy_effort: Optional[Literal["medium", "high"]] = None
     mineru_deploy_parse_method: Optional[Literal["auto", "txt", "ocr"]] = None
-    mineru_deploy_table_enable: bool = True
-    mineru_deploy_formula_enable: bool = True
-    mineru_deploy_image_analysis: bool = True
-    mineru_deploy_start_page_id: int = 0
-    mineru_deploy_end_page_id: int = 99999
+    mineru_deploy_table_enable: Optional[bool] = None
+    mineru_deploy_formula_enable: Optional[bool] = None
+    mineru_deploy_image_analysis: Optional[bool] = None
+    mineru_deploy_start_page_id: Optional[int] = None
+    mineru_deploy_end_page_id: Optional[int] = None
     mineru_deploy_lang_list: Optional[List[str]] = None
     mineru_deploy_server_url: Optional[str] = None
 
@@ -514,7 +539,7 @@ class JsonWorkflowParams(BaseWorkflowParams):
         ..., description="指定使用JSON的翻译工作流。"
     )
     json_paths: List[str] = Field(
-        ...,
+        default_factory=lambda: ["$..*"],
         description="一个jsonpath-ng表达式列表，用于指定需要翻译的JSON字段。",
         examples=[["$.product.name", "$.product.description", "$.features[*]"]],
     )

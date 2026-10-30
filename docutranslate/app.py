@@ -48,6 +48,8 @@ from pydantic import (
 
 from docutranslate import __version__
 from docutranslate.core.schemas import TranslatePayload
+from docutranslate.core.params import INHERIT
+from docutranslate.core.task_status import task_status, task_statistics, default_statistics
 from docutranslate.exporter.md.types import ConvertEngineType
 from docutranslate.logger import global_logger
 # Shared server layer imports
@@ -678,27 +680,16 @@ async def service_get_status(
         for identifier in task_state["attachment_files"].keys():
             attachments[identifier] = f"/service/attachment/{task_id}/{identifier}"
 
-    # 获取统计信息
-    # 优先使用已保存的统计数据（翻译完成后）
-    # 如果正在翻译中，尝试从workflow实例获取实时统计
-    statistics = task_state.get("statistics")
-    if statistics is None:
-        # 尝试从workflow实例获取实时统计
-        workflow = task_state.get("workflow_instance")
-        if workflow and task_state.get("is_processing"):
-            try:
-                statistics = workflow.get_statistics()
-            except Exception:
-                statistics = _get_default_statistics()
-        else:
-            statistics = _get_default_statistics()
+    statistics = task_statistics(task_state)
 
     return JSONResponse(
         content={
             "task_id": task_id,
             "is_processing": task_state["is_processing"],
+            "status": task_status(task_state),
             "status_message": task_state["status_message"],
             "error_flag": task_state["error_flag"],
+            "cancelled": task_state.get("cancelled", False),
             "download_ready": task_state["download_ready"],
             "progress_percent": task_state.get("progress_percent", 0),
             "original_filename_stem": task_state["original_filename_stem"],
@@ -713,24 +704,7 @@ async def service_get_status(
 
 
 def _get_default_statistics() -> dict:
-    """
-    返回默认统计结构（向后兼容）。
-    当任务尚未完成或统计信息不可用时使用。
-    """
-    return {
-        "glossary": None,
-        "translation": None,
-        "total": {
-            "input_tokens": 0,
-            "cached_tokens": 0,
-            "output_tokens": 0,
-            "reasoning_tokens": 0,
-            "total_tokens": 0,
-            "request_count": 0,
-            "unresolved_errors": 0,
-            "unresolved_error_rate": 0.0
-        }
-    }
+    return default_statistics()
 
 
 @service_router.get(
@@ -916,6 +890,12 @@ async def service_content(
 # ===================================================================
 
 
+@service_router.get("/capabilities", summary="查询工作流输入和输出能力", tags=["Application"])
+def service_capabilities():
+    from docutranslate.core.file_types import formats_info
+    return formats_info()
+
+
 @service_router.get(
     "/engin-list",
     summary="获取可用的转换引擎",
@@ -1033,6 +1013,16 @@ async def service_flat_translate(
         temperature: float = Form(default_params["temperature"], description="温度 (0-1)"),
         top_p: float = Form(default_params["top_p"], description="核采样 (0-1)"),
         timeout: int = Form(default_params["timeout"], description="单个翻译分片总超时时间（包含全部重试，秒）"),
+        connect_timeout: Optional[float] = Form(None),
+        read_timeout: Optional[float] = Form(None),
+        write_timeout: Optional[float] = Form(None),
+        pool_timeout: Optional[float] = Form(None),
+        streaming: Optional[bool] = Form(None),
+        stream_idle_timeout: Optional[float] = Form(None),
+        non_stream_timeout: Optional[float] = Form(None),
+        office_password: Optional[str] = Form(None),
+        html_exporter_options_json: Optional[str] = Form(None, description="HTML导出选项JSON，如{\"cdn\": false, \"include_hidden_slides\": true}"),
+        md2docx_engine: Optional[str] = Form(INHERIT, description="inherit继承配置；none禁用DOCX导出；python/pandoc/auto选择引擎"),
         retry: int = Form(default_params["retry"], description="失败重试次数"),
         thinking: str = Form("default", description="思考模式: default, enable, disable"),
         custom_prompt: Optional[str] = Form("", description="自定义系统提示词"),
@@ -1041,9 +1031,9 @@ async def service_flat_translate(
         rpm: Optional[int] = Form(None, description="RPM (每分钟请求数) 限制"),
         tpm: Optional[int] = Form(None, description="TPM (每分钟 Token 数) 限制"),
         provider: Optional[str] = Form("", description="LLM 提供商标识 (用于特定平台的特殊处理)"),
-        insert_mode: str = Form("replace", description="插入模式: replace(替换), append(追加), prepend(前置)"),
-        separator: str = Form("\n", description="追加/前置时的分隔符"),
-        segment_mode: str = Form("line", description="[Txt专用] 分段模式: line(按行), paragraph(按段), none(全文)"),
+        insert_mode: Optional[str] = Form(None, description="插入模式: replace(替换), append(追加), prepend(前置)"),
+        separator: Optional[str] = Form(None, description="追加/前置时的分隔符"),
+        segment_mode: Optional[str] = Form(None, description="[Txt专用] 分段模式: line(按行), paragraph(按段), none(全文)"),
         translate_regions: Optional[List[str]] = Form(None, description="[Xlsx专用] 翻译区域列表, 如 'Sheet1!A1:B10'"),
         convert_engine: Optional[ConvertEngineType] = Form(None,
                                                            description="[PDF/MD] 解析引擎: mineru, identity,mineru_deploy。留空时按文件后缀自动选择。"),
@@ -1109,6 +1099,13 @@ async def service_flat_translate(
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"extra_body_json 解析失败: {mask_secrets(str(e))}")
 
+    parsed_html_options = None
+    if html_exporter_options_json:
+        try:
+            parsed_html_options = json.loads(html_exporter_options_json)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail="html_exporter_options_json 必须是有效JSON") from exc
+    submitted_form = await request.form()
     payload_dict = {
         "workflow_type": workflow_type,
         "base_url": base_url,
@@ -1121,6 +1118,16 @@ async def service_flat_translate(
         "temperature": temperature,
         "top_p": top_p,
         "timeout": timeout,
+        "connect_timeout": connect_timeout,
+        "read_timeout": read_timeout,
+        "write_timeout": write_timeout,
+        "pool_timeout": pool_timeout,
+        "streaming": streaming,
+        "stream_idle_timeout": stream_idle_timeout,
+        "non_stream_timeout": non_stream_timeout,
+        "office_password": office_password,
+        "html_exporter_options": parsed_html_options,
+        "md2docx_engine": md2docx_engine,
         "retry": retry,
         "thinking": thinking,
         "custom_prompt": custom_prompt,
@@ -1160,10 +1167,24 @@ async def service_flat_translate(
     if extra_body_json and extra_body_json.strip():
         payload_dict["extra_body"] = extra_body_json
 
-    payload_dict = {
-        k: v for k, v in payload_dict.items()
-        if v is not None and (not isinstance(v, str) or v != "")
-    }
+    aliases = {"html_exporter_options": "html_exporter_options_json",
+               "glossary_dict": "glossary_dict_json",
+               "glossary_agent_config": "glossary_agent_config_json", "extra_body": "extra_body_json"}
+    payload_dict = {key: value for key, value in payload_dict.items()
+                    if aliases.get(key, key) in submitted_form or key in {"workflow_type", "skip_translate"}}
+    # FastAPI maps an empty form string to the parameter default. Preserve text
+    # overrides from the raw form, after typed validation of numeric/bool fields.
+    for key in ("separator", "custom_prompt", "extra_body", "office_password"):
+        form_key = aliases.get(key, key)
+        if form_key in submitted_form:
+            payload_dict[key] = str(submitted_form[form_key])
+    engine = payload_dict.get("md2docx_engine", INHERIT)
+    if engine == INHERIT:
+        payload_dict.pop("md2docx_engine", None)
+    elif engine in ("none", "null", ""):
+        payload_dict["md2docx_engine"] = None
+    payload_dict = {key: value for key, value in payload_dict.items()
+                    if value is not None or key in {"md2docx_engine", "non_stream_timeout", "read_timeout"}}
 
     # Note: For auto workflow type, we leave it as "auto" and let
     # translation_service.start_translation handle the detection,

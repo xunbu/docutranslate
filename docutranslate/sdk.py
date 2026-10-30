@@ -9,14 +9,13 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional, Literal, Dict, Any, List, Union
 
-from pydantic import TypeAdapter
-
 from docutranslate.agents.agent import ThinkingMode
 from docutranslate.agents.provider import ProviderType
 
-from docutranslate.core.schemas import TranslatePayload, GlossaryAgentConfigPayload, WorkflowType, InsertMode
+from docutranslate.core.schemas import GlossaryAgentConfigPayload, WorkflowType
 from docutranslate.core.factory import create_workflow_from_payload
-from docutranslate.core.file_types import PARSER_INPUT_SUFFIXES
+from docutranslate.core.file_types import WORKFLOW_FORMATS, detect_workflow
+from docutranslate.core.params import resolve_payload, normalize_options
 from docutranslate.translator import default_params
 from docutranslate.config import TO_LANG
 
@@ -32,26 +31,10 @@ _UNSET = _Unset.TOKEN
 # --- 映射配置 ---
 # 格式说明: {workflow_type: {save_type: (method_name, default_suffix)}}
 # 注意: 第一个格式为默认格式
+_FORMAT_SUFFIXES = {"markdown": "md", "markdown_zip": "zip"}
 _WORKFLOW_MAPPINGS = {
-    "markdown_based": {
-        "markdown": ("save_as_markdown", "md"),  # 默认格式: 内嵌 base64 图片
-        "markdown_zip": ("save_as_markdown_zip", "zip"),  # 非内嵌图片，分离存储
-        "html": ("save_as_html", "html"),
-        "docx": ("save_as_docx", "docx"),
-    },
-    "docx": {"docx": ("save_as_docx", "docx"), "html": ("save_as_html", "html")},
-    "xlsx": {
-        "xlsx": ("save_as_xlsx", "xlsx"),
-        "csv": ("save_as_csv", "csv"),
-        "html": ("save_as_html", "html"),
-    },
-    "pptx": {"pptx": ("save_as_pptx", "pptx"), "html": ("save_as_html", "html")},
-    "epub": {"epub": ("save_as_epub", "epub"), "html": ("save_as_html", "html")},
-    "txt": {"txt": ("save_as_txt", "txt"), "html": ("save_as_html", "html")},
-    "json": {"json": ("save_as_json", "json"), "html": ("save_as_html", "html")},
-    "srt": {"srt": ("save_as_srt", "srt"), "html": ("save_as_html", "html")},
-    "ass": {"ass": ("save_as_ass", "ass"), "html": ("save_as_html", "html")},
-    "html": {"html": ("save_as_html", "html")},
+    workflow: {fmt: (f"save_as_{fmt}", _FORMAT_SUFFIXES.get(fmt, fmt)) for fmt in formats}
+    for workflow, formats in WORKFLOW_FORMATS.items()
 }
 
 
@@ -73,7 +56,7 @@ class TranslationResult:
     @property
     def supported_formats(self) -> List[str]:
         """获取当前工作流支持的输出格式"""
-        return self._supported_formats
+        return list(self._supported_formats)
 
     def save(
             self,
@@ -155,6 +138,14 @@ class TranslationResult:
         raise AttributeError(f"Workflow 缺少方法 {method_name}")
 
     @property
+    def statistics(self) -> Dict[str, Any]:
+        return self._workflow.get_statistics()
+
+    @property
+    def attachments(self):
+        return self._workflow.get_attachment()
+
+    @property
     def workflow(self):
         """获取底层 Workflow 实例以访问高级功能 (如附件)"""
         return self._workflow
@@ -176,7 +167,7 @@ class Client:
             retry: int = default_params["retry"],
             thinking: ThinkingMode = default_params["thinking"],
             system_proxy_enable: bool = default_params["system_proxy_enable"],
-            convert_engine: Literal["identity", "mineru", "mineru_deploy"] = "identity",
+            convert_engine: Optional[Literal["identity", "mineru", "mineru_deploy"]] = None,
             mineru_token: str = "",
             extra_body: Optional[str] = None,
             temperature: Optional[float] = None,
@@ -200,8 +191,13 @@ class Client:
         }
         self.defaults = {
             k: v for k, v in self.defaults.items()
-            if v is not None or k == "md2docx_engine"
+            if v is not None or k in {"md2docx_engine", "read_timeout", "non_stream_timeout"}
         }
+
+    @property
+    def capabilities(self) -> Dict[str, Any]:
+        from docutranslate.core.file_types import formats_info
+        return formats_info()
 
     def translate(
             self,
@@ -212,13 +208,20 @@ class Client:
             base_url: Optional[str] = None,
             model_id: Optional[str] = None,
             to_lang: Optional[str] = None,
-            workflow_type: WorkflowType = "auto",
-            skip_translate: bool = False,
+            workflow_type: Optional[WorkflowType] = None,
+            skip_translate: Optional[bool] = None,
             concurrent: Optional[int] = None,
             chunk_size: Optional[int] = None,
             temperature: Optional[float] = None,
             top_p: Optional[float] = None,
             timeout: Optional[int] = None,
+            connect_timeout: Optional[float] = None,
+            read_timeout: Union[float, None, _Unset] = _UNSET,
+            write_timeout: Optional[float] = None,
+            pool_timeout: Optional[float] = None,
+            streaming: Optional[bool] = None,
+            stream_idle_timeout: Optional[float] = None,
+            non_stream_timeout: Union[float, None, _Unset] = _UNSET,
             retry: Optional[int] = None,
             thinking: Optional[ThinkingMode] = None,
             custom_prompt: Optional[str] = None,
@@ -259,6 +262,7 @@ class Client:
             glossary_dict: Optional[Dict[str, str]] = None,
             glossary_agent_config: Optional[Union[GlossaryAgentConfigPayload, Dict[str, Any]]] = None,
             office_password: Optional[str] = None,
+            html_exporter_options: Optional[Dict[str, Any]] = None,
             **kwargs
     ) -> TranslationResult:
         """
@@ -287,8 +291,8 @@ class Client:
             to_lang: Optional[str] = None,
 
             # --- 流程控制 ---
-            workflow_type: WorkflowType = "auto",
-            skip_translate: bool = False,
+            workflow_type: Optional[WorkflowType] = None,
+            skip_translate: Optional[bool] = None,
 
             # --- LLM 参数 ---
             concurrent: Optional[int] = None,
@@ -296,6 +300,13 @@ class Client:
             temperature: Optional[float] = None,
             top_p: Optional[float] = None,
             timeout: Optional[int] = None,
+            connect_timeout: Optional[float] = None,
+            read_timeout: Union[float, None, _Unset] = _UNSET,
+            write_timeout: Optional[float] = None,
+            pool_timeout: Optional[float] = None,
+            streaming: Optional[bool] = None,
+            stream_idle_timeout: Optional[float] = None,
+            non_stream_timeout: Union[float, None, _Unset] = _UNSET,
             retry: Optional[int] = None,
             thinking: Optional[ThinkingMode] = None,
             custom_prompt: Optional[str] = None,
@@ -346,6 +357,7 @@ class Client:
 
             # --- Docx/Xlsx 密码 ---
             office_password: Optional[str] = None,
+            html_exporter_options: Optional[Dict[str, Any]] = None,
 
             **kwargs
     ) -> TranslationResult:
@@ -375,9 +387,10 @@ class Client:
             k: v for k, v in current_args.items()
             if k not in ['self', 'file_path', 'kwargs']
             and v is not _UNSET
-            and (v is not None or k == 'md2docx_engine')
+            and (v is not None or k in {"md2docx_engine", "read_timeout", "non_stream_timeout"})
         }
-        call_params.update({k: v for k, v in kwargs.items() if v is not None})
+        call_params.update({k: v for k, v in kwargs.items()
+                            if v is not None or k in {"read_timeout", "non_stream_timeout"}})
 
         # 2. 参数层级合并
         final_params = {**default_params, **self.defaults, **call_params}
@@ -387,25 +400,11 @@ class Client:
         if not path_obj.exists():
             raise FileNotFoundError(f"文件不存在: {file_path}")
 
-        # 4. 自动检测 Workflow 类型
-        if final_params.get("workflow_type", "auto") == "auto":
-            final_params["workflow_type"] = self._detect_workflow(path_obj)
-            # The constructor's historical identity default is only suitable
-            # for Markdown. Auto mode must parse binary PDF/image inputs.
-            # An explicit per-call engine or a configured parser takes priority.
-            if (path_obj.suffix.lower() in PARSER_INPUT_SUFFIXES
-                    and final_params.get("convert_engine") == "identity"
-                    and "convert_engine" not in call_params):
-                final_params.pop("convert_engine")
-
-        # 5. 智能补全
-        self._patch_defaults(final_params, path_obj)
-
-        # 6. Pydantic 校验
         try:
-            payload = TypeAdapter(TranslatePayload).validate_python(final_params)
-        except Exception as e:
-            raise ValueError(f"参数配置校验失败: {e}")
+            payload = resolve_payload(final_params, path_obj.name)
+        except ValueError as e:
+            raise ValueError(f"参数配置校验失败: {e}") from e
+        final_params["workflow_type"] = payload.workflow_type
 
         # 7. 创建 Workflow
         workflow = create_workflow_from_payload(payload)
@@ -420,23 +419,7 @@ class Client:
         return TranslationResult(workflow, final_params["workflow_type"], path_obj.name)
 
     def _detect_workflow(self, path: Path) -> str:
-        ext = path.suffix.lower().lstrip(".")
-        if path.suffix.lower() in PARSER_INPUT_SUFFIXES or ext in ["md", "markdown", "zip"]: return "markdown_based"
-        if ext in ["xlsx", "csv", "xls"]: return "xlsx"
-        if ext in ["docx", "doc"]: return "docx"
-        if ext in ["html", "htm"]: return "html"
-        if ext in ["pptx", "ppt"]: return "pptx"
-        if ext in ["txt", "json", "srt", "epub", "ass"]: return ext
-        return "txt"
+        return detect_workflow(str(path))
 
     def _patch_defaults(self, params: Dict[str, Any], path: Path):
-        wf = params.get("workflow_type")
-        if wf == "json" and not params.get("json_paths"):
-            params["json_paths"] = ["$..*"]
-        if wf == "markdown_based" and "convert_engine" not in params:
-            ext = path.suffix.lower()
-            if ext in PARSER_INPUT_SUFFIXES:
-                params["convert_engine"] = "mineru"
-            else:
-                params["convert_engine"] = "identity"
-
+        params.update(normalize_options(params, str(path)))

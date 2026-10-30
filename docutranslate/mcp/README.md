@@ -316,13 +316,13 @@ Get list of supported input and output formats.
 ### Supported File Formats
 
 #### Input Formats
-PDF, DOCX, DOC, XLSX, XLS, CSV, MD, Markdown, TXT, JSON, EPUB, SRT, ASS, PPTX, PPT, HTML, HTM, PNG, JPG
+PDF, DOCX, XLSX, CSV, MD, Markdown, ZIP, TXT, JSON, EPUB, SRT, ASS, PPTX, HTML, HTM, PNG, JPG, JPEG, JP2, WEBP, GIF, BMP
 
 #### Output Formats
 - PDF/Images: HTML, Markdown, Markdown+Zip, DOCX
 - DOCX: DOCX, HTML
-- XLSX: XLSX, HTML
-- PPTX: PPTX
+- XLSX: XLSX, CSV, HTML
+- PPTX: PPTX, HTML
 - TXT: TXT, HTML
 - JSON: JSON, HTML
 - Subtitles: SRT/ASS, HTML
@@ -674,13 +674,13 @@ docutranslate -i --with-mcp
 ### 支持的文件格式
 
 #### 输入格式
-PDF, DOCX, DOC, XLSX, XLS, CSV, MD, Markdown, TXT, JSON, EPUB, SRT, ASS, PPTX, PPT, HTML, HTM, PNG, JPG
+PDF, DOCX, XLSX, CSV, MD, Markdown, ZIP, TXT, JSON, EPUB, SRT, ASS, PPTX, HTML, HTM, PNG, JPG, JPEG, JP2, WEBP, GIF, BMP
 
 #### 输出格式
 - PDF/图片: HTML, Markdown, Markdown+Zip, DOCX
 - DOCX: DOCX, HTML
-- XLSX: XLSX, HTML
-- PPTX: PPTX
+- XLSX: XLSX, CSV, HTML
+- PPTX: PPTX, HTML
 - TXT: TXT, HTML
 - JSON: JSON, HTML
 - 字幕: SRT/ASS, HTML
@@ -719,3 +719,25 @@ pip install docutranslate[mcp]
 2. 尝试使用虚拟环境的绝对路径
 3. 重启 Claude Desktop
 4. 查看日志：Help > Debug > Logs
+
+
+### Unified interface options
+
+MCP, SDK and HTTP share workflow routing and validation. Old `.doc`, `.xls` and
+`.ppt` files must be converted to `.docx`, `.xlsx` and `.pptx` first.
+
+- Omitted options inherit defaults. Empty `separator` and `custom_prompt` values,
+  `false` and `0` are explicit overrides.
+- `md2docx_engine`: omission / `"inherit"` keeps MCP client configuration;
+  JSON `null` disables DOCX export. In `/service/flat-translate`, send `"none"`
+  to disable it. SDK callers use `None`.
+- `connect_timeout`, `read_timeout`, `write_timeout`, `pool_timeout`, `streaming`,
+  `stream_idle_timeout`, `non_stream_timeout` are available per request.
+  Explicit null read/non-stream timeouts restore runtime fallback behavior.
+- `html_exporter_options` accepts `{"cdn": false}` and, for PPTX,
+  `{"include_hidden_slides": true}`. The flat HTTP form accepts this object as
+  `html_exporter_options_json`.
+- `list_tasks` and `get_task_logs` expose the shared service's task IDs and
+  retained logs. `get_task_status` includes cancellation state and statistics.
+- `docutranslate://formats`, SDK `client.capabilities`, and HTTP
+  `GET /service/capabilities` expose the same format registry.

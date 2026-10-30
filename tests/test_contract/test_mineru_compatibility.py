@@ -336,6 +336,75 @@ def test_cloud_pdf_chunking_respects_size_limit():
     assert all(len(chunk) <= limit for chunk in chunks)
 
 
+def test_cloud_pdf_chunking_preserves_named_links_without_repeated_destination_scans(monkeypatch):
+    from pypdf import PdfReader, PdfWriter
+    from pypdf.generic import DictionaryObject, NameObject, TextStringObject
+    from pypdf.annotations import Link
+
+    writer = PdfWriter()
+    for index in range(6):
+        writer.add_blank_page(width=72 + index, height=72)
+        writer.add_named_destination(f"page-{index}", index)
+    for index in range(6):
+        target = index // 3 * 3 + (index + 1) % 3
+        for _ in range(8):
+            link = Link(rect=(0, 0, 10, 10), target_page_index=target)
+            link.pop(NameObject('/Dest'), None)
+            link[NameObject('/A')] = DictionaryObject({
+                NameObject('/S'): NameObject('/GoTo'),
+                NameObject('/D'): TextStringObject(f"page-{target}"),
+            })
+            writer.add_annotation(index, link)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    destination_reads = []
+    original_getter = PdfReader.named_destinations.fget
+
+    def get_destinations(reader):
+        destination_reads.append(reader)
+        return original_getter(reader)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(PdfReader, 'named_destinations', property(get_destinations))
+        converter = cloud.ConverterMineru(cloud.ConverterMineruConfig(mineru_token="token"))
+        converter.max_pages = 3
+        chunks = converter._split_pdf(buffer.getvalue())
+    assert len(chunks) == 2
+    # A table scan per link stalls splitting of books with many links.
+    assert len(destination_reads) <= len(chunks)
+    for chunk_index, chunk in enumerate(chunks):
+        reader = PdfReader(io.BytesIO(chunk))
+        assert [int(page.mediabox.width) for page in reader.pages] == [
+            72 + chunk_index * 3 + i for i in range(3)
+        ]
+        for index, page in enumerate(reader.pages):
+            assert len(page['/Annots']) == 8
+            for annotation in page['/Annots']:
+                name = annotation.get_object()['/A']['/D']
+                destination = reader.named_destinations[name]
+                assert reader.get_destination_page_number(destination) == (index + 1) % 3
+
+
+@pytest.mark.parametrize('limit_mb', [180, 0.00001])
+def test_cloud_pdf_chunking_handles_unchanged_and_oversized_single_pages(limit_mb, caplog):
+    from pypdf import PdfReader, PdfWriter
+
+    writer = PdfWriter()
+    writer.add_blank_page(width=72, height=72)
+    writer.add_blank_page(width=73, height=72)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    content = buffer.getvalue()
+    converter = cloud.ConverterMineru(cloud.ConverterMineruConfig(mineru_token='token'))
+    converter.max_size_mb = limit_mb
+    chunks = converter._split_pdf(content)
+    if limit_mb == 180:
+        assert chunks == [content]
+    else:
+        assert [len(PdfReader(io.BytesIO(chunk)).pages) for chunk in chunks] == [1, 1]
+        assert '超过单文件限制' in caplog.text
+
+
 @pytest.mark.parametrize("backend", ["hybrid-auto-engine", "pipeline", "standard", "advanced"])
 @pytest.mark.asyncio
 async def test_sdk_keeps_constructor_options_without_new_call_arguments(monkeypatch, tmp_path, backend):

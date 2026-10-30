@@ -1,0 +1,6 @@
+#!/bin/bash
+# Finder launches .app executables without a Terminal window.
+set -eu
+
+launcher_dir="$(cd -- "$(dirname -- "$0")" && pwd)"
+exec /usr/bin/open -a Terminal "$launcher_dir/DocuTranslate.command"

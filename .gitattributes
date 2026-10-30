@@ -6,3 +6,6 @@
 # 统一按 LF 检出，保证各平台构建结果一致。
 frontend/** text eol=lf
 frontend/public/favicon.ico binary
+
+# macOS .app launchers must retain Unix line endings for their shebangs.
+scripts/macos/* text eol=lf

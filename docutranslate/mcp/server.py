@@ -13,7 +13,7 @@ to ensure consistent task management between the Web backend and MCP server.
 import asyncio
 import base64
 import os
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, Union, Literal
 
 # Import config to load .env and make config values available
 from docutranslate.config import (
@@ -42,7 +42,10 @@ from docutranslate.server import (
 )
 
 from docutranslate import __version__
-from docutranslate.core.schemas import TranslatePayload
+from docutranslate.core.schemas import TranslatePayload, BaseWorkflowParams, UniversalParamsMixin
+from docutranslate.core.params import INHERIT
+from docutranslate.core.task_status import task_status, task_statistics
+from docutranslate.core.file_types import formats_info
 from docutranslate.logger import global_logger
 from pydantic import TypeAdapter
 
@@ -59,25 +62,7 @@ def _format_json(data: Any) -> str:
 
 def _get_formats_info() -> Dict[str, Any]:
     """Get information about supported formats"""
-    return {
-        "input_formats": [
-            "pdf", "docx", "doc", "xlsx", "xls", "csv", "md", "markdown",
-            "txt", "json", "epub", "srt", "ass", "pptx", "ppt", "html", "htm",
-            "png", "jpg"
-        ],
-        "output_formats_by_workflow": {
-            "markdown_based": ["html", "markdown", "markdown_zip", "docx"],
-            "txt": ["txt"],
-            "json": ["json"],
-            "xlsx": ["xlsx", "csv", "html"],
-            "docx": ["docx", "html"],
-            "srt": ["srt", "html"],
-            "epub": ["epub", "html"],
-            "html": ["html"],
-            "ass": ["ass", "html"],
-            "pptx": ["pptx", "html"],
-        },
-    }
+    return formats_info()
 
 
 def _task_state_to_dict(task_id: str, task_state: Optional[Dict[str, Any]]) -> Dict[str, Any]:
@@ -85,17 +70,16 @@ def _task_state_to_dict(task_id: str, task_state: Optional[Dict[str, Any]]) -> D
     if not task_state:
         return {"task_id": task_id, "status": "not_found", "error": "Task not found"}
 
-    status = "idle"
-    if task_state.get("is_processing"):
-        status = "running"
-    elif task_state.get("error_flag"):
-        status = "error"
-    elif task_state.get("download_ready"):
-        status = "completed"
+    status = task_status(task_state)
 
     return {
         "task_id": task_id,
         "status": status,
+        "cancelled": task_state.get("cancelled", False),
+        "statistics": task_statistics(task_state),
+        "original_filename": task_state.get("original_filename"),
+        "task_start_time": task_state.get("task_start_time"),
+        "task_end_time": task_state.get("task_end_time"),
         "status_message": task_state.get("status_message", ""),
         "progress_percent": task_state.get("progress_percent", 0),
         "download_ready": task_state.get("download_ready", False),
@@ -162,7 +146,7 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
             "extra_body": EXTRA_BODY,
             "glossary_generate_enable": GLOSSARY_GENERATE_ENABLE,
             # Convert engine settings
-            "convert_engine": CONVERT_ENGINE,
+            "convert_engine": CONVERT_ENGINE if CONVERT_ENGINE in ("mineru", "mineru_deploy") else None,
             "md2docx_engine": MD2DOCX_ENGINE,
             # MinerU settings
             "mineru_token": MINERU_TOKEN,
@@ -183,9 +167,7 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
             "mineru_deploy_lang_list": None,  # List type, not supported via env
             "mineru_deploy_server_url": MINERU_DEPLOY_SERVER_URL,
             # TextWorkflowParams defaults
-            "insert_mode": INSERT_MODE,
-            "separator": SEPARATOR,
-            "segment_mode": SEGMENT_MODE,
+
         }
 
         # Create the MCP server（host/port 不在这里设置，见 run_mcp_server）
@@ -213,7 +195,7 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 "version": __version__,
                 "status": "ready",
                 "client_configured": is_configured,
-                "active_tasks": len(service.tasks_state),
+                "active_tasks": sum(bool(state.get("is_processing")) for state in service.tasks_state.values()),
             }
             return f"Server Status:\n{_format_json(status_info)}"
 
@@ -232,14 +214,26 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 top_p: Optional[float] = None,
                 retry: Optional[int] = None,
                 timeout: Optional[int] = None,
+                connect_timeout: Optional[float] = None,
+                read_timeout: Union[float, None, Literal["inherit"]] = INHERIT,
+                write_timeout: Optional[float] = None,
+                pool_timeout: Optional[float] = None,
+                streaming: Optional[bool] = None,
+                stream_idle_timeout: Optional[float] = None,
+                non_stream_timeout: Union[float, None, Literal["inherit"]] = INHERIT,
                 system_proxy_enable: Optional[bool] = None,
                 force_json: Optional[bool] = None,
                 rpm: Optional[int] = None,
                 tpm: Optional[int] = None,
                 custom_prompt: Optional[str] = None,
+                extra_body: Optional[str] = None,
+                glossary_generate_enable: Optional[bool] = None,
+                insert_mode: Optional[str] = None,
+                separator: Optional[str] = None,
+                segment_mode: Optional[str] = None,
                 # Convert engine settings
                 convert_engine: Optional[str] = None,
-                md2docx_engine: Optional[str] = None,
+                md2docx_engine: Optional[str] = INHERIT,
                 # MinerU settings
                 mineru_token: Optional[str] = None,
                 model_version: Optional[str] = None,
@@ -281,7 +275,7 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 tpm: TPM limit (Tokens Per Minute)
                 custom_prompt: Custom system prompt
                 convert_engine: PDF conversion engine (identity, mineru, mineru_deploy)
-                md2docx_engine: Markdown to docx engine (python, pandoc, auto)
+                md2docx_engine: Markdown to docx engine; inherit keeps config, null disables DOCX
                 mineru_token: MinerU Cloud API Token
                 model_version: MinerU Cloud model version (pipeline, vlm, MinerU-HTML)
                 formula_ocr: Enable formula OCR
@@ -299,6 +293,13 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 mineru_deploy_lang_list: Language list
                 mineru_deploy_server_url: MinerU Server URL
             """
+            config_options = locals().copy()
+            for field in ("connect_timeout", "read_timeout", "write_timeout", "pool_timeout",
+                          "streaming", "stream_idle_timeout", "non_stream_timeout", "extra_body",
+                          "glossary_generate_enable", "insert_mode", "separator", "segment_mode"):
+                value = config_options[field]
+                if value != INHERIT and (value is not None or field in {"read_timeout", "non_stream_timeout"}):
+                    client_config[field] = value
             # Basic LLM settings
             if api_key is not None:
                 client_config["api_key"] = api_key
@@ -337,7 +338,7 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
             # Convert engine settings
             if convert_engine is not None:
                 client_config["convert_engine"] = convert_engine
-            if md2docx_engine is not None:
+            if md2docx_engine != INHERIT:
                 client_config["md2docx_engine"] = md2docx_engine
             # MinerU settings
             if mineru_token is not None:
@@ -441,25 +442,32 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 glossary_generate_enable: Optional[bool] = None,
                 glossary_dict_json: str = "",
                 glossary_agent_config_json: str = "",
-                extra_body_json: str = "",
+                extra_body_json: Optional[str] = None,
                 # LLM 进阶参数
                 chunk_size: Optional[int] = None,
                 concurrent: Optional[int] = None,
                 temperature: Optional[float] = None,
                 top_p: Optional[float] = None,
                 timeout: Optional[int] = None,
+                connect_timeout: Optional[float] = None,
+                read_timeout: Union[float, None, Literal["inherit"]] = INHERIT,
+                write_timeout: Optional[float] = None,
+                pool_timeout: Optional[float] = None,
+                streaming: Optional[bool] = None,
+                stream_idle_timeout: Optional[float] = None,
+                non_stream_timeout: Union[float, None, Literal["inherit"]] = INHERIT,
                 thinking: Optional[str] = None,
                 retry: Optional[int] = None,
                 system_proxy_enable: Optional[bool] = None,
-                custom_prompt: str = "",
+                custom_prompt: Optional[str] = None,
                 force_json: Optional[bool] = None,
                 rpm: Optional[int] = None,
                 tpm: Optional[int] = None,
                 provider: Optional[str] = None,
                 # Markdown 工作流参数
                 convert_engine: Optional[str] = None,
-                md2docx_engine: Optional[str] = None,
-                mineru_token: str = "",
+                md2docx_engine: Optional[str] = INHERIT,
+                mineru_token: Optional[str] = None,
                 model_version: Optional[str] = None,
                 formula_ocr: Optional[bool] = None,
                 mineru_language: Optional[str] = None,
@@ -474,7 +482,7 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 mineru_deploy_start_page_id: Optional[int] = None,
                 mineru_deploy_end_page_id: Optional[int] = None,
                 mineru_deploy_lang_list: Optional[List[str]] = None,
-                mineru_deploy_server_url: str = "",
+                mineru_deploy_server_url: Optional[str] = None,
                 # 其他工作流参数
                 insert_mode: Optional[str] = None,
                 separator: Optional[str] = None,
@@ -482,6 +490,7 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 translate_regions: Optional[List[str]] = None,
                 json_paths: Optional[List[str]] = None,
                 office_password: Optional[str] = None,
+                html_exporter_options: Optional[Dict[str, Any]] = None,
         ) -> str:
             """Submit a translation task (asynchronous, returns immediately).
             Use get_task_status to check progress. When complete, it will show
@@ -513,7 +522,7 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 tpm: TPM limit (Tokens Per Minute)
                 provider: LLM provider identifier
                 convert_engine: PDF conversion engine (identity, mineru, mineru_deploy)
-                md2docx_engine: Markdown to docx engine (python, pandoc, auto)
+                md2docx_engine: Markdown to docx engine; inherit keeps config, null disables DOCX
                 mineru_token: MinerU Cloud API Token
                 model_version: MinerU Cloud model version (pipeline, vlm, MinerU-HTML)
                 formula_ocr: Enable formula OCR
@@ -537,6 +546,7 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 json_paths: [Json only] JsonPath expressions list
                 office_password: [Docx/Xlsx only] Password for encrypted files
             """
+            request_options = locals().copy()
             # Ensure service is properly initialized with event loop and httpx_client
             if service.main_event_loop is None:
                 service.main_event_loop = asyncio.get_running_loop()
@@ -608,153 +618,26 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 except Exception as e:
                     return f"Error parsing extra_body_json: {e}"
 
-            # Build payload dict - use AutoWorkflowParams with extra=allow
-            # This avoids validation errors for workflow-specific optional fields
-            # Use client_config for defaults if parameters not provided
-            payload_dict = {
-                "workflow_type": workflow_type,
-                "to_lang": to_lang or client_config["to_lang"] or "中文",
-                "skip_translate": skip_translate,
-                "glossary_dict": parsed_glossary_dict,
-                "glossary_agent_config": parsed_glossary_agent,
-            }
-            # Add extra_body if provided
-            if extra_body_json and extra_body_json.strip():
-                payload_dict["extra_body"] = extra_body_json
-
-            # Add AI config - use parameter if provided, otherwise use client_config
-            use_api_key = api_key or client_config["api_key"]
-            use_base_url = base_url or client_config["base_url"]
-            use_model_id = model_id or client_config["model_id"]
-
-            if use_api_key:
-                payload_dict["api_key"] = use_api_key
-            if use_base_url:
-                payload_dict["base_url"] = use_base_url
-            if use_model_id:
-                payload_dict["model_id"] = use_model_id
-
-            # Add LLM advanced parameters if provided or from client_config
-            use_chunk_size = chunk_size if chunk_size is not None else client_config.get("chunk_size")
-            if use_chunk_size is not None:
-                payload_dict["chunk_size"] = use_chunk_size
-            use_concurrent = concurrent if concurrent is not None else client_config["concurrent"]
-            if use_concurrent is not None:
-                payload_dict["concurrent"] = use_concurrent
-            use_temperature = temperature if temperature is not None else client_config.get("temperature")
-            if use_temperature is not None:
-                payload_dict["temperature"] = use_temperature
-            use_top_p = top_p if top_p is not None else client_config.get("top_p")
-            if use_top_p is not None:
-                payload_dict["top_p"] = use_top_p
-            use_timeout = timeout if timeout is not None else client_config.get("timeout")
-            if use_timeout is not None:
-                payload_dict["timeout"] = use_timeout
-            use_thinking = thinking if thinking is not None else client_config.get("thinking")
-            if use_thinking:
-                payload_dict["thinking"] = use_thinking
-            use_retry = retry if retry is not None else client_config.get("retry")
-            if use_retry is not None:
-                payload_dict["retry"] = use_retry
-            use_system_proxy_enable = system_proxy_enable if system_proxy_enable is not None else client_config.get("system_proxy_enable")
-            if use_system_proxy_enable is not None:
-                payload_dict["system_proxy_enable"] = use_system_proxy_enable
-            use_custom_prompt = custom_prompt or client_config.get("custom_prompt") or ""
-            if use_custom_prompt:
-                payload_dict["custom_prompt"] = use_custom_prompt
-            use_force_json = force_json if force_json is not None else client_config.get("force_json")
-            if use_force_json is not None:
-                payload_dict["force_json"] = use_force_json
-            use_rpm = rpm if rpm is not None else client_config.get("rpm")
-            if use_rpm is not None:
-                payload_dict["rpm"] = use_rpm
-            use_tpm = tpm if tpm is not None else client_config.get("tpm")
-            if use_tpm is not None:
-                payload_dict["tpm"] = use_tpm
-            use_provider = provider or client_config.get("provider")
-            if use_provider:
-                payload_dict["provider"] = use_provider
-
-            # Add Markdown workflow parameters if provided or from client_config
-            use_convert_engine = convert_engine or client_config.get("convert_engine")
-            if use_convert_engine:
-                payload_dict["convert_engine"] = use_convert_engine
-            use_md2docx_engine = md2docx_engine or client_config.get("md2docx_engine")
-            if use_md2docx_engine:
-                payload_dict["md2docx_engine"] = use_md2docx_engine
-            use_mineru_token = mineru_token or client_config.get("mineru_token")
-            if use_mineru_token:
-                payload_dict["mineru_token"] = use_mineru_token
-            use_model_version = model_version or client_config.get("model_version")
-            if use_model_version:
-                payload_dict["model_version"] = use_model_version
-            use_formula_ocr = formula_ocr if formula_ocr is not None else client_config.get("formula_ocr")
-            if use_formula_ocr is not None:
-                payload_dict["formula_ocr"] = use_formula_ocr
-            use_mineru_language = mineru_language or client_config.get("mineru_language")
-            if use_mineru_language:
-                payload_dict["mineru_language"] = use_mineru_language
-            use_mineru_deploy_base_url = mineru_deploy_base_url or client_config.get("mineru_deploy_base_url")
-            payload_dict["mineru_deploy_api_key"] = (
-                mineru_deploy_api_key if mineru_deploy_api_key is not None
-                else client_config.get("mineru_deploy_api_key")
-            )
-            if use_mineru_deploy_base_url:
-                payload_dict["mineru_deploy_base_url"] = use_mineru_deploy_base_url
-            use_mineru_deploy_backend = mineru_deploy_backend or client_config.get("mineru_deploy_backend")
-            if use_mineru_deploy_backend:
-                payload_dict["mineru_deploy_backend"] = use_mineru_deploy_backend
-            use_mineru_deploy_effort = mineru_deploy_effort or client_config.get("mineru_deploy_effort")
-            if use_mineru_deploy_effort:
-                payload_dict["mineru_deploy_effort"] = use_mineru_deploy_effort
-            use_mineru_deploy_parse_method = mineru_deploy_parse_method or client_config.get("mineru_deploy_parse_method")
-            if use_mineru_deploy_parse_method:
-                payload_dict["mineru_deploy_parse_method"] = use_mineru_deploy_parse_method
-            use_mineru_deploy_table_enable = mineru_deploy_table_enable if mineru_deploy_table_enable is not None else client_config.get("mineru_deploy_table_enable")
-            if use_mineru_deploy_table_enable is not None:
-                payload_dict["mineru_deploy_table_enable"] = use_mineru_deploy_table_enable
-            use_mineru_deploy_formula_enable = mineru_deploy_formula_enable if mineru_deploy_formula_enable is not None else client_config.get("mineru_deploy_formula_enable")
-            if use_mineru_deploy_formula_enable is not None:
-                payload_dict["mineru_deploy_formula_enable"] = use_mineru_deploy_formula_enable
-            use_mineru_deploy_image_analysis = mineru_deploy_image_analysis if mineru_deploy_image_analysis is not None else client_config.get("mineru_deploy_image_analysis")
-            if use_mineru_deploy_image_analysis is not None:
-                payload_dict["mineru_deploy_image_analysis"] = use_mineru_deploy_image_analysis
-            use_mineru_deploy_start_page_id = mineru_deploy_start_page_id if mineru_deploy_start_page_id is not None else client_config.get("mineru_deploy_start_page_id")
-            if use_mineru_deploy_start_page_id is not None:
-                payload_dict["mineru_deploy_start_page_id"] = use_mineru_deploy_start_page_id
-            use_mineru_deploy_end_page_id = mineru_deploy_end_page_id if mineru_deploy_end_page_id is not None else client_config.get("mineru_deploy_end_page_id")
-            if use_mineru_deploy_end_page_id is not None:
-                payload_dict["mineru_deploy_end_page_id"] = use_mineru_deploy_end_page_id
-            use_mineru_deploy_lang_list = mineru_deploy_lang_list if mineru_deploy_lang_list is not None else client_config.get("mineru_deploy_lang_list")
-            if use_mineru_deploy_lang_list:
-                payload_dict["mineru_deploy_lang_list"] = use_mineru_deploy_lang_list
-            use_mineru_deploy_server_url = mineru_deploy_server_url or client_config.get("mineru_deploy_server_url") or ""
-            if use_mineru_deploy_server_url:
-                payload_dict["mineru_deploy_server_url"] = use_mineru_deploy_server_url
-
-            # Add other workflow parameters if provided or from client_config
-            use_insert_mode = insert_mode or client_config.get("insert_mode")
-            if use_insert_mode:
-                payload_dict["insert_mode"] = use_insert_mode
-            use_separator = separator or client_config.get("separator")
-            if use_separator:
-                payload_dict["separator"] = use_separator
-            use_segment_mode = segment_mode or client_config.get("segment_mode")
-            if use_segment_mode:
-                payload_dict["segment_mode"] = use_segment_mode
-            if translate_regions:
-                payload_dict["translate_regions"] = translate_regions
-            if json_paths:
-                payload_dict["json_paths"] = json_paths
-            if office_password:
-                payload_dict["office_password"] = office_password
-            # Add extra_body and glossary_generate_enable from client_config
-            use_extra_body = extra_body_json or client_config.get("extra_body")
-            if use_extra_body:
-                payload_dict["extra_body"] = use_extra_body
-            use_glossary_generate_enable = glossary_generate_enable if glossary_generate_enable is not None else client_config.get("glossary_generate_enable")
-            if use_glossary_generate_enable is not None:
-                payload_dict["glossary_generate_enable"] = use_glossary_generate_enable
+            payload_dict = dict(client_config)
+            aliases = {"extra_body_json": "extra_body"}
+            ignored = {"file_path", "glossary_dict_json", "glossary_agent_config_json"}
+            allowed = set(BaseWorkflowParams.model_fields) | set(UniversalParamsMixin.model_fields) | {"workflow_type", "md2docx_engine"}
+            for key, value in request_options.items():
+                if key in ignored or aliases.get(key, key) not in allowed:
+                    continue
+                if key in {"md2docx_engine", "read_timeout", "non_stream_timeout"}:
+                    if value != INHERIT:
+                        payload_dict[key] = value
+                elif value is not None:
+                    # Empty credentials keep the configured connection; empty text
+                    # options, false, zero and empty lists remain explicit overrides.
+                    if key in {"api_key", "base_url", "model_id"} and value == "":
+                        continue
+                    payload_dict[aliases.get(key, key)] = value
+            payload_dict["glossary_dict"] = parsed_glossary_dict
+            payload_dict["glossary_agent_config"] = parsed_glossary_agent
+            payload_dict = {key: value for key, value in payload_dict.items()
+                            if value is not None or key in {"md2docx_engine", "read_timeout", "non_stream_timeout"}}
 
             try:
                 # Validate and create payload - AutoWorkflowParams allows extra fields
@@ -857,6 +740,18 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
             return f"Task Status:\n{_format_json(status_dict)}"
 
         @mcp.tool()
+        async def list_tasks() -> str:
+            """List task IDs retained by the shared HTTP/MCP translation service."""
+            return _format_json({"task_ids": service.list_tasks()})
+
+        @mcp.tool()
+        async def get_task_logs(task_id: str) -> str:
+            """Read the retained log history without consuming another client's logs."""
+            if service.get_task_state(task_id) is None:
+                return _format_json({"task_id": task_id, "status": "not_found"})
+            return _format_json({"task_id": task_id, "logs": service.get_task_logs(task_id)})
+
+        @mcp.tool()
         async def download_file(
                 task_id: str,
                 file_name: str,
@@ -925,7 +820,10 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                         del service._mcp_output_options[task_id]
 
                     release_result = await service.release_task(task_id)
-                    response += f"\n\nTask {task_id} released automatically. {release_result['message']}"
+                    if release_result["released"]:
+                        response += f"\n\nTask {task_id} released automatically. {release_result['message']}"
+                    else:
+                        response += f"\n\nWarning: {release_result['message']}"
                 except Exception as e:
                     response += f"\n\nWarning: Failed to auto-release task: {e}"
 
@@ -940,7 +838,7 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
             """
             try:
                 result = service.cancel_task(task_id)
-                return f"Task {task_id} cancelled successfully"
+                return f"Task {task_id}: {result['message']}"
             except Exception as e:
                 return f"Error: {e}"
 
@@ -958,6 +856,8 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
 
             try:
                 result = await service.release_task(task_id)
+                if not result["released"]:
+                    return f"Error releasing task {task_id}: {result['message']}"
                 return f"Task {task_id} released successfully. {result['message']}"
             except Exception as e:
                 return f"Error releasing task: {e}"
@@ -1027,9 +927,11 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 elif ext == ".csv":
                     import csv
                     glossary_dict = {}
-                    content_text = content_bytes.decode("utf-8")
+                    content_text = content_bytes.decode("utf-8-sig")
                     reader = csv.reader(io.StringIO(content_text))
-                    for row in reader:
+                    for index, row in enumerate(reader):
+                        if index == 0 and [cell.strip().lower() for cell in row[:2]] == ["src", "dst"]:
+                            continue
                         if len(row) >= 2:
                             key = row[0].strip()
                             value = row[1].strip()

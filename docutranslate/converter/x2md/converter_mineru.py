@@ -116,46 +116,49 @@ class ConverterMineru(X2MarkdownConverter):
             self.logger.info(f"PDF 需要拆分: {total_pages}页, {original_size / 1024 / 1024:.1f}MB (限制: {self.max_pages}页, {self.max_size_mb}MB)")
             chunks = []
 
-            start_page = 0
-            while start_page < total_pages:
-                # 尝试找到最大的 end_page，使得切片既不超过页数限制，也不超过大小限制
-                # 先按最大页数尝试
-                tentative_end = min(start_page + self.max_pages, total_pages)
-
-                # 使用二分查找找到合适的切片大小
-                best_end = start_page + 1
-                low = start_page + 1
-                high = tentative_end
-
-                while low <= high:
-                    mid = (low + high) // 2
-                    writer = PdfWriter()
-                    for page_num in range(start_page, mid):
-                        writer.add_page(reader.pages[page_num])
-                    with io.BytesIO() as output_stream:
-                        writer.write(output_stream)
-                        size = len(output_stream.getvalue())
-                    if size <= max_size_bytes:
-                        best_end = mid
-                        low = mid + 1
-                    else:
-                        high = mid - 1
-
-                # 使用找到的 best_end 创建切片
+            def build_chunk(start: int, end: int) -> bytes:
                 writer = PdfWriter()
-                for page_num in range(start_page, best_end):
-                    writer.add_page(reader.pages[page_num])
+                # append 批量处理命名目标和跨页链接。逐页 add_page 会在 write
+                # 时为每个命名链接重新解析目标表，链接密集的书籍会极慢。
+                writer.append(reader, pages=(start, end), import_outline=False)
                 with io.BytesIO() as output_stream:
                     writer.write(output_stream)
-                    chunk_content = output_stream.getvalue()
-                    chunks.append(chunk_content)
-                    chunk_size_mb = len(chunk_content) / 1024 / 1024
-                    page_range = f"页 {start_page + 1}-{best_end}" if best_end > start_page + 1 else f"页 {start_page + 1}"
-                    self.logger.info(f"  切片 {len(chunks)}: {page_range}, {chunk_size_mb:.1f}MB")
+                    return output_stream.getvalue()
 
-                    # 如果单页就超过大小限制，发出警告
-                    if best_end == start_page + 1 and chunk_size_mb > self.max_size_mb:
-                        self.logger.warning(f"    警告: 第 {start_page + 1} 页大小 ({chunk_size_mb:.1f}MB) 超过单文件限制 ({self.max_size_mb}MB)，仍将尝试上传")
+            start_page = 0
+            while start_page < total_pages:
+                tentative_end = min(start_page + self.max_pages, total_pages)
+                chunk_start = time.monotonic()
+                self.logger.info(f"正在生成 PDF 切片 {len(chunks) + 1}: 页 {start_page + 1}-{tentative_end}...")
+                # 通常只受页数限制：先直接生成最大分片，超出大小限制才二分。
+                best_end = tentative_end
+                chunk_content = build_chunk(start_page, tentative_end)
+                if len(chunk_content) > max_size_bytes and tentative_end > start_page + 1:
+                    best_end = start_page
+                    best_content = None
+                    low, high = start_page + 1, tentative_end - 1
+                    while low <= high:
+                        mid = (low + high) // 2
+                        candidate = build_chunk(start_page, mid)
+                        if len(candidate) <= max_size_bytes:
+                            best_end, best_content = mid, candidate
+                            low = mid + 1
+                        else:
+                            high = mid - 1
+                    if best_content is None:
+                        best_end = start_page + 1
+                        chunk_content = build_chunk(start_page, best_end)
+                    else:
+                        chunk_content = best_content
+
+                chunks.append(chunk_content)
+                chunk_size_mb = len(chunk_content) / 1024 / 1024
+                page_range = f"页 {start_page + 1}-{best_end}" if best_end > start_page + 1 else f"页 {start_page + 1}"
+                self.logger.info(f"  切片 {len(chunks)}: {page_range}, {chunk_size_mb:.1f}MB, 耗时 {time.monotonic() - chunk_start:.2f}秒")
+
+                # 如果单页就超过大小限制，发出警告
+                if best_end == start_page + 1 and chunk_size_mb > self.max_size_mb:
+                    self.logger.warning(f"    警告: 第 {start_page + 1} 页大小 ({chunk_size_mb:.1f}MB) 超过单文件限制 ({self.max_size_mb}MB)，仍将尝试上传")
 
                 start_page = best_end
 
