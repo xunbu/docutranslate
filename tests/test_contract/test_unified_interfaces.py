@@ -236,3 +236,94 @@ async def test_all_surfaces_share_capabilities_and_cancelled_statistics(fake_mcp
     assert status["status"] == mcp_status["status"] == "cancelled"
     assert status["statistics"] == mcp_status["statistics"] == {"requests": 3}
     assert fake_mcp_server_module._get_formats_info() == expected
+
+
+@pytest.mark.asyncio
+async def test_flat_translate_empty_select_fields_mean_not_provided(monkeypatch):
+    from docutranslate.config import MD2DOCX_ENGINE, NON_STREAM_TIMEOUT, READ_TIMEOUT
+
+    import docutranslate.app as module
+
+    captured = []
+
+    async def capture(**kwargs):
+        captured.append(kwargs["payload"])
+        return {"task_started": True, "task_id": kwargs["task_id"]}
+
+    monkeypatch.setattr(module.translation_service, "start_translation", capture)
+    monkeypatch.setattr(module.translation_service, "get_task_state",
+                        lambda _: {"download_ready": True})
+
+    # Legacy form clients send every optional select as an empty string. Only
+    # separator/custom_prompt keep an empty value; everything else is unset.
+    data = {
+        "workflow_type": "auto", "skip_translate": "true",
+        "base_url": "https://api.invalid/v1", "api_key": "test-api-key",
+        "model_id": "gpt-test", "to_lang": "中文",
+        "provider": "", "thinking": "", "convert_engine": "", "insert_mode": "",
+        "segment_mode": "", "model_version": "", "mineru_language": "",
+        "mineru_deploy_backend": "", "mineru_token": "", "office_password": "",
+        "extra_body_json": "", "html_exporter_options_json": "",
+        "separator": "", "custom_prompt": "", "md2docx_engine": "",
+        "read_timeout": "", "non_stream_timeout": "",
+    }
+    async with httpx.AsyncClient(transport=httpx.ASGITransport(app=module.app),
+                                 base_url="http://test") as client:
+        response = await client.post(
+            "/service/flat-translate",
+            files={"file": ("sample.md", b"# Title\n")},
+            data=data,
+        )
+    assert response.status_code == 200, response.text
+
+    payload = captured[-1]
+    assert payload.separator == "" and payload.custom_prompt == ""
+    assert payload.provider is None
+    assert getattr(payload, "office_password", None) is None
+    resolved = resolve_auto_payload(payload, "sample.md")
+    assert resolved.workflow_type == "markdown_based"
+    # Empty md2docx_engine inherits the configured engine instead of disabling DOCX.
+    assert resolved.md2docx_engine == MD2DOCX_ENGINE
+    # The flat form cannot express JSON null: empty timeouts inherit defaults.
+    assert resolved.read_timeout == READ_TIMEOUT
+    assert resolved.non_stream_timeout == NON_STREAM_TIMEOUT
+
+
+@pytest.mark.asyncio
+async def test_mcp_empty_string_options_inherit_configuration(fake_mcp_server_module, tmp_path):
+    from docutranslate.config import MD2DOCX_ENGINE
+
+    service = FakeService()
+    server = fake_mcp_server_module.create_mcp_server(translation_service=service)
+    source = tmp_path / "sample.txt"
+    source.write_text("hello", encoding="utf-8")
+    markdown = tmp_path / "sample.md"
+    markdown.write_text("# Title\n", encoding="utf-8")
+
+    # Empty strings in configure_client must not poison the shared config.
+    await server.tools["configure_client"](
+        provider="", thinking="", insert_mode="", model_version="",
+        separator="/", custom_prompt="default", md2docx_engine="",
+    )
+    response = await server.tools["submit_task"](
+        str(source), workflow_type="txt", skip_translate=True,
+        provider="", thinking="", convert_engine="", insert_mode="",
+        separator="", custom_prompt="",
+    )
+    assert response.startswith("Translation task submitted"), response
+    payload = service.payloads[-1]
+    assert payload.provider is None
+    assert payload.separator == "" and payload.custom_prompt == ""
+    assert payload.insert_mode == "replace"  # empty enum means workflow default
+
+    # Omitted options now inherit the configured values.
+    await server.tools["submit_task"](str(source), workflow_type="txt", skip_translate=True)
+    inherited = service.payloads[-1]
+    assert inherited.separator == "/"
+    assert inherited.custom_prompt == "default"
+
+    # Empty md2docx_engine means inherit for auto payloads, JSON null disables it.
+    await server.tools["submit_task"](str(markdown), skip_translate=True, md2docx_engine="")
+    assert service.payloads[-1].md2docx_engine == MD2DOCX_ENGINE
+    await server.tools["submit_task"](str(markdown), skip_translate=True, md2docx_engine=None)
+    assert service.payloads[-1].md2docx_engine is None

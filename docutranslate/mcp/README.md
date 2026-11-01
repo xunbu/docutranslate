@@ -727,8 +727,9 @@ MCP, SDK and HTTP share workflow routing and validation. Old `.doc`, `.xls` and
 `.ppt` files must be converted to `.docx`, `.xlsx` and `.pptx` first.
 
 - Omitted options inherit defaults. Empty `separator` and `custom_prompt` values,
-  `false` and `0` are explicit overrides.
-- `md2docx_engine`: omission / `"inherit"` keeps MCP client configuration;
+  `false` and `0` are explicit overrides. Empty strings sent for any other
+  option (for example `provider=""`) mean "not provided", matching older clients.
+- `md2docx_engine`: omission / `"inherit"` / `""` keeps MCP client configuration;
   JSON `null` disables DOCX export. In `/service/flat-translate`, send `"none"`
   to disable it. SDK callers use `None`.
 - `connect_timeout`, `read_timeout`, `write_timeout`, `pool_timeout`, `streaming`,

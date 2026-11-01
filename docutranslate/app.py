@@ -48,7 +48,7 @@ from pydantic import (
 
 from docutranslate import __version__
 from docutranslate.core.schemas import TranslatePayload
-from docutranslate.core.params import INHERIT
+from docutranslate.core.params import EMPTY_TEXT_OVERRIDE_FIELDS, INHERIT
 from docutranslate.core.task_status import task_status, task_statistics, default_statistics
 from docutranslate.exporter.md.types import ConvertEngineType
 from docutranslate.logger import global_logger
@@ -1172,19 +1172,23 @@ async def service_flat_translate(
                "glossary_agent_config": "glossary_agent_config_json", "extra_body": "extra_body_json"}
     payload_dict = {key: value for key, value in payload_dict.items()
                     if aliases.get(key, key) in submitted_form or key in {"workflow_type", "skip_translate"}}
-    # FastAPI maps an empty form string to the parameter default. Preserve text
-    # overrides from the raw form, after typed validation of numeric/bool fields.
-    for key in ("separator", "custom_prompt", "extra_body", "office_password"):
+    # FastAPI coerces an empty form string to the parameter default (or None),
+    # so read the documented empty text overrides from the raw form instead.
+    for key in EMPTY_TEXT_OVERRIDE_FIELDS:
         form_key = aliases.get(key, key)
         if form_key in submitted_form:
             payload_dict[key] = str(submitted_form[form_key])
     engine = payload_dict.get("md2docx_engine", INHERIT)
-    if engine == INHERIT:
+    if engine in (INHERIT, "", None):
         payload_dict.pop("md2docx_engine", None)
-    elif engine in ("none", "null", ""):
+    elif engine in ("none", "null"):
         payload_dict["md2docx_engine"] = None
+    # Empty strings mean "not provided" (legacy form clients send them for
+    # unset selects) except for the documented empty text overrides. The flat
+    # form cannot express JSON null, so empty timeouts are unset, not cleared.
     payload_dict = {key: value for key, value in payload_dict.items()
-                    if value is not None or key in {"md2docx_engine", "non_stream_timeout", "read_timeout"}}
+                    if (value is not None or key == "md2docx_engine")
+                    and (value != "" or key in EMPTY_TEXT_OVERRIDE_FIELDS)}
 
     # Note: For auto workflow type, we leave it as "auto" and let
     # translation_service.start_translation handle the detection,

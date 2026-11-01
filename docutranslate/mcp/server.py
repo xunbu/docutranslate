@@ -31,8 +31,6 @@ from docutranslate.config import (
     MINERU_DEPLOY_PARSE_METHOD, MINERU_DEPLOY_TABLE_ENABLE,
     MINERU_DEPLOY_FORMULA_ENABLE, MINERU_DEPLOY_IMAGE_ANALYSIS,
     MINERU_DEPLOY_START_PAGE_ID, MINERU_DEPLOY_END_PAGE_ID, MINERU_DEPLOY_SERVER_URL,
-    # TextWorkflowParams defaults
-    INSERT_MODE, SEPARATOR, SEGMENT_MODE,
 )
 
 # Shared server layer imports
@@ -43,7 +41,7 @@ from docutranslate.server import (
 
 from docutranslate import __version__
 from docutranslate.core.schemas import TranslatePayload, BaseWorkflowParams, UniversalParamsMixin
-from docutranslate.core.params import INHERIT
+from docutranslate.core.params import INHERIT, normalize_empty_text
 from docutranslate.core.task_status import task_status, task_statistics
 from docutranslate.core.file_types import formats_info
 from docutranslate.logger import global_logger
@@ -52,6 +50,21 @@ from pydantic import TypeAdapter
 # MCP Server configuration
 SERVER_NAME = "docutranslate"
 SERVER_VERSION = __version__
+
+# Optional client settings stored by configure_client and forwarded verbatim to
+# submit_task (md2docx_engine has dedicated inherit/null semantics).
+_CONFIGURE_PASSTHROUGH_FIELDS = (
+    "api_key", "base_url", "model_id", "provider", "to_lang", "thinking",
+    "chunk_size", "concurrent", "temperature", "top_p", "retry", "timeout",
+    "system_proxy_enable", "force_json", "rpm", "tpm", "custom_prompt",
+    "convert_engine", "mineru_token", "model_version", "formula_ocr",
+    "mineru_language", "mineru_deploy_base_url", "mineru_deploy_api_key",
+    "mineru_deploy_backend", "mineru_deploy_effort",
+    "mineru_deploy_parse_method", "mineru_deploy_formula_enable",
+    "mineru_deploy_table_enable", "mineru_deploy_image_analysis",
+    "mineru_deploy_start_page_id", "mineru_deploy_end_page_id",
+    "mineru_deploy_lang_list", "mineru_deploy_server_url",
+)
 
 
 def _format_json(data: Any) -> str:
@@ -294,86 +307,28 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
                 mineru_deploy_server_url: MinerU Server URL
             """
             config_options = locals().copy()
+            # Empty strings mean "not provided" for typed options; only the
+            # documented text overrides (separator/custom_prompt) keep an empty
+            # value. md2docx_engine "" inherits the configured engine.
+            for field in ("extra_body", "insert_mode", "separator", "segment_mode",
+                          *_CONFIGURE_PASSTHROUGH_FIELDS):
+                config_options[field] = normalize_empty_text(field, config_options[field])
+            if config_options["md2docx_engine"] == "":
+                config_options["md2docx_engine"] = INHERIT
             for field in ("connect_timeout", "read_timeout", "write_timeout", "pool_timeout",
                           "streaming", "stream_idle_timeout", "non_stream_timeout", "extra_body",
                           "glossary_generate_enable", "insert_mode", "separator", "segment_mode"):
                 value = config_options[field]
                 if value != INHERIT and (value is not None or field in {"read_timeout", "non_stream_timeout"}):
                     client_config[field] = value
-            # Basic LLM settings
-            if api_key is not None:
-                client_config["api_key"] = api_key
-            if base_url is not None:
-                client_config["base_url"] = base_url
-            if model_id is not None:
-                client_config["model_id"] = model_id
-            if provider is not None:
-                client_config["provider"] = provider
-            if to_lang is not None:
-                client_config["to_lang"] = to_lang
-            if thinking is not None:
-                client_config["thinking"] = thinking
-            if chunk_size is not None:
-                client_config["chunk_size"] = chunk_size
-            if concurrent is not None:
-                client_config["concurrent"] = concurrent
-            if temperature is not None:
-                client_config["temperature"] = temperature
-            if top_p is not None:
-                client_config["top_p"] = top_p
-            if retry is not None:
-                client_config["retry"] = retry
-            if timeout is not None:
-                client_config["timeout"] = timeout
-            if system_proxy_enable is not None:
-                client_config["system_proxy_enable"] = system_proxy_enable
-            if force_json is not None:
-                client_config["force_json"] = force_json
-            if rpm is not None:
-                client_config["rpm"] = rpm
-            if tpm is not None:
-                client_config["tpm"] = tpm
-            if custom_prompt is not None:
-                client_config["custom_prompt"] = custom_prompt
+            # Basic LLM, MinerU and workflow options
+            for field in _CONFIGURE_PASSTHROUGH_FIELDS:
+                value = config_options[field]
+                if value is not None:
+                    client_config[field] = value
             # Convert engine settings
-            if convert_engine is not None:
-                client_config["convert_engine"] = convert_engine
-            if md2docx_engine != INHERIT:
-                client_config["md2docx_engine"] = md2docx_engine
-            # MinerU settings
-            if mineru_token is not None:
-                client_config["mineru_token"] = mineru_token
-            if model_version is not None:
-                client_config["model_version"] = model_version
-            if formula_ocr is not None:
-                client_config["formula_ocr"] = formula_ocr
-            if mineru_language is not None:
-                client_config["mineru_language"] = mineru_language
-            # MinerU Deploy settings
-            if mineru_deploy_base_url is not None:
-                client_config["mineru_deploy_base_url"] = mineru_deploy_base_url
-            if mineru_deploy_api_key is not None:
-                client_config["mineru_deploy_api_key"] = mineru_deploy_api_key
-            if mineru_deploy_backend is not None:
-                client_config["mineru_deploy_backend"] = mineru_deploy_backend
-            if mineru_deploy_effort is not None:
-                client_config["mineru_deploy_effort"] = mineru_deploy_effort
-            if mineru_deploy_parse_method is not None:
-                client_config["mineru_deploy_parse_method"] = mineru_deploy_parse_method
-            if mineru_deploy_formula_enable is not None:
-                client_config["mineru_deploy_formula_enable"] = mineru_deploy_formula_enable
-            if mineru_deploy_table_enable is not None:
-                client_config["mineru_deploy_table_enable"] = mineru_deploy_table_enable
-            if mineru_deploy_image_analysis is not None:
-                client_config["mineru_deploy_image_analysis"] = mineru_deploy_image_analysis
-            if mineru_deploy_start_page_id is not None:
-                client_config["mineru_deploy_start_page_id"] = mineru_deploy_start_page_id
-            if mineru_deploy_end_page_id is not None:
-                client_config["mineru_deploy_end_page_id"] = mineru_deploy_end_page_id
-            if mineru_deploy_lang_list is not None:
-                client_config["mineru_deploy_lang_list"] = mineru_deploy_lang_list
-            if mineru_deploy_server_url is not None:
-                client_config["mineru_deploy_server_url"] = mineru_deploy_server_url
+            if config_options["md2docx_engine"] != INHERIT:
+                client_config["md2docx_engine"] = config_options["md2docx_engine"]
 
             # Check if we have the required config
             has_required = bool(
@@ -623,17 +578,26 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
             ignored = {"file_path", "glossary_dict_json", "glossary_agent_config_json"}
             allowed = set(BaseWorkflowParams.model_fields) | set(UniversalParamsMixin.model_fields) | {"workflow_type", "md2docx_engine"}
             for key, value in request_options.items():
-                if key in ignored or aliases.get(key, key) not in allowed:
+                target = aliases.get(key, key)
+                if key in ignored or target not in allowed:
                     continue
-                if key in {"md2docx_engine", "read_timeout", "non_stream_timeout"}:
-                    if value != INHERIT:
-                        payload_dict[key] = value
-                elif value is not None:
-                    # Empty credentials keep the configured connection; empty text
-                    # options, false, zero and empty lists remain explicit overrides.
-                    if key in {"api_key", "base_url", "model_id"} and value == "":
+                # "inherit"/"" keep the configured value; JSON null explicitly
+                # disables DOCX export and restores runtime timeout fallbacks.
+                if target in {"md2docx_engine", "read_timeout", "non_stream_timeout"}:
+                    if value == INHERIT or value == "":
                         continue
-                    payload_dict[aliases.get(key, key)] = value
+                    payload_dict[target] = value
+                    continue
+                if target == "workflow_type":
+                    payload_dict[target] = value or "auto"
+                    continue
+                if value is None:
+                    continue
+                # Legacy clients send "" for options they do not set; only the
+                # documented text overrides keep an empty value.
+                if normalize_empty_text(target, value) is None:
+                    continue
+                payload_dict[target] = value
             payload_dict["glossary_dict"] = parsed_glossary_dict
             payload_dict["glossary_agent_config"] = parsed_glossary_agent
             payload_dict = {key: value for key, value in payload_dict.items()

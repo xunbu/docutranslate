@@ -10,6 +10,18 @@ from docutranslate.core.schemas import TranslatePayload
 
 INHERIT = "inherit"
 
+# An empty string is an explicit override only for these text options (the
+# v1.7.11 contract). For every other option an empty string means "not
+# provided", which is how older MCP/HTTP clients signalled "use the default".
+EMPTY_TEXT_OVERRIDE_FIELDS = frozenset({"separator", "custom_prompt"})
+
+
+def normalize_empty_text(name: str, value):
+    """Treat empty text as omitted unless the option documents empty as a value."""
+    if isinstance(value, str) and value == "" and name not in EMPTY_TEXT_OVERRIDE_FIELDS:
+        return None
+    return value
+
 
 def normalize_options(options, filename: str):
     """Resolve auto before validation; retain explicit empty/false/zero/null values."""
