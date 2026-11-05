@@ -3,6 +3,14 @@ export function emptyToNull(val) {
     return (!val && val !== 0 && val !== false) ? null : val;
 }
 
+// atob returns a Latin-1 string; using it directly as UTF-8 mangles CJK text.
+// Restore the bytes first, then decode as UTF-8.
+export function decodeBase64Utf8(b64) {
+    const bin = atob(b64);
+    const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+    return new TextDecoder('utf-8').decode(bytes);
+}
+
 export function capitalize(s) {
     return s.charAt(0).toUpperCase() + s.slice(1);
 }

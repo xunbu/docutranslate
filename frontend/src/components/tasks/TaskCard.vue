@@ -16,35 +16,56 @@
             <div class="flex flex-col gap-3">
                 <!-- Row 1: File Upload + Status/Logs -->
                 <div class="flex flex-col md:flex-row gap-3">
-                    <!-- File Upload Area -->
+                    <!-- File Upload Area (file tasks) / Text Input Area (text tasks) -->
                     <div class="w-full md:w-4/12">
-                        <input type="file" class="hidden" :id="'fileInput-' + task.uiId" @change="onFileSelect">
-                        <div
-                            class="file-drop-area border-2 border-dashed rounded transition-colors"
-                            :class="{
-                                'border-gray-300 dark:border-gray-600': !task.isDragOver && !task.file && !task.validationError,
-                                'border-primary bg-blue-50 dark:bg-blue-900/20': task.isDragOver,
-                                'border-solid border-success bg-green-50 dark:bg-green-900/20': !!task.file,
-                                'border-red-400 dark:border-red-500': task.validationError && !task.file
-                            }"
-                            @click.stop="triggerFileInput"
-                            @dragenter.prevent="task.isDragOver = true"
-                            @dragover.prevent="task.isDragOver = true"
-                            @dragleave.prevent="task.isDragOver = false"
-                            @drop.prevent="onFileDrop">
-                            <div v-if="!task.file" class="text-center py-2">
-                                <Heroicon name="CloudArrowUpIcon" class="w-8 h-8 mx-auto text-gray-400" />
-                                <p class="m-0 text-sm text-gray-500 dark:text-gray-400">{{ t('taskCardFileDrop') }}</p>
+                        <template v-if="!task.isTextInput">
+                            <input type="file" class="hidden" :id="'fileInput-' + task.uiId" @change="onFileSelect">
+                            <div
+                                class="file-drop-area border-2 border-dashed rounded transition-colors"
+                                :class="{
+                                    'border-gray-300 dark:border-gray-600': !task.isDragOver && !task.file && !task.validationError,
+                                    'border-primary bg-blue-50 dark:bg-blue-900/20': task.isDragOver,
+                                    'border-solid border-success bg-green-50 dark:bg-green-900/20': !!task.file,
+                                    'border-red-400 dark:border-red-500': task.validationError && !task.file
+                                }"
+                                @click.stop="triggerFileInput"
+                                @dragenter.prevent="task.isDragOver = true"
+                                @dragover.prevent="task.isDragOver = true"
+                                @dragleave.prevent="task.isDragOver = false"
+                                @drop.prevent="onFileDrop">
+                                <div v-if="!task.file" class="text-center py-2">
+                                    <Heroicon name="CloudArrowUpIcon" class="w-8 h-8 mx-auto text-gray-400" />
+                                    <p class="m-0 text-sm text-gray-500 dark:text-gray-400">{{ t('taskCardFileDrop') }}</p>
+                                </div>
+                                <div v-else class="text-center py-2">
+                                    <Heroicon name="CheckCircleIcon" class="w-8 h-8 mx-auto text-success" solid />
+                                    <p class="m-0 mt-1 text-sm font-bold text-success">{{ t('taskCardFileSelected') }}</p>
+                                </div>
                             </div>
-                            <div v-else class="text-center py-2">
-                                <Heroicon name="CheckCircleIcon" class="w-8 h-8 mx-auto text-success" solid />
-                                <p class="m-0 mt-1 text-sm font-bold text-success">{{ t('taskCardFileSelected') }}</p>
+                            <div class="mt-1 text-sm" v-if="task.file || task.fileName">
+                                <span class="font-bold text-gray-700 dark:text-gray-300">{{ t('taskCardFilenameLabel') }} </span>
+                                <span class="text-success">{{ task.fileName || task.file.name }}</span>
                             </div>
-                        </div>
-                        <div class="mt-1 text-sm" v-if="task.file || task.fileName">
-                            <span class="font-bold text-gray-700 dark:text-gray-300">{{ t('taskCardFilenameLabel') }} </span>
-                            <span class="text-success">{{ task.fileName || task.file.name }}</span>
-                        </div>
+                        </template>
+                        <template v-else>
+                            <textarea
+                                class="w-full px-3 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                                :class="task.validationError ? 'border-red-400 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'"
+                                v-model="task.inputText"
+                                rows="8"
+                                :disabled="task.isTranslating"
+                                :placeholder="t('textInputPlaceholder')"
+                                @click.stop></textarea>
+                            <div class="mt-1 flex justify-between items-center">
+                                <span class="text-xs font-bold text-gray-700 dark:text-gray-300">{{ t('taskCardTextInputLabel') }}</span>
+                                <span class="text-xs" :class="isOverLimit ? 'text-danger font-bold' : 'text-gray-500 dark:text-gray-400'">
+                                    {{ charCountText }}
+                                </span>
+                            </div>
+                            <div v-if="task.isFinished && !(task.inputText && task.inputText.trim())" class="text-xs text-gray-400 mt-1">
+                                {{ t('textInputRestoredNote') }}
+                            </div>
+                        </template>
                     </div>
 
                     <!-- Logs + Status Area -->
@@ -65,12 +86,37 @@
                                     {{ t('taskCardQueuePosition', { n: task.queuePosition, total: task.queueTotal }) }}
                                 </template>
                                 <template v-else>
-                                    {{ task.statusMessage || t('taskCardStatusWaiting') }}
+                                    {{ task.statusMessage || t(task.isTextInput ? 'taskCardStatusWaitingText' : 'taskCardStatusWaiting') }}
                                 </template>
                             </span>
                             <div v-if="task.isProcessing" class="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
                             <span v-if="task.isProcessing" class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">{{ task.progressPercent || 0 }}%</span>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Inline translated result (text tasks) -->
+                <div v-if="task.isTextInput && task.isFinished" class="border border-gray-200 dark:border-gray-700 rounded">
+                    <div class="flex justify-between items-center px-3 py-1.5 bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
+                        <span class="text-sm font-bold text-gray-900 dark:text-gray-100">{{ t('taskCardResultLabel') }}</span>
+                        <div class="flex gap-1.5">
+                            <button type="button"
+                                    class="px-2.5 py-1 text-sm bg-primary text-white rounded hover:bg-primary-hover transition-colors flex items-center gap-1"
+                                    :disabled="!task.resultText"
+                                    @click.stop="onCopyResult">
+                                <Heroicon name="ClipboardDocumentIcon" class="w-4 h-4" />
+                                <span>{{ task.resultCopied ? t('copyResultSuccess') : t('copyResultBtn') }}</span>
+                            </button>
+                            <a v-if="task.downloads && task.downloads.txt" :href="task.downloads.txt"
+                               class="px-2.5 py-1 text-sm bg-success text-white rounded hover:bg-green-600 transition-colors flex items-center gap-1">
+                                <Heroicon name="ArrowDownTrayIcon" class="w-4 h-4" />
+                                <span>{{ t('downloadResultTxtBtn') }}</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="px-3 py-2 max-h-80 overflow-y-auto">
+                        <pre v-if="task.resultText" class="whitespace-pre-wrap break-words text-sm text-gray-900 dark:text-gray-100 m-0 font-sans">{{ task.resultText }}</pre>
+                        <p v-else class="text-sm text-gray-400 m-0">{{ t('resultLoading') }}</p>
                     </div>
                 </div>
 
@@ -184,7 +230,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { getFileIcon, getDownloadIcon } from '../../utils/helpers';
 import Tooltip from '../ui/Tooltip.vue';
 import Dropdown from '../ui/Dropdown.vue';
@@ -202,6 +248,7 @@ const emit = defineEmits([
     'fileDrop',
     'triggerFileInput',
     'copyLog',
+    'copyResult',
     'openPreview',
     'printPdf',
     'toggleTaskState',
@@ -213,6 +260,20 @@ const onFileSelect = (e) => emit('fileSelect', e, props.task);
 const onFileDrop = (e) => emit('fileDrop', e, props.task);
 const triggerFileInput = () => emit('triggerFileInput', props.task.uiId);
 const onCopyLog = (e) => emit('copyLog', e, props.task.logs);
+const onCopyResult = () => emit('copyResult', props.task);
+
+// Text task: character counter against the backend-provided limit
+const textInputLimit = inject('textInputLimit');
+const charCount = computed(() => (props.task.inputText ? props.task.inputText.length : 0));
+const isOverLimit = computed(() =>
+    !!textInputLimit && textInputLimit.value > 0 && charCount.value > textInputLimit.value
+);
+const charCountText = computed(() => {
+    const limit = textInputLimit ? textInputLimit.value : 0;
+    return limit > 0
+        ? props.t('textInputCharCountLimit', { n: charCount.value, limit })
+        : props.t('textInputCharCount', { n: charCount.value });
+});
 const onOpenPreview = () => emit('openPreview', props.task);
 const onPrintPdf = () => emit('printPdf', props.task.downloads.html);
 const onToggleTaskState = () => emit('toggleTaskState', props.task);

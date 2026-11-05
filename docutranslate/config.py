@@ -245,6 +245,9 @@ TASK_MAX_COUNT = _get_env_int("DOCUTRANSLATE_TASK_MAX_COUNT", 200)
 TEMP_CLEANUP_AGE_HOURS = _get_env_float("DOCUTRANSLATE_TEMP_CLEANUP_AGE_HOURS", 24.0)
 # 单次上传/请求体大小上限（MB，<=0 表示不限制），用于避免单进程被大文件 OOM。
 MAX_UPLOAD_MB = _get_env_float("DOCUTRANSLATE_MAX_UPLOAD_MB", 512.0)
+# 网页文本输入框（/service/translate/text）的字符数上限；<=0 表示不限制字符数。
+# 注意：即使不限制字符数，仍受 DOCUTRANSLATE_MAX_UPLOAD_MB 的请求体大小限制。
+TEXT_INPUT_LIMIT = _get_env_int("DOCUTRANSLATE_TEXT_INPUT_LIMIT", 1000000)
 
 # ============================================================
 # 兼容旧版 default_params

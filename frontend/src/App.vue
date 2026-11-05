@@ -86,7 +86,7 @@ const tasksComposable = useTasks(settings, glossary, i18n);
 const preview = usePreview();
 
 // Destructure from composables
-const { form, workflowParams, errors, defaultParams, default_workflows, queue_concurrent, webSkipValidation, envForceOverride,
+const { form, workflowParams, errors, defaultParams, default_workflows, queue_concurrent, webSkipValidation, envForceOverride, textInputLimit,
         clearError, loadConfig, saveSetting, saveSettingArray, saveWorkflowParam,
         saveAllSettings, setupPlatformWatchers, exportConfig, importConfig,
         saveDefaultWorkflows } = settings;
@@ -96,9 +96,10 @@ const { currentLang, t, setLanguage, loadI18n } = i18n;
 const { glossaryData, glossaryCount, glossaryModalRef, handleGlossaryFiles, clearGlossary,
         openGlossaryModal, downloadGlossaryTemplate } = glossary;
 
-const { tasks, hasPendingTasks, createNewTask, removeTask, clearAllTasks,
+const { tasks, hasPendingTasks, createNewTask, createNewTextTask, removeTask, clearAllTasks,
         handleTaskFileSelect, handleTaskFileDrop, triggerFileInput, selectTaskWorkflow,
-        handleFolderSelect, runAllPendingTasks, toggleTaskState, copyLog, pollStatus } = tasksComposable;
+        handleFolderSelect, runAllPendingTasks, toggleTaskState, copyLog, pollStatus,
+        copyResultText } = tasksComposable;
 
 const { previewMode, syncScrollEnabled, previewTask, isOpen, previewOffcanvasComponent,
         openPreview, closePreview, setPreviewMode, toggleSyncScroll, printPdf, initSplit } = preview;
@@ -133,6 +134,7 @@ provide('default_workflows', default_workflows);
 provide('queue_concurrent', queue_concurrent);
 provide('webSkipValidation', webSkipValidation);
 provide('envForceOverride', envForceOverride);
+provide('textInputLimit', textInputLimit);
 provide('glossaryData', glossaryData);
 provide('glossaryCount', glossaryCount);
 provide('tasks', tasks);
@@ -159,6 +161,8 @@ provide('setPreviewMode', setPreviewMode);
 provide('toggleSyncScroll', toggleSyncScroll);
 provide('printPdf', printPdf);
 provide('createNewTask', createNewTask);
+provide('createNewTextTask', createNewTextTask);
+provide('copyResultText', copyResultText);
 provide('removeTask', removeTask);
 provide('clearAllTasks', clearAllTasks);
 provide('handleTaskFileSelect', handleTaskFileSelect);
@@ -200,6 +204,7 @@ onMounted(async () => {
         ]);
         const meta = await metaRes.json();
         version.value = meta.version;
+        textInputLimit.value = meta.text_input_limit ?? -1;
         enginList.value = await enginRes.json();
         const paramsData = await paramsRes.json();
         Object.assign(defaultParams, paramsData);
