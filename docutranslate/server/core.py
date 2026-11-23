@@ -33,6 +33,7 @@ from docutranslate.config import TASK_MAX_COUNT, TEMP_CLEANUP_AGE_HOURS
 from docutranslate.core.schemas import TranslatePayload
 from docutranslate.core.file_types import detect_workflow
 from docutranslate.core.params import resolve_auto_payload
+from docutranslate.core.task_status import statistics_totals
 from docutranslate.core.factory import create_workflow_from_payload
 from docutranslate.utils.utils import mask_secrets
 from docutranslate.workflow.ass_workflow import AssWorkflow
@@ -560,9 +561,26 @@ class TranslationService:
             statistics = workflow.get_statistics()
             task_logger.info(f"收集统计信息: {statistics}")
 
+            # 分块请求全部失败时，该分块会退回原文；导出照样成功，任务也照样报完成。
+            # 这里把失败块数写进 status_message，让调用方不必自己翻 statistics 才能发现
+            # 产出可能只是原文（批量场景下静默降级比直接失败更难排查）。
+            totals = statistics_totals(statistics)
+            unresolved = totals["unresolved_errors"]
+            status_message = f"翻译完成！用时 {duration:.2f} 秒。"
+            if unresolved > 0:
+                status_message = (
+                    f"翻译完成，但 {unresolved}/{totals['request_count']} 个分块失败，"
+                    f"对应段落保留了原文。用时 {duration:.2f} 秒。"
+                )
+                task_logger.warning(
+                    f"{unresolved}/{totals['request_count']} 个分块失败，"
+                    f"对应段落保留了原文（unresolved_error_rate="
+                    f"{totals['unresolved_error_rate']:.1%}）"
+                )
+
             task_state.update(
                 {
-                    "status_message": f"翻译完成！用时 {duration:.2f} 秒。",
+                    "status_message": status_message,
                     "download_ready": True,
                     "error_flag": False,
                     "progress_percent": 100,
