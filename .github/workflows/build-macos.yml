@@ -53,6 +53,30 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
+      - name: Verify bundled Word and PowerPoint templates
+        run: |
+          uv run --no-sync python - <<'PY'
+          from pathlib import Path
+          from tempfile import TemporaryDirectory
+          from xml.etree import ElementTree
+          from PyInstaller.archive.readers import CArchiveReader
+
+          archive = CArchiveReader("dist/DocuTranslate-${{ env.VERSION }}-${{ matrix.executable_suffix }}")
+          with TemporaryDirectory() as tmp:
+              for name in archive.toc:
+                  if name.startswith(("docx/parts/", "docx/templates/", "pptx/oxml/", "pptx/templates/")):
+                      target = Path(tmp, name)
+                      target.parent.mkdir(parents=True, exist_ok=True)
+                      target.write_bytes(archive.extract(name))
+              templates = {
+                  "docx/parts": ("default-header", "default-footer", "default-styles", "default-settings", "default-comments"),
+                  "pptx/oxml": ("notes", "notesMaster", "theme"),
+              }
+              for base, names in templates.items():
+                  for name in names:
+                      ElementTree.parse(Path(tmp, base, "..", "templates", f"{name}.xml"))
+          PY
+
       - name: Create macOS app bundle structure
         run: |
           # 创建必要的目录

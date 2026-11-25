@@ -38,6 +38,8 @@ a = Analysis(
     runtime_hooks=[],
     # 保持原有的排除项
     excludes=[],
+    # Both libraries open ../templates from these directories, which must exist on macOS.
+    module_collection_mode={'docx.parts.hdrftr': 'py', 'pptx.oxml.slide': 'py'},
     noarchive=False,
     target_arch='x86_64',
     optimize=0,
