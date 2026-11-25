@@ -14,7 +14,7 @@ jobs:
       matrix:
         include:
           - arch: arm64
-            runner: macos-14
+            runner: macos-15
             spec: lite_mac.spec
             executable_suffix: mac
           - arch: x86_64
@@ -25,10 +25,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -129,7 +129,7 @@ jobs:
 
       # 这样你就可以在工作流运行结束后下载它，或者在 release 中使用它。
       - name: Upload macOS DMG
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: DocuTranslate-macOS-${{ matrix.arch }}
           path: dist/DocuTranslate-${{ env.VERSION }}-macOS-${{ matrix.arch }}.dmg
@@ -145,7 +145,7 @@ jobs:
       contents: write
     steps:
       - name: Download macOS DMGs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           pattern: DocuTranslate-macOS-*
           path: release-assets
