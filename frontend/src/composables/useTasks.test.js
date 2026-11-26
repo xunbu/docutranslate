@@ -139,3 +139,54 @@ test('task validation and payload use the task workflow without changing the sel
         globalThis.localStorage = originalLocalStorage;
     }
 });
+
+for (const [partial, expectedClass] of [[true, 'text-warning'], [false, 'text-success']]) {
+    test(`finished task with is_partial=${partial} is styled ${expectedClass}`, async () => {
+        const originalFetch = globalThis.fetch;
+        const originalSetInterval = globalThis.setInterval;
+        const originalClearInterval = globalThis.clearInterval;
+        const originalWindow = globalThis.window;
+        const originalLocalStorage = globalThis.localStorage;
+        const polling = [];
+        globalThis.window = { location: { pathname: '/' } };
+        globalThis.localStorage = { setItem() {}, getItem() { return null; } };
+        globalThis.setInterval = callback => { polling.push(callback); return polling.length; };
+        globalThis.clearInterval = () => {};
+        globalThis.fetch = async url => {
+            if (url === '/service/translate/file') {
+                return { ok: true, json: async () => ({ task_started: true, task_id: 'partial-task' }) };
+            }
+            if (url.startsWith('/service/logs/')) return { json: async () => ({ logs: [] }) };
+            if (url.startsWith('/service/status/')) return {
+                ok: true,
+                json: async () => ({
+                    is_processing: false, download_ready: true, downloads: {},
+                    error_flag: false, is_partial: partial,
+                    status_message: partial ? '翻译完成，但 2/2 个分块失败' : '翻译完成！'
+                })
+            };
+            throw new Error(`Unexpected request: ${url}`);
+        };
+        try {
+            const settings = {
+                form: { workflow_type: 'markdown_based', convert_engine: 'identity', skip_translate: true },
+                workflowParams: {}, default_workflows: {}, queue_concurrent: ref(1),
+                errors: {}, webSkipValidation: ref(false)
+            };
+            const tasks = useTasks(settings, { glossaryData: ref({}) }, { t: key => key });
+            const task = tasks.createNewTask();
+            task.file = new Blob(['body']);
+            await tasks.toggleTaskState(task, settings.errors);
+            await polling[0]();
+            await new Promise(setImmediate);
+            assert.equal(task.statusClass, expectedClass);
+            assert.equal(task.isFinished, true);
+        } finally {
+            globalThis.fetch = originalFetch;
+            globalThis.setInterval = originalSetInterval;
+            globalThis.clearInterval = originalClearInterval;
+            globalThis.window = originalWindow;
+            globalThis.localStorage = originalLocalStorage;
+        }
+    });
+}

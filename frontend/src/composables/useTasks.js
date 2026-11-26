@@ -520,7 +520,9 @@ export function useTasks(settings, glossary, i18n) {
                     if (d.download_ready && !d.error_flag) {
                         task.downloads = d.downloads || {};
                         task.attachment = d.attachment || {};
-                        task.statusClass = 'text-success';
+                        // 有分块失败时导出仍是成功的，但内容可能保留了原文：
+                        // 用 warning 色提示，不要和完整翻译一样显示为绿色成功。
+                        task.statusClass = d.is_partial ? 'text-warning' : 'text-success';
                     } else {
                         task.statusClass = 'text-danger';
                         task.statusMessage = d.error_flag ? (d.status_message || 'Failed') : d.status_message;

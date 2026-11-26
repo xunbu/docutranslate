@@ -42,7 +42,7 @@ from docutranslate.server import (
 from docutranslate import __version__
 from docutranslate.core.schemas import TranslatePayload, BaseWorkflowParams, UniversalParamsMixin
 from docutranslate.core.params import INHERIT, normalize_empty_text
-from docutranslate.core.task_status import task_status, task_statistics
+from docutranslate.core.task_status import task_status, task_statistics, is_partial, statistics_totals
 from docutranslate.core.file_types import formats_info
 from docutranslate.logger import global_logger
 from pydantic import TypeAdapter
@@ -89,6 +89,7 @@ def _task_state_to_dict(task_id: str, task_state: Optional[Dict[str, Any]]) -> D
         "task_id": task_id,
         "status": status,
         "cancelled": task_state.get("cancelled", False),
+        "is_partial": is_partial(task_state),
         "statistics": task_statistics(task_state),
         "original_filename": task_state.get("original_filename"),
         "task_start_time": task_state.get("task_start_time"),
@@ -663,8 +664,17 @@ if MCP_AVAILABLE and MCPServer is not None and Context is not None:
 
             # If completed, show user-friendly format with download info
             if status == "completed":
+                if status_dict.get("is_partial"):
+                    totals = statistics_totals(status_dict.get("statistics"))
+                    headline = (
+                        f"Translation finished, but {totals['unresolved_errors']}/"
+                        f"{totals['request_count']} chunks failed and kept their source text. "
+                        "Review the result before using it."
+                    )
+                else:
+                    headline = "Translation completed successfully!"
                 response_parts = [
-                    "Translation completed successfully!",
+                    headline,
                     f"Task ID: {task_id}",
                     "",
                     "Available formats:",

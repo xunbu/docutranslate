@@ -49,7 +49,7 @@ from pydantic import (
 from docutranslate import __version__
 from docutranslate.core.schemas import TranslatePayload
 from docutranslate.core.params import EMPTY_TEXT_OVERRIDE_FIELDS, INHERIT
-from docutranslate.core.task_status import task_status, task_statistics, default_statistics
+from docutranslate.core.task_status import task_status, task_statistics, default_statistics, is_partial
 from docutranslate.exporter.md.types import ConvertEngineType
 from docutranslate.logger import global_logger
 # Shared server layer imports
@@ -690,6 +690,7 @@ async def service_get_status(
             "status_message": task_state["status_message"],
             "error_flag": task_state["error_flag"],
             "cancelled": task_state.get("cancelled", False),
+            "is_partial": is_partial(task_state),
             "download_ready": task_state["download_ready"],
             "progress_percent": task_state.get("progress_percent", 0),
             "original_filename_stem": task_state["original_filename_stem"],
